@@ -1,0 +1,51 @@
+name: Build, Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build_binary:
+    name: Build Binary
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup build environment
+        run: |
+          sudo apt update
+          sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup target add wasm32-unknown-unknown --toolchain nightly-x86_64-unknown-linux-gnu
+          rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+
+      - name: Build Project
+        run: |
+          make vendor-clone
+          make qf-node
+
+      - name: Archive output files
+        run: |
+          mkdir -p artifacts
+          tar -czvf artifacts/qf-solochain-output.tar.gz output
+
+      - name: Generate checksums
+        run: |
+          shasum -a 256 artifacts/qf-solochain-output.tar.gz > artifacts/qf-solochain-output.tar.gz.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/qf-solochain-output.tar.gz
+            artifacts/qf-solochain-output.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
