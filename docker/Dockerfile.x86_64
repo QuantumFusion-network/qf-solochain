@@ -2,7 +2,7 @@ ARG BUILD_ARCH=x86_64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"a/docker/Dockerfile.qfnode
+LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
 
 SHELL ["/bin/sh", "-c"]
 
