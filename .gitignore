@@ -23,3 +23,5 @@ Cargo.lock
 vendor/
 output/
 .obsidian
+
+.idea

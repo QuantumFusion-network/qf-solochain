@@ -1,9 +1,9 @@
-name: Build, Release
+name: Build
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - runner-test
 
 jobs:
   build_binary:
@@ -19,33 +19,16 @@ jobs:
           sudo apt update
           sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
-          export PATH="$HOME/.cargo/bin:$PATH"
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           rustup target add wasm32-unknown-unknown --toolchain nightly-x86_64-unknown-linux-gnu
           rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 
       - name: Build Project
         run: |
+          cargo --version
           make vendor-clone
           make qf-node
 
-      - name: Archive output files
-        run: |
-          mkdir -p artifacts
-          tar -czvf artifacts/qf-solochain-output.tar.gz output
-
       - name: Generate checksums
         run: |
-          shasum -a 256 artifacts/qf-solochain-output.tar.gz > artifacts/qf-solochain-output.tar.gz.sha256
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          files: |
-            artifacts/qf-solochain-output.tar.gz
-            artifacts/qf-solochain-output.tar.gz.sha256
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          shasum -a 256 output/qf-node > output/qf-node.sha256
