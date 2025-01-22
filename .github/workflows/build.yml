@@ -1,4 +1,4 @@
-name: Build
+name: Build, Release
 
 on:
   push:
@@ -27,12 +27,6 @@ jobs:
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-#      - name: Build Project
-#        run: |
-#          cargo --version
-#          make vendor-clone
-#          make qf-node
-
       - name: Build Project
         run: |
           mkdir output
@@ -43,40 +37,40 @@ jobs:
         run: |
           mkdir -p artifacts
           cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
-          cp output/qf_runtime.wasm artifacts/qf_runtime${{ github.ref_name }}.wasm
+          cp output/qf_runtime.wasm artifacts/qf_runtime-${{ github.ref_name }}.wasm
 
       - name: Generate checksums
         id: checksums
         run: |
           SHA256_QFNODE=$(sha256sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
           BLAKE2_QFNODE=$(b2sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
-          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime${{ github.ref_name }}.wasm | cut -d ' ' -f1)
-          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+
+          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+
           echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
           echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
           echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
           echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
-
-      - name: Get date for release
-        id: date
-        run: echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.AT_PAT }}
         with:
-          name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: |
             artifacts/qf-node-${{ github.ref_name }}
-            artifacts/qf_runtime${{ github.ref_name }}.wasm
+            artifacts/qf_runtime-${{ github.ref_name }}.wasm
           body: |
             ## Runtimes
-            **qf-node-v0.0.4**
+            **qf-node-${{ github.ref_name }}**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
-            **qf_runtime-v0.0.4.wasm**
+
+            **qf_runtime-${{ github.ref_name }}.wasm**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
