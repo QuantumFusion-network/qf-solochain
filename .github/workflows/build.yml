@@ -29,9 +29,8 @@ jobs:
 
       - name: Build Project
         run: |
-          mkdir output
-          echo "it's qf-node test" > output/qf-node
-          echo "it's qf_runtime.wasm test" > output/qf_runtime.wasm
+          make vendor-clone
+          make qf-node
 
       - name: Prepare artifacts
         run: |
