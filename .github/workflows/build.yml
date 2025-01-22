@@ -27,12 +27,32 @@ jobs:
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+#      - name: Build Project
+#        run: |
+#          cargo --version
+#          make vendor-clone
+#          make qf-node
+
       - name: Build Project
         run: |
-          cargo --version
-          make vendor-clone
-          make qf-node
+          mkdir output
+          echo "it's qf-node test" > output/qf-node
+          echo "it's qf_runtime.wasm test" > output/qf_runtime.wasm
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts
+          cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
+          cp output/qf_runtime.wasm artifacts/qf_runtime${{ github.ref_name }}.wasm
 
       - name: Generate checksums
+        id: checksums
         run: |
-          shasum -a 256 output/qf-node > output/qf-node.sha256
+          SHA256_QFNODE=$(sha256sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+          BLAKE2_QFNODE=$(b2sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+          echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
+          echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
+          echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
+          echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
