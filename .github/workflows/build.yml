@@ -56,3 +56,28 @@ jobs:
           echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
           echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
           echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
+
+      - name: Get date for release
+        id: date
+        run: echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
+          name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/qf-node-${{ github.ref_name }}
+            artifacts/qf_runtime${{ github.ref_name }}.wasm
+          body: |
+            Runtimes
+            qf-node
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
+            qf_runtime.wasm
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
