@@ -2,8 +2,8 @@ name: Build
 
 on:
   push:
-    branches:
-      - runner-test
+    tags:
+      - '*'
 
 jobs:
   build_binary:
@@ -74,10 +74,10 @@ jobs:
             artifacts/qf-node-${{ github.ref_name }}
             artifacts/qf_runtime${{ github.ref_name }}.wasm
           body: |
-            Runtimes
-            qf-node-v0.0.4
+            ## Runtimes
+            **qf-node-v0.0.4**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
-            qf_runtime-v0.0.4.wasm
+            **qf_runtime-v0.0.4.wasm**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
