@@ -66,7 +66,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.AT_PAT }}
         with:
-          tag_name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
           name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
           draft: false
           prerelease: false
