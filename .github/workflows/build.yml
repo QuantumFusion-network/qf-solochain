@@ -63,6 +63,8 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.AT_PAT }}
         with:
           tag_name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
           name: test${{ github.ref_name }}-${{ steps.date.outputs.date }}
@@ -73,11 +75,9 @@ jobs:
             artifacts/qf_runtime${{ github.ref_name }}.wasm
           body: |
             Runtimes
-            qf-node
+            qf-node-v0.0.4
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
-            qf_runtime.wasm
+            qf_runtime-v0.0.4.wasm
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
