@@ -77,7 +77,6 @@ jobs:
   build_docker:
     name: Build and Publish Docker Image
     runs-on: [self-hosted, Linux, X64]
-    needs: build_binary
 
     steps:
       - name: Checkout repository
