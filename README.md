@@ -16,6 +16,10 @@
 make qf-run
 ```
 
+### Run the full node
+-   To run a full node please read instruction `docker/README.md`
+-   Please notice a full node does register itself at `http://telemetry.qfnetwork.xyz/`.
+
 ### Other make commands
 -   Build the node: `make qf-node`
 -   Build the relese node: `make qf-node-release`
