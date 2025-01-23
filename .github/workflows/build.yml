@@ -93,7 +93,9 @@ jobs:
           cd docker
           docker build -f Dockerfile.x86_64 -t qf-solochain:${{ github.ref_name }} .
           docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
+          docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
 
       - name: Push Docker Image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
