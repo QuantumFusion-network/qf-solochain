@@ -6,105 +6,111 @@ on:
       - '*'
 
 jobs:
-  #  build_binary:
-  #    name: Build Binary
-  #    runs-on: [self-hosted, Linux, X64]
-  #
-  #    steps:
-  #      - name: Checkout repository
-  #        uses: actions/checkout@v3
-  #
-  #      - name: Setup build environment
-  #        run: |
-  #          sudo apt update
-  #          sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
-  #          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
-  #
-  #          . "$HOME/.cargo/env"
-  #
-  #          rustup target add wasm32-unknown-unknown --toolchain nightly-x86_64-unknown-linux-gnu
-  #          rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
-  #
-  #          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-  #
-  #      - name: Build Project
-  #        run: |
-  #          make vendor-clone
-  #          make qf-node
-  #
-  #      - name: Prepare artifacts
-  #        run: |
-  #          mkdir -p artifacts
-  #          cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
-  #          cp output/qf_runtime.wasm artifacts/qf_runtime-${{ github.ref_name }}.wasm
-  #
-  #      - name: Generate checksums
-  #        id: checksums
-  #        run: |
-  #          SHA256_QFNODE=$(sha256sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
-  #          BLAKE2_QFNODE=$(b2sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
-  #
-  #          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
-  #          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
-  #
-  #          echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
-  #          echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
-  #          echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
-  #          echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
-  #
-  #      - name: Create GitHub Release
-  #        uses: softprops/action-gh-release@v1
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.AT_PAT }}
-  #        with:
-  #          tag_name: ${{ github.ref_name }}
-  #          name: ${{ github.ref_name }}
-  #          draft: false
-  #          prerelease: false
-  #          files: |
-  #            artifacts/qf-node-${{ github.ref_name }}
-  #            artifacts/qf_runtime-${{ github.ref_name }}.wasm
-  #          body: |
-  #            ## Runtimes
-  #            **qf-node-${{ github.ref_name }}**
-  #            sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
-  #            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
-  #
-  #            **qf_runtime-${{ github.ref_name }}.wasm**
-  #            sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
-  #            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
-  #
-  build_docker:
-    name: Build and Publish Docker Image
+  build_binary:
+    name: Build Binary
     runs-on: [self-hosted, Linux, X64]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PAT }}
-
-      - name: Build and Tag Docker Image
+      - name: Setup build environment
         run: |
-          cd docker
-          docker build -f Dockerfile.x86_64 -t qf-solochain:${{ github.ref_name }} .
-          docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
-          docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
+          sudo apt update
+          sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
 
-      - name: Push Docker Image to Docker Hub (signed)
-        env:
-          DOCKER_CONTENT_TRUST: "1"
-          DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DCT_REPO_PASSPHRASE }}
+          . "$HOME/.cargo/env"
+
+          rustup target add wasm32-unknown-unknown --toolchain nightly-x86_64-unknown-linux-gnu
+          rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Update Cargo.toml version
         run: |
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
+          sed -i "s/^version = \".*\"/version = \"${{ github.ref_name }}\"/" Cargo.toml
+          echo "Updated Cargo.toml:"
+          cat Cargo.toml
 
-
+#      - name: Build Project
+#        run: |
+#          make vendor-clone
+#          make qf-node
+#
+#      - name: Prepare artifacts
+#        run: |
+#          mkdir -p artifacts
+#          cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
+#          cp output/qf_runtime.wasm artifacts/qf_runtime-${{ github.ref_name }}.wasm
+#
+#      - name: Generate checksums
+#        id: checksums
+#        run: |
+#          SHA256_QFNODE=$(sha256sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+#          BLAKE2_QFNODE=$(b2sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+#
+#          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+#          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime-${{ github.ref_name }}.wasm | cut -d ' ' -f1)
+#
+#          echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
+#          echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
+#          echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
+#          echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
+#
+#      - name: Create GitHub Release
+#        uses: softprops/action-gh-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.AT_PAT }}
+#        with:
+#          tag_name: ${{ github.ref_name }}
+#          name: ${{ github.ref_name }}
+#          draft: false
+#          prerelease: false
+#          files: |
+#            artifacts/qf-node-${{ github.ref_name }}
+#            artifacts/qf_runtime-${{ github.ref_name }}.wasm
+#          body: |
+#            ## Runtimes
+#            **qf-node-${{ github.ref_name }}**
+#            sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
+#            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
+#
+#            **qf_runtime-${{ github.ref_name }}.wasm**
+#            sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
+#            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
+#
+#  build_docker:
+#    name: Build and Publish Docker Image
+#    runs-on: [self-hosted, Linux, X64]
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v3
+#
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v2
+#        with:
+#          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+#          password: ${{ secrets.DOCKER_HUB_PAT }}
+#
+#      - name: Build and Tag Docker Image
+#        run: |
+#          cd docker
+#          docker build -f Dockerfile.x86_64 -t qf-solochain:${{ github.ref_name }} .
+#          docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
+#          docker tag qf-solochain:${{ github.ref_name }} ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
+#
+#      - name: Push Docker Image to Docker Hub (signed)
+#        env:
+#          DOCKER_CONTENT_TRUST: "1"
+#          DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}
+#          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DCT_REPO_PASSPHRASE }}
+#        run: |
+#          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:${{ github.ref_name }}
+#          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/qf-solochain:latest
+#
+#
 #  release:
 #    name: Release
 #    runs-on: [self-hosted, Linux, X64]
