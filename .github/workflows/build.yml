@@ -29,9 +29,9 @@ jobs:
 
       - name: Update Cargo.toml version
         run: |
-          sed -i "s/^version = \".*\"/version = \"${{ github.ref_name }}\"/" Cargo.toml
-          echo "Updated Cargo.toml:"
-          cat Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"${{ github.ref_name }}\"/" node/Cargo.toml
+          echo "Updated node/Cargo.toml:"
+          cat node/Cargo.toml
 
 #      - name: Build Project
 #        run: |
