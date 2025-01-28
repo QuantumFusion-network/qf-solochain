@@ -1,0 +1,27 @@
+[package]
+name = "xcq-extension"
+description = "Extension system for XCQ"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true, default-features = false}
+polkavm = { workspace = true }
+scale-info = { workspace = true, default-features = false}
+xcq-executor = { workspace = true, default-features = false}
+fortuples = { workspace = true }
+tracing = { workspace = true, default-features = false }
+xcq-extension-procedural = { path = "procedural" }
+xcq-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "xcq-executor/std",
+    "tracing/std",
+]

@@ -20,6 +20,14 @@ scale-info = { features = [
 	"derive",
 ], workspace = true }
 
+# XCQ
+xcq-extension = { path = "../../xcq-extension", default-features = false}
+xcq-extension-fungibles = { path = "../../xcq-extension-fungibles", default-features = false}
+xcq-primitives = { path = "../../xcq-primitives", default-features = false}
+xcq-extension-core = { path = "../../xcq-extension-core", default-features = false}
+
+log = "0.4"
+
 # frame deps
 frame-benchmarking = { optional = true, workspace = true }
 frame-support = { workspace = true }
@@ -44,6 +52,10 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"polkavm/std",
+	"xcq-extension/std",
+	"xcq-extension-fungibles/std",
+	"xcq-extension-core/std",
+	"xcq-primitives/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

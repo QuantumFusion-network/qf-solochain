@@ -1,0 +1,18 @@
+[package]
+name = "xcq-extension-fungibles"
+description = "Fungibles extension for XCQ"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+xcq-extension = { workspace = true }
+scale-info = { workspace = true }
+xcq-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["parity-scale-codec/std", "xcq-extension/std"]

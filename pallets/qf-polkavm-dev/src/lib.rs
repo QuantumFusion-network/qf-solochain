@@ -43,7 +43,9 @@
 pub use pallet::*;
 
 pub mod weights;
+pub mod xcq;
 pub use weights::*;
+use xcq_extension;
 
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
@@ -54,6 +56,11 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::traits::Hash;
+
+    use xcq_extension_fungibles::EXTENSION_ID;
+    use xcq::{execute_query as xcq_execute_query, metadata as xcq_metadata, XcqResult};
+
+    use log;
 
     use polkavm::{
         Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule, ProgramBlob,
@@ -67,6 +74,12 @@ pub mod pallet {
     pub(super) struct BlobMetadata<T: Config> {
         owner: T::AccountId,
         version: u64,
+    }
+
+    #[derive(Encode, Decode)]
+    enum FungiblesMethod {
+        TotalSupply { asset: u64 },
+        Balance { asset: u64, who: [u8; 32] },
     }
 
     // The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -162,6 +175,13 @@ pub mod pallet {
         PolkaVMModulePreInstantiationFailed,
     }
 
+    #[derive(Debug)]
+    pub enum QfExecutorError<UserError> {
+        MemoryAllocationError,
+        MemoryAccessError(polkavm::MemoryAccessError),
+        CallError(polkavm::CallError<UserError>),
+    }
+
     /// The pallet's dispatchable functions ([`Call`]s).
     ///
     /// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -247,11 +267,28 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
-            let result = match op {
-                0 => Self::sum(a, b, raw_blob)?,
-                1 => Self::sub(a, b, raw_blob)?,
-                2 => Self::mul(a, b, raw_blob)?,
-                _ => Err(Error::<T>::InvalidOperation)?,
+            let mut input_data = EXTENSION_ID.encode();
+            log::info!("Extension ID: {:?}", EXTENSION_ID);
+            input_data.extend_from_slice(&[2u8]);
+            let method1 = FungiblesMethod::Balance {
+                asset: 1,
+                who: [0u8; 32],
+            };
+            let method1_encoded = method1.encode();
+            input_data.extend_from_slice(&[method1_encoded.len() as u8]);
+            let method2 = FungiblesMethod::Balance {
+                asset: 1,
+                who: [1u8; 32],
+            };
+            input_data.extend_from_slice(&method1_encoded);
+            input_data.extend_from_slice(&method2.encode());
+            log::info!("Input data: {:?}", input_data);
+
+            let res = Self::execute_query(raw_blob, input_data).unwrap();
+            log::info!("Result: {:?}", res);
+            let result = match res.get(0) {
+                Some(value) => *value as u32,
+                None => return Err(Error::<T>::InvalidOperation.into())
             };
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
@@ -265,6 +302,13 @@ pub mod pallet {
 
             // Return a successful `DispatchResult`
             Ok(())
+        }
+    }
+
+    impl<T: Config> xcq_extension::Guest for Pallet<T> {
+        fn program(&self) -> &[u8] {
+            let a: &[u8; 2] = &[1,2];
+            a
         }
     }
 
@@ -309,6 +353,20 @@ pub mod pallet {
         }
     }
 
+    trait XcqApi {
+        fn execute_query(query: Vec<u8>, input: Vec<u8>) -> XcqResult;
+        fn metadata() -> Vec<u8>;
+    }
+
+    impl<T: Config> XcqApi for Pallet<T> {
+        fn execute_query(query: Vec<u8>, input: Vec<u8>) -> XcqResult {
+            xcq_execute_query(query, input)
+        }
+        fn metadata() -> Vec<u8> {
+            xcq_metadata().encode()
+        }
+    }
+
     trait ModuleLoader {
         fn prepare(raw_blob: Vec<u8>) -> Result<PolkaVMModule, DispatchError>;
         fn instantiate(module: PolkaVMModule) -> Result<Instance, DispatchError>;
@@ -318,7 +376,7 @@ pub mod pallet {
         fn prepare(raw_blob: Vec<u8>) -> Result<PolkaVMModule, DispatchError> {
             let blob = ProgramBlob::parse(raw_blob[..].into())
                 .map_err(|_| Error::<T>::ProgramBlobParsingFailed)?;
-
+        
             let config =
                 PolkaVMConfig::from_env().map_err(|_| Error::<T>::PolkaVMConfigurationFailed)?;
             let engine =
