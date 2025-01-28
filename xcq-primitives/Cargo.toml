@@ -1,0 +1,17 @@
+[package]
+name = "xcq-primitives"
+description = "Primitives for XCQ"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+xcq-scale-info = { workspace = true }
+xcq-types = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["parity-scale-codec/std", "xcq-scale-info/std", "xcq-types/std"]

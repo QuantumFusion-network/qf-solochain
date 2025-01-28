@@ -1,0 +1,27 @@
+[package]
+name = "xcq-executor"
+description = "XCQ program executor"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+tracing = { workspace = true, default-features = false}
+
+polkavm = { workspace = true, default-features = false}
+
+xcq-api = { workspace = true, default-features = false}
+xcq-primitives = { workspace = true, default-features = false}
+
+[features]
+default = ["std"]
+std = [
+    "tracing/std",
+
+    "polkavm/std",
+
+    "xcq-api/std",
+    "xcq-primitives/std",
+]

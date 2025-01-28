@@ -169,7 +169,7 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
-    pub const PolkaVmMaxCodeLen: u32 = 1024;
+    pub const PolkaVmMaxCodeLen: u32 = 4048;
 }
 
 impl pallet_qf_polkavm_dev::Config for Runtime {

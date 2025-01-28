@@ -1,0 +1,18 @@
+[package]
+name = "xcq-extension-core"
+description = "Core extension for XCQ"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true, default-features = false}
+xcq-extension = { workspace = true, default-features = false}
+scale-info = { workspace = true }
+xcq-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["parity-scale-codec/std", "xcq-extension/std"]
