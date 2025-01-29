@@ -56,11 +56,6 @@ ENV QF_RPC_PORT=${rpc_port}
 
 ENV QF_TELEMETRY_URL='wss://telemetry.qfnetwork.xyz/submit 0'
 
-# You can define your boot node here
-ENV QF_BOOT_NODE_IP="103.113.69.222"
-ENV QF_BOOT_NODE_PORT="30333"
-ENV QF_BOOT_NODE_KEY="12D3KooWMWYPNvMSSstMoADACyX7EppjuRWtTeugFcVEQcrrjvoR"
-
 EXPOSE ${port}
 EXPOSE ${rpc_port}
 EXPOSE ${prometheus_port}

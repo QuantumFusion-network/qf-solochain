@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ ! -z "${QF_NODE_NAME}" ];
-then OPTIONAL_NAME=--name ${QF_NODE_NAME};
+if [ ! -z "${QF_NODE_NAME}" ]; then
+	OPTIONAL_NAME="--name ${QF_NODE_NAME}"
 fi
 
 /opt/qf-solochain/qf-node \
@@ -13,5 +13,4 @@ fi
 	--rpc-port ${QF_RPC_PORT} \
 	--rpc-cors all \
 	${OPTIONAL_NAME} \
-	--telemetry-url ${QF_TELEMETRY_URL} \
-    --bootnodes /ip4/${QF_BOOT_NODE_IP}/tcp/${QF_BOOT_NODE_PORT}/p2p/${QF_BOOT_NODE_KEY}
+	--telemetry-url ${QF_TELEMETRY_URL}
