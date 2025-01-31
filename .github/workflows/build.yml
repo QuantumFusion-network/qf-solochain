@@ -110,11 +110,11 @@ jobs:
           docker push qfnetwork/qf-node:latest
 
 
-  release:
-    name: Release
-    runs-on: [self-hosted, Linux, X64]
-    needs: [build_binary, build_docker]
-
-    steps:
-      - name: Run Release Playbook
-        run: ansible-playbook -i ~/infra-proto/hosts ~/infra-proto/roles/cd/tasks/release.yml
+#  release:
+#    name: Release
+#    runs-on: [self-hosted, Linux, X64]
+#    needs: [build_binary, build_docker]
+#
+#    steps:
+#      - name: Run Release Playbook
+#        run: ansible-playbook -i ~/infra-proto/hosts ~/infra-proto/roles/cd/tasks/release.yml
