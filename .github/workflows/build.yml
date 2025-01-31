@@ -109,7 +109,6 @@ jobs:
           docker push qfnetwork/qf-node:${{ github.ref_name }}
           docker push qfnetwork/qf-node:latest
 
-
 #  release:
 #    name: Release
 #    runs-on: [self-hosted, Linux, X64]
