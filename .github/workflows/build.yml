@@ -14,6 +14,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Check release version
+        run: |
+          release_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
+          if [[ "${release_version}" != "${{ github.ref_name }}" ]]; then
+            echo "release version\t = ${node_version}"
+            echo "tag version\t = ${{ github.ref_name }}"
+            echo "Please update release version!"
+            exit 1
+          fi
+
       - name: Setup build environment
         run: |
           sudo apt update
@@ -26,12 +36,6 @@ jobs:
           rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Update Cargo.toml version
-        run: |
-          sed -i "s/^version = \".*\"/version = \"${{ github.ref_name }}\"/" node/Cargo.toml
-          echo "Updated node/Cargo.toml:"
-          cat node/Cargo.toml
 
       - name: Build Project
         run: |
