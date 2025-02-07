@@ -33,7 +33,6 @@ fn main() {
         .expect("Failed to initialize tracing");
 
     let cli = Cli::parse();
-        // .expect("Failed to parse CLI arguments");
 
     let raw_blob = std::fs::read(cli.program)
         .map_err(|e| {
