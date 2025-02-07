@@ -1,0 +1,19 @@
+name: Release
+
+on:
+  workflow_dispatch:  # Позволяет запуск вручную из интерфейса GitHub
+
+jobs:
+  release:
+    name: Release
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: QuantumFusion-network/infra
+          path: infra
+      
+      - name: Run Release Playbook
+        run: ansible-playbook -i ~/infra/hosts ~/infra/roles/cd/tasks/release.yml
