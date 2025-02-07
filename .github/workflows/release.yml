@@ -1,7 +1,15 @@
 name: Release
 
 on:
-  workflow_dispatch:  # Позволяет запуск вручную из интерфейса GitHub
+  workflow_dispatch:
+    inputs:
+      refreshDB:
+        description: "Refresh database before release"
+        required: true
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 jobs:
   release:
@@ -16,4 +24,4 @@ jobs:
           path: infra
       
       - name: Run Release Playbook
-        run: ansible-playbook -i ~/infra/hosts ~/infra/roles/cd/tasks/release.yml
+        run: ansible-playbook -i ~/infra/hosts ~/infra/roles/cd/tasks/release.yml --extra-vars "refreshDB=${{ inputs.refreshDB }}"
