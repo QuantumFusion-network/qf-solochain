@@ -52,7 +52,13 @@ pub use weights::*;
 pub mod pallet {
     // Import various useful types required by all FRAME pallets.
     use super::*;
-    use frame_support::{pallet_prelude::*, traits::{fungible::{Inspect, Mutate, MutateHold}, Currency}};
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{
+            Currency,
+            fungible::{Inspect, Mutate},
+        },
+    };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::traits::Hash;
@@ -97,8 +103,7 @@ pub mod pallet {
         type MaxCodeLen: Get<u32>;
 
         /// The fungible
-        type Currency: Inspect<Self::AccountId>
-            + Mutate<Self::AccountId>;
+        type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
         /// A type representing the weights required by the dispatchables of this pallet.
         type WeightInfo: WeightInfo;
@@ -362,4 +367,3 @@ pub mod pallet {
         Signed(T::AccountId),
     }
 }
-
