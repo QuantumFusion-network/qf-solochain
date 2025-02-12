@@ -42,6 +42,8 @@
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+mod exec;
+
 pub mod weights;
 pub use weights::*;
 
@@ -50,7 +52,7 @@ pub use weights::*;
 pub mod pallet {
     // Import various useful types required by all FRAME pallets.
     use super::*;
-    use frame_support::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, traits::{fungible::{Inspect, Mutate, MutateHold}, Currency}};
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::traits::Hash;
@@ -59,6 +61,8 @@ pub mod pallet {
         Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule, ProgramBlob,
     };
 
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
     type CodeHash<T> = <T as frame_system::Config>::Hash;
     type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 
@@ -83,8 +87,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// The overarching runtime event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// A type representing the weights required by the dispatchables of this pallet.
-        type WeightInfo: WeightInfo;
 
         /// The maximum length of a contract code in bytes.
         ///
@@ -93,6 +95,13 @@ pub mod pallet {
         /// depth](#associatedtype.CallStack). Look into the `integrity_test()` for some insights.
         #[pallet::constant]
         type MaxCodeLen: Get<u32>;
+
+        /// The fungible
+        type Currency: Inspect<Self::AccountId>
+            + Mutate<Self::AccountId>;
+
+        /// A type representing the weights required by the dispatchables of this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::storage]
@@ -346,4 +355,11 @@ pub mod pallet {
             Ok(instance)
         }
     }
+
+    #[derive(Clone, Encode, Decode, PartialEq, TypeInfo, RuntimeDebugNoBound)]
+    pub enum Origin<T: Config> {
+        Root,
+        Signed(T::AccountId),
+    }
 }
+

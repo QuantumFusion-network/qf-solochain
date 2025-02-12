@@ -174,8 +174,9 @@ parameter_types! {
 
 impl pallet_qf_polkavm_dev::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
     type MaxCodeLen = PolkaVmMaxCodeLen;
+    type Currency = Balances;
+    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
