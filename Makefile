@@ -1,7 +1,7 @@
 GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=--unique --remap-path-prefix=$(pwd)= --remap-path-prefix=$HOME=~"
 
 vendor-clone:
-	git clone --depth=1 --branch v0.18.0 https://github.com/paritytech/polkavm.git vendor/polkavm
+	git clone --depth=1 --branch v0.19.0 https://github.com/paritytech/polkavm.git vendor/polkavm
 	git clone --depth=1 https://github.com/QuantumFusion-network/polkadot-sdk vendor/polkadot-sdk
 
 tools: polkatool chain-spec-builder

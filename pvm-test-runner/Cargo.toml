@@ -1,0 +1,15 @@
+[package]
+name = "pvm-test-runner"
+description = "PolkaVM program runner. Only for testing purpose."
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version = "0.1.0"
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+polkavm = { workspace = true }
