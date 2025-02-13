@@ -13,3 +13,5 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 polkavm = { workspace = true }
+polkavm-disassembler = { path = "../vendor/polkavm/crates/polkavm-disassembler", default-features = false, package = "polkavm-disassembler" }
+polkavm-common = { path = "../vendor/polkavm/crates/polkavm-common", default-features = false, package = "polkavm-common" }

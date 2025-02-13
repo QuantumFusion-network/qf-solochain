@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use clap::Parser;
 use tracing_subscriber::prelude::*;
 
@@ -6,8 +8,10 @@ extern crate alloc;
 use polkavm::{
     Config as PolkaVMConfig,
     Engine, GasMeteringKind, InterruptKind, Module, ModuleConfig,
-    ProgramBlob
+    ProgramBlob, Reg
 };
+// use polkavm_common::Reg;
+use polkavm_disassembler::{Disassembler, DisassemblyFormat};
 
 // For debugging purposes
 macro_rules! match_interrupt {
@@ -39,10 +43,25 @@ struct Cli {
     /// Available Gas
     #[arg(short, long, default_value="100")]
     gas: u32,
+    /// Additional debug information
+    #[arg(short, long, action )]
+    debug: bool,
+    /// Write debug to the file
+    #[arg(long)]
+    debug_file: Option<std::path::PathBuf>,
 }
 
 fn get_native_page_size() -> usize {
     4096
+}
+
+fn disassemble_with_gas(blob: &ProgramBlob, format: DisassemblyFormat) -> Vec<u8> {
+    let mut disassembler = Disassembler::new(blob, format).unwrap();
+    disassembler.display_gas().unwrap();
+
+    let mut buffer = Vec::with_capacity(1 << 20);
+    disassembler.disassemble_into(&mut buffer).unwrap();
+    buffer
 }
 
 fn main() {
@@ -74,16 +93,52 @@ fn main() {
         })
         .expect("Failed to initialize PolkaVM Engine");
     let page_size = get_native_page_size() as u32;
-    let blob = ProgramBlob::parse(raw_blob.into())
+    let blob = ProgramBlob::parse(raw_blob.clone().into())
         .map_err(|e| {
             tracing::debug!("Failed to parse a blob: {}", e);
             e
         })
         .expect("Failed to parse a blob");
 
+    let disasm;
+    if cli.debug {
+        let dblob = ProgramBlob::parse(raw_blob.into())
+            .map_err(|e| {
+                tracing::debug!("Failed to parse a blob: {}", e);
+                e
+            })
+            .expect("Failed to parse a blob");
+        disasm = disassemble_with_gas(&dblob, DisassemblyFormat::Guest);
+        let assembly_text = String::from_utf8(disasm).unwrap();
+
+        println!("\n========={}===========\n", assembly_text);
+
+        let exported_fns = blob.exports().map(|e| e.symbol().clone().to_string()).collect::<Vec<_>>();
+        let imported_fns = blob.imports().iter().map(|e| e).collect::<Vec<_>>();
+        println!("Imported functions:");
+        for imp in imported_fns {
+            if imp.is_some() {
+                println!("- {:?}", String::from_utf8(imp.expect("no import").as_bytes().to_vec()).unwrap());
+            }
+        }
+        println!("\nExported functions:");
+        for exp in exported_fns {
+            println!("- {:?}", exp);
+        }
+
+        if cli.debug_file.is_some() {
+            let mut file = std::fs::File::create(cli.debug_file.as_ref().unwrap()).unwrap();
+            let data = assembly_text.as_bytes();
+            file.write_all(&data).unwrap();
+        }
+    }
+    println!("\nRun the blob");
     let mut module_config = ModuleConfig::new();
     module_config.set_page_size(page_size);
     module_config.set_gas_metering(Some(GasMeteringKind::Sync));
+    if cli.debug {
+        module_config.set_step_tracing(true);
+    }
     let module = Module::from_blob(&engine, &module_config, blob)
         .map_err(|e| {
             tracing::debug!("Failed to initialize PolkaVM Module: {}", e);
@@ -109,7 +164,7 @@ fn main() {
 
     let args = (cli.a, cli.b);
 
-    println!("Entry {} with args: {:?}", entry, args);
+    println!("Entry \"{}\" with args: {:?}", entry, args);
 
     instance.prepare_call_typed(pc, args);
     let gas_cost = module.calculate_gas_cost_for(pc).unwrap();
@@ -124,12 +179,24 @@ fn main() {
             .expect("Failed to run an Instance");
         match run_result {
             InterruptKind::Step => {
-                println!("Step pc={:?}", instance.program_counter().unwrap());
+                let pc = instance.program_counter().unwrap();
+                println!("Step pc={:?}", pc);
             },
             InterruptKind::Finished => {
                 println!("Finished");
                 break;
-            }
+            },
+            InterruptKind::Ecalli(num) => {
+                let Some(name) = module.imports().get(num) else {
+                    panic!("unexpected external call: {num}");
+                };
+
+                if name == "get_third_number" {
+                    instance.set_reg(Reg::A0, 100);
+                } else {
+                    panic!("unexpected external call: {name} ({num})")
+                }
+            },
             _ => {
                 println!("Unexpected interrupt: {:?}", run_result);
                 break;
