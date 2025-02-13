@@ -174,6 +174,10 @@ pub mod pallet {
         PolkaVMModuleExecutionFailed,
         PolkaVMModuleInstantiationFailed,
         PolkaVMModulePreInstantiationFailed,
+
+        /// Performing the requested transfer failed. Probably because there isn't enough
+        /// free balance in the sender's account.
+        TransferFailed,
     }
 
     /// The pallet's dispatchable functions ([`Call`]s).
