@@ -1,7 +1,10 @@
 use crate::{BalanceOf, Config, Error, Origin};
 
 use core::marker::PhantomData;
-use frame_support::{pallet_prelude::{DispatchResult, Zero}, traits::{fungible::Mutate, tokens::Preservation}};
+use frame_support::{
+    pallet_prelude::{DispatchResult, Zero},
+    traits::{fungible::Mutate, tokens::Preservation},
+};
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -12,13 +15,10 @@ pub struct Stack<T: Config, E> {
 }
 
 impl<T, E> Stack<T, E>
-where   
+where
     T: Config,
 {
-    fn new(
-        origin: Origin<T>,
-        caller: AccountIdOf<T>,
-    ) -> Self {
+    fn new(origin: Origin<T>, caller: AccountIdOf<T>) -> Self {
         Self {
             origin,
             caller,
@@ -49,12 +49,12 @@ trait Ext {
 }
 
 impl<T, E> Ext for Stack<T, E>
-where T: Config,
+where
+    T: Config,
 {
     type T = T;
 
     fn transfer(&mut self, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::transfer(Preservation::Preserve, &self.caller, to, value)
-    }    
+    }
 }
-
