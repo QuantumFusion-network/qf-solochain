@@ -1,8 +1,7 @@
 use crate::{BalanceOf, Config, Error, Origin};
 
 use core::marker::PhantomData;
-use frame_support::{pallet_prelude::{DispatchResult, Zero}, traits::tokens::Preservation};
-use frame_support::traits::fungible::Mutate;
+use frame_support::{pallet_prelude::{DispatchResult, Zero}, traits::{fungible::Mutate, tokens::Preservation}};
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
