@@ -18,9 +18,7 @@ where
     T: Config,
 {
     pub fn new(caller: AccountIdOf<T>) -> Self {
-        Self {
-            caller,
-        }
+        Self { caller }
     }
 
     /// Transfer some funds from `from` to `to`.

@@ -61,12 +61,13 @@ pub mod pallet {
         },
     };
     use frame_system::pallet_prelude::*;
+    use scale_info::prelude::sync::Arc;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::traits::Hash;
-    use scale_info::prelude::sync::Arc;
 
     use polkavm::{
-        Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule, ProgramBlob,
+        Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
+        ProgramBlob,
     };
 
     pub type BalanceOf<T> =
@@ -319,12 +320,17 @@ pub mod pallet {
             let mut linker: Linker = Linker::new();
 
             // linker.define_typed("transfer", |stack: Stack<Self::T>, to: &T::AccountId, value: BalanceOf<T>| -> Result<(), DispatchError> {
-            //     stack.transfer(to, value) 
-            // }).unwrap(); 
+            //     stack.transfer(to, value)
+            // }).unwrap();
 
             // struct State { }
             // linker.define_typed("transfer", |caller: Caller<State>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
-            linker.define_typed("transfer", |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
+            linker
+                .define_typed(
+                    "transfer",
+                    |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() },
+                )
+                .unwrap();
 
             // Link the host functions with the module.
             let instance_pre = linker
