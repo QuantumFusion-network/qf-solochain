@@ -1,4 +1,5 @@
 use crate::{BalanceOf, Config, Error, Origin};
+use sp_runtime::Vec;
 
 use core::marker::PhantomData;
 use frame_support::{
@@ -8,21 +9,17 @@ use frame_support::{
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-pub struct Stack<T: Config, E> {
-    origin: Origin<T>,
+pub struct Stack<T: Config> {
     caller: AccountIdOf<T>,
-    _phantom: PhantomData<E>,
 }
 
-impl<T, E> Stack<T, E>
+impl<T> Stack<T>
 where
     T: Config,
 {
-    fn new(origin: Origin<T>, caller: AccountIdOf<T>) -> Self {
+    pub fn new(caller: AccountIdOf<T>) -> Self {
         Self {
-            origin,
             caller,
-            _phantom: Default::default(),
         }
     }
 
@@ -41,20 +38,20 @@ where
     }
 }
 
-trait Ext {
+pub trait Ext {
     type T: Config;
 
     /// Transfer some amount of funds into the specified account.
-    fn transfer(&mut self, to: &AccountIdOf<Self::T>, value: BalanceOf<Self::T>) -> DispatchResult;
+    fn transfer(&self, to: &AccountIdOf<Self::T>, value: BalanceOf<Self::T>) -> DispatchResult;
 }
 
-impl<T, E> Ext for Stack<T, E>
+impl<T> Ext for Stack<T>
 where
     T: Config,
 {
     type T = T;
 
-    fn transfer(&mut self, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
+    fn transfer(&self, to: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         Self::transfer(Preservation::Preserve, &self.caller, to, value)
     }
 }
