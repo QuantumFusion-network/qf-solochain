@@ -43,6 +43,7 @@
 pub use pallet::*;
 
 mod exec;
+use exec::{Ext, Stack};
 
 pub mod weights;
 pub use weights::*;
@@ -62,9 +63,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::traits::Hash;
+    use scale_info::prelude::sync::Arc;
 
     use polkavm::{
-        Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule, ProgramBlob,
+        Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule, ProgramBlob,
     };
 
     pub type BalanceOf<T> =
@@ -265,12 +267,13 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
-            let result = match op {
-                0 => Self::sum(a, b, raw_blob)?,
-                1 => Self::sub(a, b, raw_blob)?,
-                2 => Self::mul(a, b, raw_blob)?,
-                _ => Err(Error::<T>::InvalidOperation)?,
-            };
+            let stack: exec::Stack<T> = Stack::new(who.clone());
+
+            let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
+
+            let result = instance
+                .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), "add_numbers", (a, b))
+                .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
 
@@ -286,53 +289,16 @@ pub mod pallet {
         }
     }
 
-    trait Calculator {
-        fn sum(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError>;
-        fn sub(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError>;
-        fn mul(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError>;
-    }
-
-    impl<T: Config> Calculator for Pallet<T> {
-        fn sum(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError> {
-            a.checked_add(b).ok_or(Error::<T>::InvalidOperands)?;
-
-            // Grab the function and call it.
-            let result = Self::instantiate(Self::prepare(raw_blob)?)?
-                .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), "add_numbers", (a, b))
-                .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
-
-            Ok(result)
-        }
-
-        fn sub(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError> {
-            a.checked_sub(b).ok_or(Error::<T>::InvalidOperands)?;
-
-            // Grab the function and call it.
-            let result = Self::instantiate(Self::prepare(raw_blob)?)?
-                .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), "sub_numbers", (a, b))
-                .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
-
-            Ok(result)
-        }
-
-        fn mul(a: u32, b: u32, raw_blob: Vec<u8>) -> Result<u32, DispatchError> {
-            a.checked_mul(b).ok_or(Error::<T>::InvalidOperands)?;
-
-            // Grab the function and call it.
-            let result = Self::instantiate(Self::prepare(raw_blob)?)?
-                .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), "mul_numbers", (a, b))
-                .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
-
-            Ok(result)
-        }
-    }
-
     trait ModuleLoader {
+        type T: Config;
+
         fn prepare(raw_blob: Vec<u8>) -> Result<PolkaVMModule, DispatchError>;
         fn instantiate(module: PolkaVMModule) -> Result<Instance, DispatchError>;
     }
 
     impl<T: Config> ModuleLoader for Pallet<T> {
+        type T = T;
+
         fn prepare(raw_blob: Vec<u8>) -> Result<PolkaVMModule, DispatchError> {
             let blob = ProgramBlob::parse(raw_blob[..].into())
                 .map_err(|_| Error::<T>::ProgramBlobParsingFailed)?;
@@ -347,9 +313,18 @@ pub mod pallet {
             Ok(module)
         }
 
+        // fn instantiate(module: PolkaVMModule, stack: Stack<Self::T>) -> Result<Instance, DispatchError> {
         fn instantiate(module: PolkaVMModule) -> Result<Instance, DispatchError> {
             // High-level API.
-            let linker: Linker = Linker::new();
+            let mut linker: Linker = Linker::new();
+
+            // linker.define_typed("transfer", |stack: Stack<Self::T>, to: &T::AccountId, value: BalanceOf<T>| -> Result<(), DispatchError> {
+            //     stack.transfer(to, value) 
+            // }).unwrap(); 
+
+            // struct State { }
+            // linker.define_typed("transfer", |caller: Caller<State>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
+            linker.define_typed("transfer", |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
 
             // Link the host functions with the module.
             let instance_pre = linker
