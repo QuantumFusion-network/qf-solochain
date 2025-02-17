@@ -67,7 +67,7 @@ pub mod pallet {
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
-        ProgramBlob,
+        ProgramBlob, State,
     };
 
     pub type BalanceOf<T> =
@@ -272,8 +272,10 @@ pub mod pallet {
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
+            let mut state = State::new(Vec::new());
+
             let result = instance
-                .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), "add_numbers", (a, b))
+                .call_typed_and_get_result::<u32, (u32, u32)>(&mut state, "add_numbers", (a, b))
                 .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
@@ -323,14 +325,18 @@ pub mod pallet {
             //     stack.transfer(to, value)
             // }).unwrap();
 
-            // struct State { }
-            // linker.define_typed("transfer", |caller: Caller<State>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
-            linker
-                .define_typed(
-                    "transfer",
-                    |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() },
-                )
-                .unwrap();
+            // fn foo(caller: Caller) -> Result<(), core::convert::Infallible> {
+            //     todo!()
+            // }
+            // linker.define_untyped("transfer", foo).unwrap();
+
+            linker.define_typed("transfer", move |caller: Caller, to: u32, value: u32| -> u32 { todo!() }).unwrap();
+            // linker
+            //     .define_typed(
+            //         "transfer",
+            //         |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() },
+            //     )
+            //     .unwrap();
 
             // Link the host functions with the module.
             let instance_pre = linker
