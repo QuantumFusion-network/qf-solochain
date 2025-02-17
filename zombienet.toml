@@ -1,0 +1,16 @@
+[relaychain]
+default_command = "./target/release/qf-node"
+chain = "local"
+args = ["--state-pruning archive --blocks-pruning archive"]
+
+[[relaychain.nodes]]
+name = "alice"
+
+[[relaychain.nodes]]
+name = "bob"
+
+[[relaychain.nodes]]
+name = "charlie"
+
+[[relaychain.nodes]]
+name = "dave"
