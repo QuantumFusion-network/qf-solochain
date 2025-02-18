@@ -43,7 +43,7 @@ make qf-run
 To compile a program, run `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example, `make pvm-prog-calc`.
 The `.polkavm` file will be generated in `output/`.
 
-After that you can use the `make run` to run the node. Then go to UI Polkadot.js and call the extrisinc `qfPolkaVM`.
+After that you can use the `make run` to run the node. Then go to UI Polkadot.js and call the extrinsic `qfPolkaVM`.
 Then run functions:
 
 - `upload(programBlob)` and upload the `.polkavm` blob
@@ -53,11 +53,11 @@ NOTE - you can use the precompiled `qf-pvm-calc.polkavm` blob to test the node. 
 
 ### Testing the compiling polkavm blobs
 
-For testing compiling polkavm binary blobs use the [[qf-test-runner/README|qf-test-runner]]
+For testing compiling polkavm binary blobs use the [qf-test-runner/README.md](qf-test-runner/README.md)
 
-### Trouble shooting
+### Troubleshooting
 
-If your compiled `.polkavm` file is not working, try to run `make tools` again that reinstalling the tools with `polkatool` for actual version.
+If your compiled `.polkavm` file is not working, try to run `make tools` again that reinstall the tools with `polkatool` for actual version.
 
 For any compilation errors try to run `make clean` or `rm -rf target` and then try again.
 
