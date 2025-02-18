@@ -64,3 +64,6 @@ For any compilation errors try to run `make clean` or `rm -rf target` and then t
 ### Testing with zombienet
 
 See [zombienet/README.md](zombienet/README.md).
+
+[^1]: <https://forum.polkadot.network/t/announcing-polkavm-a-new-risc-v-based-vm-for-smart-contracts-and-possibly-more/3811#the-compilation-pipeline-7> "The compilation pipeline".
+[^2]: <https://github.com/paritytech/polkadot-sdk/tree/master/substrate/bin/utils/chain-spec-builder> "chain-spec-builder".
