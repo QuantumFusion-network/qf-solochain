@@ -53,3 +53,7 @@ For testing compiling polkavm binary blobs use the [[qf-test-runner/README|qf-te
 If your compiled `.polkavm` file is not working, try to run `make tools` again that reinstalling the tools with `polkatool` for actual version.
 
 For any compilation errors try to run `make clean` or `rm -rf target` and then try again.
+
+### Testing with zombienet
+
+See [zombienet/README.md](zombienet/README.md).
