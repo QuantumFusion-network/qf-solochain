@@ -25,7 +25,7 @@ make qf-run
 ### Other make commands
 
 - Build the node: `make qf-node`
-- Build the relese node: `make qf-node-release`
+- Build the release node: `make qf-node-release`
 - Build the node and run it: `make qf-run`
 - Build the node and run it with wasm file from `output`: `make qf-run-wasm`
 - Build the runtime: `make qf-runtime`
