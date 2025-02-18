@@ -25,6 +25,8 @@ macro_rules! match_interrupt {
     };
 }
 
+const NATIVE_PAGE_SIZE: u32 = 4096;
+
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Cli {
@@ -49,10 +51,6 @@ struct Cli {
     /// Write debug to the file
     #[arg(long)]
     debug_file: Option<std::path::PathBuf>,
-}
-
-fn get_native_page_size() -> usize {
-    4096
 }
 
 fn disassemble_with_gas(blob: &ProgramBlob, format: DisassemblyFormat) -> Vec<u8> {
@@ -92,7 +90,7 @@ fn main() {
             e
         })
         .expect("Failed to initialize PolkaVM Engine");
-    let page_size = get_native_page_size() as u32;
+    let page_size = NATIVE_PAGE_SIZE;
     let blob = ProgramBlob::parse(raw_blob.clone().into())
         .map_err(|e| {
             tracing::debug!("Failed to parse a blob: {}", e);
@@ -167,7 +165,7 @@ fn main() {
     println!("Entry \"{}\" with args: {:?}", entry, args);
 
     instance.prepare_call_typed(pc, args);
-    let gas_cost = module.calculate_gas_cost_for(pc).unwrap();
+    let gas_cost = module.calculate_gas_cost_for(pc).expect(&format!("Failed to calculate gas cost for {:?}", pc));
     println!("gas_cost: {}", gas_cost);
 
     loop {
@@ -179,7 +177,7 @@ fn main() {
             .expect("Failed to run an Instance");
         match run_result {
             InterruptKind::Step => {
-                let pc = instance.program_counter().unwrap();
+                let pc = instance.program_counter().expect("Failed to get program counter");
                 println!("Step pc={:?}", pc);
             },
             InterruptKind::Finished => {
@@ -196,6 +194,10 @@ fn main() {
                 } else {
                     panic!("unexpected external call: {name} ({num})")
                 }
+            },
+            InterruptKind::NotEnoughGas => {
+                println!("Not enough gas");
+                break;
             },
             _ => {
                 println!("Unexpected interrupt: {:?}", run_result);
