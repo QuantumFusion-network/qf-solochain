@@ -1,0 +1,21 @@
+[relaychain]
+default_command = "./target/debug/qf-node"
+chain = "local"
+args = ["--state-pruning archive --blocks-pruning archive"]
+
+[[relaychain.nodes]]
+name = "alice"
+
+[[relaychain.nodes]]
+name = "bob"
+
+[[relaychain.nodes]]
+name = "charlie"
+
+[[relaychain.nodes]]
+name = "dave"
+validator = false
+
+[[relaychain.nodes]]
+name = "eve"
+validator = false
