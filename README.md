@@ -19,8 +19,8 @@ make qf-run
 
 ### Run the full node
 
-- To run a full node please read instruction `docker/README.md`
-- Please notice a full node does register itself at `http://telemetry.qfnetwork.xyz/`.
+- To run a full node please read instruction [`docker/README.md`](docker/README.md)
+- Please notice a full node does register itself at [https://telemetry.qfnetwork.xyz/](https://telemetry.qfnetwork.xyz/).
 
 ### Other make commands
 
