@@ -272,7 +272,10 @@ pub mod pallet {
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
-            let mut state = State::new(Vec::new());
+            let mut state = State::new(
+                Vec::new(),
+                42,
+            );
 
             let result = instance
                 .call_typed_and_get_result::<u32, (u32, u32)>(&mut state, "add_numbers", (a, b))
