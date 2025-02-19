@@ -12,7 +12,7 @@ members = [
     "runtime",
     "node",
     "pallets/qf-polkavm-dev",
-    "qf-test-runner"
+#    "qf-test-runner"
 ]
 exclude = [
     "old",
@@ -35,7 +35,8 @@ clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "./vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }
 jsonrpsee = { version = "0.24.7" }
-polkavm = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false, package = "polkavm" }
+# polkavm = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false, package = "polkavm" }
+# polkavm = { path = "../polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 # polkavm = { path = "./vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 pallet-transaction-payment-rpc = { path = "./vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
 sc-basic-authorship = { path = "./vendor/polkadot-sdk/substrate/client/basic-authorship", default-features = false }
