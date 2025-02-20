@@ -60,6 +60,7 @@ pub mod pallet {
         traits::{
             Currency,
             fungible::{Inspect, Mutate},
+            Time,
         },
     };
     use frame_system::pallet_prelude::*;
@@ -109,6 +110,9 @@ pub mod pallet {
 
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
+
+        /// The time implementation used to supply timestamps to contracts through `seal_now`.
+        type Time: Time;
 
         /// A type representing the weights required by the dispatchables of this pallet.
         type WeightInfo: WeightInfo;
@@ -336,7 +340,12 @@ pub mod pallet {
             // }
             // linker.define_untyped("transfer", foo).unwrap();
 
-            linker.define_typed("transfer", move |caller: Caller<T>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
+            linker.define_typed("now", move |caller: Caller<T>| -> u32 {
+                match T::Time::now().try_into() {
+                    Ok(now) => now,
+                    _ => 0,
+                }
+             }).unwrap();
             // linker
             //     .define_typed(
             //         "transfer",

@@ -45,7 +45,7 @@ use sp_version::RuntimeVersion;
 use super::{
     AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
     PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, VERSION,
+    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, Timestamp, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -176,6 +176,7 @@ impl pallet_qf_polkavm_dev::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MaxCodeLen = PolkaVmMaxCodeLen;
     type Currency = Balances;
+    type Time = Timestamp;
     type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
 }
 
