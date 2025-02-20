@@ -24,13 +24,38 @@ scale-info = { features = [
 frame-benchmarking = { optional = true, workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-polkavm.workspace = true
 sp-runtime.workspace = true
+
+# polkavm
+log = { workspace = true }
+polkavm-assembler = { workspace = true, features = ["alloc"] }
+polkavm-common = { workspace = true, features = ["alloc", "logging", "regmap", "unique-id"] }
+schnellru = { workspace = true, optional = true }
+
+[target.'cfg(all(not(miri), target_arch = "x86_64", target_os = "linux"))'.dependencies]
+polkavm-linux-raw = { workspace = true, features = ["std"] }
+
+[target.'cfg(all(not(miri), target_arch = "x86_64", any(target_os = "macos", target_os = "freebsd")))'.dependencies]
+libc = { workspace = true }
+
 
 [dev-dependencies]
 sp-core = { workspace = true, default-features = true }
 sp-io = { workspace = true, default-features = true }
 sp-runtime = { workspace = true, default-features = true }
+
+# polkavm
+env_logger = { workspace = true }
+polkavm-common = { workspace = true, features = ["export-internals-for-testing"] }
+polkavm-linker = { workspace = true }
+image = { workspace = true, features = ["tga"] }
+ruzstd = { workspace = true }
+paste = { workspace = true }
+
+# polkavm
+[lints]
+workspace = true
+
 
 [features]
 default = ["std"]
@@ -43,7 +68,7 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"polkavm/std",
+	"ruzstd/std", # polkavm
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
@@ -56,3 +81,16 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"sp-runtime/try-runtime",
 ]
+
+## polkavm features
+# Whether to enable a module cache.
+module-cache = ["dep:schnellru", "polkavm-common/blake3"]
+
+# Whether to enable a cross-platform, generic sandbox for the recompiler backend.
+#
+# This is required on non-Linux systems to use the recompiler. On Linux it is unnecessary.
+# This sandbox is EXPERIMENTAL and is not meant for production use.
+generic-sandbox = []
+
+# Internal feature for testing. DO NOT USE.
+export-internals-for-testing = []

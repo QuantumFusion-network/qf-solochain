@@ -107,6 +107,26 @@ sp-version-proc-macro = { path = "./vendor/polkadot-sdk/substrate/primitives/ver
 # local pallet templates
 pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
 
+# polkavm
+image = { version = "0.24.7", default-features = false }
+libc = "0.2.149"
+log = "0.4.20"
+paste = "1.0.15"
+ruzstd = { version = "0.5.0", default-features = false }
+schnellru = { version = "0.2.3" }
+
+polkavm-assembler         = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-disassembler      = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-common            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-derive            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-derive-impl       = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-derive-impl-macro = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-linker            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-linux-raw         = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
+
 [profile.release]
 # runtime requires unwinding.
 panic = "unwind"
