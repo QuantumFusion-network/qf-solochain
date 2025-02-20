@@ -12,10 +12,10 @@ use polkavm_common::cast::cast;
 use polkavm_common::program::{ProgramCounter, RawReg, Reg};
 use polkavm_common::zygote::{VmCtx, VM_ADDR_VMCTX};
 
-use crate::compiler::{ArchVisitor, Bitness, CompilerBitness, SandboxKind};
-use crate::config::GasMeteringKind;
-use crate::sandbox::Sandbox;
-use crate::utils::RegImm;
+use crate::polkavm::compiler::{ArchVisitor, Bitness, CompilerBitness, SandboxKind};
+use crate::polkavm::config::GasMeteringKind;
+use crate::polkavm::sandbox::Sandbox;
+use crate::polkavm::utils::RegImm;
 
 /// The register used for the embedded sandbox to hold the base address of the guest's linear memory.
 const GENERIC_SANDBOX_MEMORY_REG: NativeReg = AUX_TMP_REG;
@@ -211,7 +211,7 @@ enum MemsetKind {
     Trampoline,
 }
 
-fn are_we_executing_memset<S>(compiled_module: &crate::compiler::CompiledModule<S>, machine_code_offset: u64) -> Option<MemsetKind>
+fn are_we_executing_memset<S>(compiled_module: &crate::polkavm::compiler::CompiledModule<S>, machine_code_offset: u64) -> Option<MemsetKind>
 where
     S: Sandbox,
 {
@@ -229,7 +229,7 @@ where
 }
 
 fn set_program_counter_after_interruption<S>(
-    compiled_module: &crate::compiler::CompiledModule<S>,
+    compiled_module: &crate::polkavm::compiler::CompiledModule<S>,
     machine_code_offset: u64,
     vmctx: &VmCtx,
 ) -> Result<ProgramCounter, &'static str>
@@ -248,7 +248,7 @@ where
 
 fn handle_interruption_during_memset<S>(
     memset_kind: MemsetKind,
-    compiled_module: &crate::compiler::CompiledModule<S>,
+    compiled_module: &crate::polkavm::compiler::CompiledModule<S>,
     is_gas_metering_enabled: bool,
     machine_code_offset: u64,
     vmctx: &VmCtx,
@@ -644,7 +644,7 @@ where
             SandboxKind::Generic => {
                 #[cfg(feature = "generic-sandbox")]
                 {
-                    let offset = crate::sandbox::generic::GUEST_MEMORY_TO_VMCTX_OFFSET as i32 + offset as i32;
+                    let offset = crate::polkavm::sandbox::generic::GUEST_MEMORY_TO_VMCTX_OFFSET as i32 + offset as i32;
                     reg_indirect(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG + offset)
                 }
 
@@ -1199,7 +1199,7 @@ where
     }
 
     pub fn on_signal_trap(
-        compiled_module: &crate::compiler::CompiledModule<S>,
+        compiled_module: &crate::polkavm::compiler::CompiledModule<S>,
         is_gas_metering_enabled: bool,
         machine_code_offset: u64,
         vmctx: &VmCtx,
@@ -1269,7 +1269,7 @@ where
     }
 
     pub fn on_page_fault(
-        compiled_module: &crate::compiler::CompiledModule<S>,
+        compiled_module: &crate::polkavm::compiler::CompiledModule<S>,
         is_gas_metering_enabled: bool,
         machine_code_address: u64,
         machine_code_offset: u64,

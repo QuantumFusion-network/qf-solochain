@@ -2,17 +2,17 @@
 
 use polkavm_common::cast::cast;
 
-use crate::mutex::Mutex;
-use crate::sandbox::get_native_page_size;
+use crate::polkavm::mutex::Mutex;
+use crate::polkavm::sandbox::get_native_page_size;
 use alloc::sync::Arc;
 use linux_raw::{cstr, Error, Fd};
 use polkavm_linux_raw as linux_raw;
 
-use crate::generic_allocator::{GenericAllocation, GenericAllocator};
+use crate::polkavm::generic_allocator::{GenericAllocation, GenericAllocator};
 
 struct Config;
 
-crate::generic_allocator::allocator_config! {
+crate::polkavm::generic_allocator::allocator_config! {
     impl AllocatorConfig for Config {
         const MAX_ALLOCATION_SIZE: u32 = (i32::MAX as u32) / 4096;
         const MAX_BINS: u32 = 4096;
@@ -176,7 +176,7 @@ impl ShmAllocator {
 
 #[test]
 fn test_shm_allocator() {
-    crate::sandbox::init_native_page_size();
+    crate::polkavm::sandbox::init_native_page_size();
     let page_size = get_native_page_size();
     let shm = ShmAllocator::new().unwrap();
     let allocation = shm.alloc(1).unwrap();

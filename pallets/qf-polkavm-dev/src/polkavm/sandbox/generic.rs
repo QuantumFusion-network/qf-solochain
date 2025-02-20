@@ -17,10 +17,10 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::{get_native_page_size, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind};
-use crate::api::{CompiledModuleKind, MemoryAccessError, Module};
-use crate::compiler::CompiledModule;
-use crate::config::Config;
-use crate::{Gas, ProgramCounter};
+use crate::polkavm::api::{CompiledModuleKind, MemoryAccessError, Module};
+use crate::polkavm::compiler::CompiledModule;
+use crate::polkavm::config::Config;
+use crate::polkavm::{Gas, ProgramCounter};
 
 #[inline(always)]
 pub(crate) fn as_bytes(slice: &[usize]) -> &[u8] {
@@ -854,7 +854,7 @@ impl Sandbox {
 
     fn execute_impl(&mut self, mut args: ExecuteArgs) -> Result<(), ExecutionError<Error>> {
         if let Some(module) = args.module {
-            let compiled_module = <Self as crate::sandbox::Sandbox>::downcast_module(module);
+            let compiled_module = <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(module);
             let program = &compiled_module.sandbox_program.0;
 
             log::trace!("Reconfiguring sandbox...");
@@ -914,7 +914,7 @@ impl Sandbox {
             self.vmctx_mut().regs.copy_from_slice(regs);
         }
 
-        if let Some(gas) = crate::sandbox::get_gas(&args, self.module.as_ref().and_then(|module| module.gas_metering())) {
+        if let Some(gas) = crate::polkavm::sandbox::get_gas(&args, self.module.as_ref().and_then(|module| module.gas_metering())) {
             self.vmctx_mut().gas = gas;
         }
 
@@ -940,7 +940,7 @@ impl Sandbox {
 
         let mut trap_kind = TrapKind::None;
         if let Some(entry_point) = args.entry_point {
-            let entry_point = <Self as crate::sandbox::Sandbox>::downcast_module(self.module.as_ref().unwrap())
+            let entry_point = <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(self.module.as_ref().unwrap())
                 .export_trampolines
                 .get(&entry_point)
                 .copied()
@@ -1068,10 +1068,10 @@ impl super::Sandbox for Sandbox {
         }
     }
 
-    fn downcast_global_state(global: &crate::sandbox::GlobalStateKind) -> &Self::GlobalState {
+    fn downcast_global_state(global: &crate::polkavm::sandbox::GlobalStateKind) -> &Self::GlobalState {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match global {
-            crate::sandbox::GlobalStateKind::Generic(global) => global,
+            crate::polkavm::sandbox::GlobalStateKind::Generic(global) => global,
             _ => unreachable!(),
         }
     }
@@ -1079,7 +1079,7 @@ impl super::Sandbox for Sandbox {
     fn downcast_worker_cache(cache: &WorkerCacheKind) -> &WorkerCache<Self> {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cache {
-            crate::sandbox::WorkerCacheKind::Generic(ref cache) => cache,
+            crate::polkavm::sandbox::WorkerCacheKind::Generic(ref cache) => cache,
             _ => unreachable!(),
         }
     }

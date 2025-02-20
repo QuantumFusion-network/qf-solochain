@@ -1,4 +1,4 @@
-use crate::error::{bail, Error};
+use crate::polkavm::error::{bail, Error};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum BackendKind {
@@ -306,7 +306,7 @@ impl Config {
 
     /// Sets whether module caching is enabled.
     ///
-    /// When set to `true` calling [`Module::new`](crate::Module::new) or [`Module::from_blob`](crate::Module::from_blob)
+    /// When set to `true` calling [`Module::new`](crate::polkavm::Module::new) or [`Module::from_blob`](crate::polkavm::Module::from_blob)
     /// will return an already compiled module if such already exists.
     ///
     /// Requires the `module-cache` compile time feature to be enabled, otherwise has no effect.
@@ -438,7 +438,7 @@ impl ModuleConfig {
 
     /// Sets whether step tracing is enabled.
     ///
-    /// When enabled [`InterruptKind::Step`](crate::InterruptKind::Step) will be returned by [`RawInstance::run`](crate::RawInstance::run)
+    /// When enabled [`InterruptKind::Step`](crate::polkavm::InterruptKind::Step) will be returned by [`RawInstance::run`](crate::polkavm::RawInstance::run)
     /// for each executed instruction.
     ///
     /// Should only be used for debugging.

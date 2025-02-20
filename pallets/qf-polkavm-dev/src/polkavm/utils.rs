@@ -124,16 +124,16 @@ pub enum InterruptKind {
     /// This happens when a program accesses a memory page that is not mapped,
     /// or tries to write to a read-only page.
     ///
-    /// Requires dynamic paging to be enabled with [`ModuleConfig::set_dynamic_paging`](crate::ModuleConfig::set_dynamic_paging), otherwise is never emitted.
+    /// Requires dynamic paging to be enabled with [`ModuleConfig::set_dynamic_paging`](crate::polkavm::ModuleConfig::set_dynamic_paging), otherwise is never emitted.
     Segfault(Segfault),
 
     /// The execution ran out of gas.
     ///
-    /// Requires gas metering to be enabled with [`ModuleConfig::set_gas_metering`](crate::ModuleConfig::set_gas_metering), otherwise is never emitted.
+    /// Requires gas metering to be enabled with [`ModuleConfig::set_gas_metering`](crate::polkavm::ModuleConfig::set_gas_metering), otherwise is never emitted.
     NotEnoughGas,
 
     /// Executed a single instruction.
     ///
-    /// Requires execution step-tracing to be enabled with [`ModuleConfig::set_step_tracing`](crate::ModuleConfig::set_step_tracing), otherwise is never emitted.
+    /// Requires execution step-tracing to be enabled with [`ModuleConfig::set_step_tracing`](crate::polkavm::ModuleConfig::set_step_tracing), otherwise is never emitted.
     Step,
 }

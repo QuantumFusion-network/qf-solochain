@@ -25,13 +25,13 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use super::{get_native_page_size, OffsetTable, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind};
-use crate::api::{CompiledModuleKind, MemoryAccessError, Module};
-use crate::compiler::{Bitness, CompiledModule, B32, B64};
-use crate::config::Config;
-use crate::config::GasMeteringKind;
-use crate::page_set::PageSet;
-use crate::shm_allocator::{ShmAllocation, ShmAllocator};
-use crate::{Gas, InterruptKind, ProgramCounter, RegValue, Segfault};
+use crate::polkavm::api::{CompiledModuleKind, MemoryAccessError, Module};
+use crate::polkavm::compiler::{Bitness, CompiledModule, B32, B64};
+use crate::polkavm::config::Config;
+use crate::polkavm::config::GasMeteringKind;
+use crate::polkavm::page_set::PageSet;
+use crate::polkavm::shm_allocator::{ShmAllocation, ShmAllocator};
+use crate::polkavm::{Gas, InterruptKind, ProgramCounter, RegValue, Segfault};
 
 pub struct GlobalState {
     shared_memory: ShmAllocator,
@@ -1141,9 +1141,9 @@ impl super::Sandbox for Sandbox {
         module
     }
 
-    fn downcast_global_state(global: &crate::sandbox::GlobalStateKind) -> &Self::GlobalState {
+    fn downcast_global_state(global: &crate::polkavm::sandbox::GlobalStateKind) -> &Self::GlobalState {
         #[allow(irrefutable_let_patterns)]
-        let crate::sandbox::GlobalStateKind::Linux(ref global) = global
+        let crate::polkavm::sandbox::GlobalStateKind::Linux(ref global) = global
         else {
             unreachable!()
         };
@@ -1152,7 +1152,7 @@ impl super::Sandbox for Sandbox {
 
     fn downcast_worker_cache(cache: &WorkerCacheKind) -> &WorkerCache<Self> {
         #[allow(irrefutable_let_patterns)]
-        let crate::sandbox::WorkerCacheKind::Linux(ref cache) = cache
+        let crate::polkavm::sandbox::WorkerCacheKind::Linux(ref cache) = cache
         else {
             unreachable!()
         };
@@ -2230,7 +2230,7 @@ impl Sandbox {
     }
 
     fn handle_guest_signal(&mut self, machine_code_address: u64) -> Result<Interrupt, Error> {
-        use crate::sandbox::Sandbox;
+        use crate::polkavm::sandbox::Sandbox;
 
         let compiled_module = Self::downcast_module(self.module.as_ref().unwrap());
         let Some(machine_code_offset) = machine_code_address.checked_sub(compiled_module.native_code_origin) else {
@@ -2238,13 +2238,13 @@ impl Sandbox {
         };
 
         let is_out_of_gas = match compiled_module.bitness {
-            Bitness::B32 => crate::compiler::ArchVisitor::<Self, B32>::on_signal_trap(
+            Bitness::B32 => crate::polkavm::compiler::ArchVisitor::<Self, B32>::on_signal_trap(
                 compiled_module,
                 self.gas_metering.is_some(),
                 machine_code_offset,
                 self.vmctx(),
             ),
-            Bitness::B64 => crate::compiler::ArchVisitor::<Self, B64>::on_signal_trap(
+            Bitness::B64 => crate::polkavm::compiler::ArchVisitor::<Self, B64>::on_signal_trap(
                 compiled_module,
                 self.gas_metering.is_some(),
                 machine_code_offset,
@@ -2264,7 +2264,7 @@ impl Sandbox {
     #[inline(never)]
     #[cold]
     fn wait(&mut self) -> Result<Interrupt, Error> {
-        use crate::sandbox::Sandbox;
+        use crate::polkavm::sandbox::Sandbox;
 
         'outer: loop {
             self.count_wait_loop_start += 1;
@@ -2334,14 +2334,14 @@ impl Sandbox {
                 };
 
                 match compiled_module.bitness {
-                    Bitness::B32 => crate::compiler::ArchVisitor::<Self, B32>::on_page_fault(
+                    Bitness::B32 => crate::polkavm::compiler::ArchVisitor::<Self, B32>::on_page_fault(
                         compiled_module,
                         self.gas_metering.is_some(),
                         machine_code_address,
                         machine_code_offset,
                         self.vmctx(),
                     ),
-                    Bitness::B64 => crate::compiler::ArchVisitor::<Self, B64>::on_page_fault(
+                    Bitness::B64 => crate::polkavm::compiler::ArchVisitor::<Self, B64>::on_page_fault(
                         compiled_module,
                         self.gas_metering.is_some(),
                         machine_code_address,

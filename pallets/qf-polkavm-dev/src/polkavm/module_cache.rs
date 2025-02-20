@@ -1,6 +1,6 @@
-use crate::api::{Module, ModulePrivate};
-use crate::mutex::Mutex;
-use crate::{ModuleConfig, ProgramBlob};
+use crate::polkavm::api::{Module, ModulePrivate};
+use crate::polkavm::mutex::Mutex;
+use crate::polkavm::{ModuleConfig, ProgramBlob};
 use alloc::collections::BTreeMap;
 use alloc::sync::{Arc, Weak};
 use polkavm_common::hasher::Hash;

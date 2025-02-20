@@ -9,14 +9,14 @@ use polkavm_common::program::{
 };
 use polkavm_common::zygote::VM_COMPILER_MAXIMUM_INSTRUCTION_LENGTH;
 
-use crate::error::Error;
+use crate::polkavm::error::Error;
 
-use crate::api::RuntimeInstructionSet;
-use crate::config::{GasMeteringKind, ModuleConfig, SandboxKind};
-use crate::gas::GasVisitor;
-use crate::mutex::Mutex;
-use crate::sandbox::{Sandbox, SandboxInit, SandboxProgram};
-use crate::utils::{FlatMap, GuestInit};
+use crate::polkavm::api::RuntimeInstructionSet;
+use crate::polkavm::config::{GasMeteringKind, ModuleConfig, SandboxKind};
+use crate::polkavm::gas::GasVisitor;
+use crate::polkavm::mutex::Mutex;
+use crate::polkavm::sandbox::{Sandbox, SandboxInit, SandboxProgram};
+use crate::polkavm::utils::{FlatMap, GuestInit};
 
 #[cfg(target_arch = "x86_64")]
 mod amd64;
@@ -168,7 +168,7 @@ where
     where
         S: Sandbox,
     {
-        let native_page_size = crate::sandbox::get_native_page_size();
+        let native_page_size = crate::polkavm::sandbox::get_native_page_size();
         if native_page_size > config.page_size as usize || config.page_size as usize % native_page_size != 0 {
             return Err(format!(
                 "configured page size of {} is incompatible with the native page size of {}",
@@ -178,7 +178,7 @@ where
         }
 
         let address_space = S::reserve_address_space().map_err(Error::from_display)?;
-        let native_code_origin = crate::sandbox::SandboxAddressSpace::native_code_origin(&address_space);
+        let native_code_origin = crate::polkavm::sandbox::SandboxAddressSpace::native_code_origin(&address_space);
 
         let (per_compilation_cache, per_module_cache) = {
             let mut cache = cache.0.lock();
@@ -369,7 +369,7 @@ where
         match S::KIND {
             SandboxKind::Linux => {}
             SandboxKind::Generic => {
-                let native_page_size = crate::sandbox::get_native_page_size();
+                let native_page_size = crate::polkavm::sandbox::get_native_page_size();
                 let padded_length = polkavm_common::utils::align_to_next_page_usize(native_page_size, self.asm.len()).unwrap();
                 self.asm.resize(padded_length, ArchVisitor::<S, B>::PADDING_BYTE);
                 self.asm.define_label(self.jump_table_label);

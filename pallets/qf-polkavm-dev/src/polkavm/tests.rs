@@ -1,5 +1,5 @@
-use crate::mutex::Mutex;
-use crate::{
+use crate::polkavm::mutex::Mutex;
+use crate::polkavm::{
     BackendKind, CallError, Caller, Config, Engine, GasMeteringKind, InterruptKind, Linker, MemoryAccessError, Module, ModuleConfig,
     ProgramBlob, ProgramCounter, Reg, Segfault,
 };
@@ -96,7 +96,7 @@ fn get_test_program(kind: TestProgram, is_64_bit: bool) -> &'static [u8] {
 
 fn get_native_page_size() -> usize {
     if_compiler_is_supported! {
-        { crate::sandbox::get_native_page_size() } else { 4096 }
+        { crate::polkavm::sandbox::get_native_page_size() } else { 4096 }
     }
 }
 
@@ -108,19 +108,19 @@ macro_rules! run_tests {
                     #[cfg(target_os = "linux")]
                     #[test]
                     fn [<compiler_linux_ $test_name>]() {
-                        let mut config = crate::Config::default();
+                        let mut config = crate::polkavm::Config::default();
                         config.set_worker_count(1);
-                        config.set_backend(Some(crate::BackendKind::Compiler));
-                        config.set_sandbox(Some(crate::SandboxKind::Linux));
+                        config.set_backend(Some(crate::polkavm::BackendKind::Compiler));
+                        config.set_sandbox(Some(crate::polkavm::SandboxKind::Linux));
                         $test_name(config);
                     }
 
                     #[cfg(target_os = "linux")]
                     #[test]
                     fn [<tracing_linux_ $test_name>]() {
-                        let mut config = crate::Config::default();
-                        config.set_backend(Some(crate::BackendKind::Compiler));
-                        config.set_sandbox(Some(crate::SandboxKind::Linux));
+                        let mut config = crate::polkavm::Config::default();
+                        config.set_backend(Some(crate::polkavm::BackendKind::Compiler));
+                        config.set_sandbox(Some(crate::polkavm::SandboxKind::Linux));
                         config.set_allow_experimental(true);
                         config.set_crosscheck(true);
                         $test_name(config);
@@ -129,9 +129,9 @@ macro_rules! run_tests {
                     #[cfg(feature = "generic-sandbox")]
                     #[test]
                     fn [<compiler_generic_ $test_name>]() {
-                        let mut config = crate::Config::default();
-                        config.set_backend(Some(crate::BackendKind::Compiler));
-                        config.set_sandbox(Some(crate::SandboxKind::Generic));
+                        let mut config = crate::polkavm::Config::default();
+                        config.set_backend(Some(crate::polkavm::BackendKind::Compiler));
+                        config.set_sandbox(Some(crate::polkavm::SandboxKind::Generic));
                         config.set_allow_experimental(true);
                         $test_name(config);
                     }
@@ -139,9 +139,9 @@ macro_rules! run_tests {
                     #[cfg(feature = "generic-sandbox")]
                     #[test]
                     fn [<tracing_generic_ $test_name>]() {
-                        let mut config = crate::Config::default();
-                        config.set_backend(Some(crate::BackendKind::Compiler));
-                        config.set_sandbox(Some(crate::SandboxKind::Generic));
+                        let mut config = crate::polkavm::Config::default();
+                        config.set_backend(Some(crate::polkavm::BackendKind::Compiler));
+                        config.set_sandbox(Some(crate::polkavm::SandboxKind::Generic));
                         config.set_allow_experimental(true);
                         config.set_crosscheck(true);
                         $test_name(config);
@@ -154,8 +154,8 @@ macro_rules! run_tests {
             paste! {
                 #[test]
                 fn [<interpreter_ $test_name>]() {
-                    let mut config = crate::Config::default();
-                    config.set_backend(Some(crate::BackendKind::Interpreter));
+                    let mut config = crate::polkavm::Config::default();
+                    config.set_backend(Some(crate::polkavm::BackendKind::Interpreter));
                     $test_name(config);
                 }
             }
@@ -527,7 +527,7 @@ fn zero_memory(engine_config: Config) {
 
     let mut instance = module.instantiate().unwrap();
     instance.set_next_program_counter(offsets[0]);
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     match_interrupt!(instance.run().unwrap(), InterruptKind::Ecalli(..));
     assert_eq!(instance.read_u32(memory_map.rw_data_address()).unwrap(), 0x12345678);
     instance.zero_memory(memory_map.rw_data_address(), 2).unwrap();
@@ -602,7 +602,7 @@ fn jump_into_middle_of_basic_block_from_outside(engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_gas(1000);
 
     instance.set_reg(Reg::A0, 0);
@@ -654,7 +654,7 @@ fn jump_into_middle_of_basic_block_from_within(engine_config: Config) {
         let instructions: Vec<_> = module.blob().instructions(DefaultInstructionSet::default()).collect();
 
         let mut instance = module.instantiate().unwrap();
-        instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+        instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
         instance.set_gas(1000);
 
         instance.set_next_program_counter(instructions[0].offset);
@@ -693,7 +693,7 @@ fn jump_into_middle_of_basic_block_from_within(engine_config: Config) {
     let instructions: Vec<_> = module.blob().instructions(DefaultInstructionSet::default()).collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_gas(1000);
 
     instance.set_next_program_counter(instructions[0].offset);
@@ -716,7 +716,7 @@ fn jump_after_invalid_instruction_from_within(engine_config: Config) {
     assert_eq!(
         instructions[0],
         polkavm_common::program::ParsedInstruction {
-            kind: crate::program::Instruction::invalid,
+            kind: crate::polkavm::program::Instruction::invalid,
             offset: ProgramCounter(0),
             next_offset: ProgramCounter(1),
         }
@@ -728,7 +728,7 @@ fn jump_after_invalid_instruction_from_within(engine_config: Config) {
     let module = Module::from_blob(&engine, &module_config, blob.clone()).unwrap();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_gas(1000);
 
     instance.set_next_program_counter(instructions[1].offset);
@@ -769,7 +769,7 @@ fn dynamic_paging_basic(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_reg(Reg::A0, 0x10); // Just clobber the registers.
     instance.set_reg(Reg::A1, 0x11);
     instance.set_reg(Reg::A2, 0x12);
@@ -839,7 +839,7 @@ fn dynamic_paging_freeing_pages(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     instance.zero_memory(segfault.page_address, page_size).unwrap();
@@ -885,7 +885,7 @@ fn dynamic_paging_protect_memory(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(instance.program_counter(), Some(offsets[0]));
@@ -929,7 +929,7 @@ fn dynamic_paging_stress_test(mut engine_config: Config) {
                     .collect();
 
                 let mut instance = module.instantiate().unwrap();
-                instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+                instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
                 instance.set_next_program_counter(offsets[0]);
                 let segfault = expect_segfault(instance.run().unwrap());
                 instance.zero_memory(segfault.page_address, page_size).unwrap();
@@ -974,7 +974,7 @@ fn dynamic_paging_initialize_multiple_pages(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000);
@@ -1013,7 +1013,7 @@ fn dynamic_paging_preinitialize_pages(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.zero_memory(0x10000, page_size * 2).unwrap();
     match_interrupt!(instance.run().unwrap(), InterruptKind::Finished);
@@ -1042,7 +1042,7 @@ fn dynamic_paging_reading_does_not_resolve_segfaults(mut engine_config: Config) 
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000);
@@ -1075,7 +1075,7 @@ fn dynamic_paging_read_at_page_boundary(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000);
@@ -1108,7 +1108,7 @@ fn dynamic_paging_read_at_top_of_address_space(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0xfffff000);
@@ -1144,7 +1144,7 @@ fn dynamic_paging_read_with_upper_bits_set(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000000);
@@ -1173,7 +1173,7 @@ fn dynamic_paging_read_at_bottom_of_address_space(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     assert_eq!(instance.run().unwrap(), InterruptKind::Trap);
 }
@@ -1201,7 +1201,7 @@ fn dynamic_paging_write_at_page_boundary_with_no_pages(mut engine_config: Config
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000);
@@ -1239,7 +1239,7 @@ fn dynamic_paging_write_at_page_boundary_with_first_page(mut engine_config: Conf
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.zero_memory(0x10000, page_size).unwrap();
 
@@ -1275,7 +1275,7 @@ fn dynamic_paging_write_at_page_boundary_with_second_page(mut engine_config: Con
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.zero_memory(0x11000, page_size).unwrap();
 
@@ -1311,7 +1311,7 @@ fn dynamic_paging_change_written_value_and_address_during_segfault(mut engine_co
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.set_reg(Reg::A0, 0x11223344);
     instance.set_reg(Reg::A1, 0x10001);
@@ -1348,7 +1348,7 @@ fn dynamic_paging_cancel_segfault_by_changing_address(mut engine_config: Config)
 
     let mut instance = module.instantiate().unwrap();
     instance.zero_memory(0x11000, page_size).unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.set_reg(Reg::A0, 0x10000);
     let segfault = expect_segfault(instance.run().unwrap());
@@ -1393,7 +1393,7 @@ fn dynamic_paging_worker_recycle_turn_dynamic_paging_on_and_off(mut engine_confi
             assert!(instance.read_u32(0x20000).is_err());
         }
 
-        instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+        instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
         instance.set_next_program_counter(ProgramCounter(0));
         if is_dynamic {
             let segfault = expect_segfault(instance.run().unwrap());
@@ -1461,7 +1461,7 @@ fn dynamic_paging_worker_recycle_during_segfault(mut engine_config: Config) {
     }
 
     let mut instance = module_2.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(ProgramCounter(0));
     match_interrupt!(instance.run().unwrap(), InterruptKind::Finished);
     assert_eq!(instance.read_u32(0x20000).unwrap(), 0x11223344);
@@ -1498,7 +1498,7 @@ fn dynamic_paging_change_program_counter_during_segfault(mut engine_config: Conf
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     let segfault = expect_segfault(instance.run().unwrap());
     assert_eq!(segfault.page_address, 0x10000);
@@ -1538,7 +1538,7 @@ fn dynamic_paging_run_out_of_gas(mut engine_config: Config) {
         .collect();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     instance.set_gas(2);
     match_interrupt!(instance.run().unwrap(), InterruptKind::NotEnoughGas);
@@ -1584,7 +1584,7 @@ fn dynamic_paging_receive_from_another_thread_and_run(mut engine_config: Config)
             .collect();
 
         let mut instance = module.instantiate().unwrap();
-        instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+        instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
         instance.set_next_program_counter(offsets[0]);
         instance.set_gas(1000000);
         instance
@@ -1635,7 +1635,7 @@ fn dynamic_paging_instantiate_on_another_thread(mut engine_config: Config) {
     {
         let module = module.clone();
         let mut instance = std::thread::spawn(move || module.instantiate()).join().unwrap().unwrap();
-        instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+        instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
         instance.set_next_program_counter(offsets[0]);
         instance.set_gas(1000000);
 
@@ -1658,7 +1658,7 @@ fn dynamic_paging_instantiate_on_another_thread(mut engine_config: Config) {
         }
         for thread in threads {
             let mut instance = thread.join().unwrap().unwrap();
-            instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+            instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
             instance.set_next_program_counter(offsets[0]);
             instance.set_gas(1000000);
 
@@ -1736,7 +1736,7 @@ fn dynamic_paging_parallel_page_fault_stress_test(mut engine_config: Config) {
         let mut flag = InterruptOnDrop(Some(Arc::clone(&flag)));
         let thread = std::thread::spawn(move || {
             let mut instance = module.instantiate().unwrap();
-            instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+            instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
             instance.set_next_program_counter(initial_offset);
             instance.set_gas(1000000);
             let mut address = 0x10000;
@@ -1815,7 +1815,7 @@ fn get_blob_impl(optimize: bool, strip: bool, elf: &'static [u8]) -> ProgramBlob
 }
 
 fn doom(config: Config, elf: &'static [u8]) {
-    if config.backend() == Some(crate::BackendKind::Interpreter) || config.crosscheck() {
+    if config.backend() == Some(crate::polkavm::BackendKind::Interpreter) || config.crosscheck() {
         // The interpreter is currently too slow to run doom.
         return;
     }
@@ -1974,7 +1974,7 @@ fn pinky_standard_64(config: Config) {
 }
 
 fn pinky_impl(config: Config, is_64_bit: bool) {
-    if (config.backend() == Some(crate::BackendKind::Interpreter) && cfg!(debug_assertions)) || config.crosscheck() {
+    if (config.backend() == Some(crate::polkavm::BackendKind::Interpreter) && cfg!(debug_assertions)) || config.crosscheck() {
         return; // Too slow.
     }
 
@@ -2045,7 +2045,7 @@ fn dispatch_table(config: Config) {
     assert_eq!(offsets[2], ProgramCounter(10));
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
 
     instance.set_next_program_counter(ProgramCounter(0));
     match_interrupt!(instance.run().unwrap(), InterruptKind::Finished);
@@ -2089,7 +2089,7 @@ fn fallthrough_into_already_compiled_block(config: Config) {
     let module = Module::from_blob(&engine, &module_config, blob).unwrap();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_gas(1000);
     instance.set_next_program_counter(offsets[0]);
     match_interrupt!(instance.run().unwrap(), InterruptKind::Finished);
@@ -2148,7 +2148,7 @@ fn invalid_instruction_after_fallthrough(engine_config: Config) {
     assert_eq!(
         instructions[1],
         polkavm_common::program::ParsedInstruction {
-            kind: crate::program::Instruction::invalid,
+            kind: crate::polkavm::program::Instruction::invalid,
             offset: ProgramCounter(1),
             next_offset: ProgramCounter(2),
         }
@@ -2160,7 +2160,7 @@ fn invalid_instruction_after_fallthrough(engine_config: Config) {
     let module = Module::from_blob(&engine, &module_config, blob.clone()).unwrap();
 
     let mut instance = module.instantiate().unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_gas(1000);
 
     instance.set_next_program_counter(instructions[0].offset);
@@ -2282,7 +2282,7 @@ fn aux_data_works(config: Config) {
     let mut instance = module.instantiate().unwrap();
     instance.write_u32(module.memory_map().aux_data_address(), 0x12345678).unwrap();
     instance.set_reg(Reg::A0, u64::from(module.memory_map().aux_data_address()));
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(offsets[0]);
     match_interrupt!(instance.run().unwrap(), InterruptKind::Trap);
     assert_eq!(instance.program_counter().unwrap(), offsets[1]);
@@ -2318,7 +2318,7 @@ fn aux_data_accessible_area(config: Config) {
     let mut instance = module.instantiate().unwrap();
     instance.set_accessible_aux_size(1).unwrap();
     instance.write_u32(module.memory_map().aux_data_address(), 0x12345678).unwrap();
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
 
     instance.set_reg(Reg::A0, u64::from(module.memory_map().aux_data_address()));
     instance.set_next_program_counter(offsets[0]);
@@ -2445,7 +2445,7 @@ fn sbrk_knob_works(config: Config) {
 
         let mut instance = module.instantiate().unwrap();
         instance.set_reg(Reg::A0, 0);
-        instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+        instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
 
         instance.set_gas(5);
         instance.set_next_program_counter(ProgramCounter(0));
@@ -2463,8 +2463,8 @@ fn sbrk_knob_works(config: Config) {
 }
 
 struct TestInstance {
-    module: crate::Module,
-    instance: crate::Instance,
+    module: crate::polkavm::Module,
+    instance: crate::polkavm::Instance,
 }
 
 impl TestInstance {
@@ -2539,10 +2539,10 @@ impl TestInstance {
         TestInstance { module, instance }
     }
 
-    pub fn call<FnArgs, FnResult>(&mut self, name: &str, args: FnArgs) -> Result<FnResult, crate::CallError>
+    pub fn call<FnArgs, FnResult>(&mut self, name: &str, args: FnArgs) -> Result<FnResult, crate::polkavm::CallError>
     where
-        FnArgs: crate::linker::FuncArgs,
-        FnResult: crate::linker::FuncResult,
+        FnArgs: crate::polkavm::linker::FuncArgs,
+        FnResult: crate::polkavm::linker::FuncResult,
     {
         self.instance.call_typed_and_get_result::<FnResult, FnArgs>(&mut (), name, args)
     }
@@ -3544,7 +3544,7 @@ fn run_riscv_test(engine_config: Config, elf: &[u8], testnum_reg: Reg, optimize:
 
     // Set some gas to prevent infinite loops.
     instance.set_gas(10000);
-    instance.set_reg(Reg::RA, crate::RETURN_TO_HOST);
+    instance.set_reg(Reg::RA, crate::polkavm::RETURN_TO_HOST);
     instance.set_next_program_counter(entry_point);
     let result = instance.run().unwrap();
     if !matches!(result, InterruptKind::Finished) {
@@ -3684,14 +3684,14 @@ macro_rules! assert_send_sync {
 }
 
 assert_send_sync! {
-    crate::Config,
-    crate::Engine,
-    crate::Error,
-    crate::Gas,
-    crate::Instance<(), ()>,
-    crate::InstancePre<(), ()>,
-    crate::Linker<(), ()>,
-    crate::Module,
-    crate::ModuleConfig,
-    crate::ProgramBlob,
+    crate::polkavm::Config,
+    crate::polkavm::Engine,
+    crate::polkavm::Error,
+    crate::polkavm::Gas,
+    crate::polkavm::Instance<(), ()>,
+    crate::polkavm::InstancePre<(), ()>,
+    crate::polkavm::Linker<(), ()>,
+    crate::polkavm::Module,
+    crate::polkavm::ModuleConfig,
+    crate::polkavm::ProgramBlob,
 }

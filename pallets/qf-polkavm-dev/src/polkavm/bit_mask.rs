@@ -98,7 +98,7 @@ where
 #[macro_export]
 macro_rules! _bitmask_type {
     ($primary:ty, $secondary:ty, $bits:expr) => {
-        $crate::bit_mask::BitMask<$primary, $secondary, {
+        $crate::polkavm::bit_mask::BitMask<$primary, $secondary, {
             let bits_per_item = ::core::mem::size_of::<$secondary>() * 8;
             let mut items = $bits / bits_per_item;
             if $bits % bits_per_item != 0 {

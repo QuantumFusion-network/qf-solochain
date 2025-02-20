@@ -1,7 +1,7 @@
-use crate::api::RegValue;
-use crate::error::bail;
-use crate::program::ProgramSymbol;
-use crate::{Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg};
+use crate::polkavm::api::RegValue;
+use crate::polkavm::error::bail;
+use crate::polkavm::program::ProgramSymbol;
+use crate::polkavm::{Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg};
 use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::String;

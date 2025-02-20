@@ -16,28 +16,28 @@ if_compiler_is_supported! {
     };
 }
 
-use crate::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
-use crate::error::{bail, bail_static, Error};
-use crate::interpreter::{InterpretedInstance, InterpretedModule};
-use crate::utils::{GuestInit, InterruptKind};
-use crate::{Gas, ProgramCounter};
+use crate::polkavm::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
+use crate::polkavm::error::{bail, bail_static, Error};
+use crate::polkavm::interpreter::{InterpretedInstance, InterpretedModule};
+use crate::polkavm::utils::{GuestInit, InterruptKind};
+use crate::polkavm::{Gas, ProgramCounter};
 
 #[cfg(feature = "module-cache")]
-use crate::module_cache::{ModuleCache, ModuleKey};
+use crate::polkavm::module_cache::{ModuleCache, ModuleKey};
 
 if_compiler_is_supported! {
     {
-        use crate::sandbox::{Sandbox, SandboxInstance};
-        use crate::compiler::{CompiledModule, CompilerCache, B32, B64};
+        use crate::polkavm::sandbox::{Sandbox, SandboxInstance};
+        use crate::polkavm::compiler::{CompiledModule, CompilerCache, B32, B64};
 
         #[cfg(target_os = "linux")]
-        use crate::sandbox::linux::Sandbox as SandboxLinux;
+        use crate::polkavm::sandbox::linux::Sandbox as SandboxLinux;
         #[cfg(feature = "generic-sandbox")]
-        use crate::sandbox::generic::Sandbox as SandboxGeneric;
+        use crate::polkavm::sandbox::generic::Sandbox as SandboxGeneric;
 
         pub(crate) struct EngineState {
-            pub(crate) sandbox_global: Option<crate::sandbox::GlobalStateKind>,
-            pub(crate) sandbox_cache: Option<crate::sandbox::WorkerCacheKind>,
+            pub(crate) sandbox_global: Option<crate::polkavm::sandbox::GlobalStateKind>,
+            pub(crate) sandbox_cache: Option<crate::polkavm::sandbox::WorkerCacheKind>,
             compiler_cache: CompilerCache,
             #[cfg(feature = "module-cache")]
             module_cache: ModuleCache,
@@ -104,7 +104,7 @@ pub struct Engine {
 impl Engine {
     pub fn new(config: &Config) -> Result<Self, Error> {
         if_compiler_is_supported! {
-            crate::sandbox::init_native_page_size();
+            crate::polkavm::sandbox::init_native_page_size();
         }
 
         if let Some(backend) = config.backend {
@@ -158,8 +158,8 @@ impl Engine {
                         bail!("cannot use the '{selected_sandbox}' sandbox: this sandbox is not production ready and may be insecure; you can enabled `set_allow_experimental`/`POLKAVM_ALLOW_EXPERIMENTAL` to be able to use it anyway");
                     }
 
-                    let sandbox_global = crate::sandbox::GlobalStateKind::new(selected_sandbox, config)?;
-                    let sandbox_cache = crate::sandbox::WorkerCacheKind::new(selected_sandbox, config);
+                    let sandbox_global = crate::polkavm::sandbox::GlobalStateKind::new(selected_sandbox, config)?;
+                    let sandbox_cache = crate::polkavm::sandbox::WorkerCacheKind::new(selected_sandbox, config);
                     for _ in 0..config.worker_count {
                         sandbox_cache.spawn(&sandbox_global)?;
                     }
@@ -461,8 +461,8 @@ impl Module {
         #[allow(unused_macros)]
         macro_rules! compile_module {
             ($sandbox_kind:ident, $bitness_kind:ident, $isa:ident, $isa_no_sbrk:ident, $visitor_name:ident, $module_kind:ident) => {{
-                type VisitorTy<'a> = crate::compiler::CompilerVisitor<'a, $sandbox_kind, $bitness_kind>;
-                let (mut visitor, aux) = crate::compiler::CompilerVisitor::<$sandbox_kind, $bitness_kind>::new(
+                type VisitorTy<'a> = crate::polkavm::compiler::CompilerVisitor<'a, $sandbox_kind, $bitness_kind>;
+                let (mut visitor, aux) = crate::polkavm::compiler::CompilerVisitor::<$sandbox_kind, $bitness_kind>::new(
                     &engine.state.compiler_cache,
                     config,
                     instruction_set,
@@ -694,7 +694,7 @@ impl Module {
     }
 
     /// Returns the module's exports.
-    pub fn exports(&self) -> impl Iterator<Item = crate::program::ProgramExport<&[u8]>> + Clone {
+    pub fn exports(&self) -> impl Iterator<Item = crate::polkavm::program::ProgramExport<&[u8]>> + Clone {
         self.state().blob.exports()
     }
 
@@ -781,7 +781,7 @@ impl Module {
             return None;
         }
 
-        let gas = crate::gas::calculate_for_block(self.instructions_bounded_at(code_offset));
+        let gas = crate::polkavm::gas::calculate_for_block(self.instructions_bounded_at(code_offset));
         Some(i64::from(gas.0))
     }
 
@@ -1478,7 +1478,7 @@ impl RawInstance {
     /// Will panic if marshalling `args` through the FFI boundary requires too many registers.
     pub fn prepare_call_typed<FnArgs>(&mut self, pc: ProgramCounter, args: FnArgs)
     where
-        FnArgs: crate::linker::FuncArgs,
+        FnArgs: crate::polkavm::linker::FuncArgs,
     {
         let mut regs = [0; Reg::ARG_REGS.len()];
         let mut input_count = 0;
@@ -1496,7 +1496,7 @@ impl RawInstance {
     /// This is equivalent to manually calling [`RawInstance::reg`].
     pub fn get_result_typed<FnResult>(&self) -> FnResult
     where
-        FnResult: crate::linker::FuncResult,
+        FnResult: crate::polkavm::linker::FuncResult,
     {
         let mut output_count = 0;
         FnResult::_get(self.module().blob().is_64_bit(), || {

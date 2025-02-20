@@ -179,7 +179,7 @@ trait BitMaskT: Default {
     fn find_first(&mut self, min_index: Self::Index) -> Option<Self::Index>;
 }
 
-impl<Primary, Secondary> BitIndexT for crate::bit_mask::BitIndex<Primary, Secondary>
+impl<Primary, Secondary> BitIndexT for crate::polkavm::bit_mask::BitIndex<Primary, Secondary>
 where
     Primary: Copy + core::fmt::Debug,
     Secondary: Copy + core::fmt::Debug,
@@ -190,12 +190,12 @@ where
     }
 }
 
-impl<Primary, Secondary, const SECONDARY_LENGTH: usize> BitMaskT for crate::bit_mask::BitMask<Primary, Secondary, SECONDARY_LENGTH>
+impl<Primary, Secondary, const SECONDARY_LENGTH: usize> BitMaskT for crate::polkavm::bit_mask::BitMask<Primary, Secondary, SECONDARY_LENGTH>
 where
-    Primary: crate::bit_mask::RawMask,
-    Secondary: crate::bit_mask::RawMask,
+    Primary: crate::polkavm::bit_mask::RawMask,
+    Secondary: crate::polkavm::bit_mask::RawMask,
 {
-    type Index = crate::bit_mask::BitIndex<Primary, Secondary>;
+    type Index = crate::polkavm::bit_mask::BitIndex<Primary, Secondary>;
 
     #[inline]
     fn index(index: u32) -> Self::Index {
@@ -279,24 +279,24 @@ macro_rules! _allocator_config {
             const MAX_BINS: u32 = $max_bins:expr;
         }
     ) => {
-        impl $crate::generic_allocator::AllocatorConfig for $type {
+        impl $crate::polkavm::generic_allocator::AllocatorConfig for $type {
             type Size = $Size;
             const MAX_ALLOCATION_SIZE: $Size = $max_allocation_size;
-            type BitMask = $crate::bit_mask::bitmask_type!(
+            type BitMask = $crate::polkavm::bit_mask::bitmask_type!(
                 usize,
                 usize,
-                $crate::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins).bin_count
+                $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins).bin_count
                     as usize
             );
             type BinArray =
-                [u32; $crate::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
+                [u32; $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
                     .bin_count as usize];
 
             fn to_bin_index<const ROUND_UP: bool>(size: $Size) -> u32 {
                 const MANTISSA_BITS: u32 =
-                    $crate::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
+                    $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
                         .mantissa_bits;
-                $crate::generic_allocator::$Size::to_bin_index::<MANTISSA_BITS, ROUND_UP>(size)
+                $crate::polkavm::generic_allocator::$Size::to_bin_index::<MANTISSA_BITS, ROUND_UP>(size)
             }
         }
     };
@@ -628,7 +628,7 @@ pub mod tests {
     struct TestConfig64;
 
     #[cfg(test)]
-    crate::generic_allocator::allocator_config! {
+    crate::polkavm::generic_allocator::allocator_config! {
         impl AllocatorConfig for TestConfig64 {
             const MAX_ALLOCATION_SIZE: u64 = 6000000;
             const MAX_BINS: u32 = 4096;

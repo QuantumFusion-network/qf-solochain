@@ -1,11 +1,11 @@
 #![allow(unknown_lints)] // Because of `non_local_definitions` on older rustc versions.
 #![allow(non_local_definitions)]
 #![deny(clippy::as_conversions)]
-use crate::api::{MemoryAccessError, Module, RegValue};
-use crate::error::Error;
-use crate::gas::GasVisitor;
-use crate::utils::{FlatMap, GuestInit, InterruptKind, Segfault};
-use crate::{Gas, GasMeteringKind, ProgramCounter};
+use crate::polkavm::api::{MemoryAccessError, Module, RegValue};
+use crate::polkavm::error::Error;
+use crate::polkavm::gas::GasVisitor;
+use crate::polkavm::utils::{FlatMap, GuestInit, InterruptKind, Segfault};
+use crate::polkavm::{Gas, GasMeteringKind, ProgramCounter};
 use alloc::boxed::Box;
 use alloc::collections::btree_map::Entry;
 use alloc::collections::BTreeMap;
@@ -932,7 +932,7 @@ impl InterpretedInstance {
         }
 
         let gas_cost = if self.module.gas_metering().is_some() {
-            crate::gas::trap_cost()
+            crate::polkavm::gas::trap_cost()
         } else {
             0
         };

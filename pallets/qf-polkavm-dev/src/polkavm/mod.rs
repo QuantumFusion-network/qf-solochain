@@ -75,7 +75,7 @@ mod mutex_no_std;
 #[cfg(not(feature = "std"))]
 pub(crate) use mutex_no_std as mutex;
 
-impl<T> Default for crate::mutex::Mutex<T>
+impl<T> Default for crate::polkavm::mutex::Mutex<T>
 where
     T: Default,
 {
@@ -125,7 +125,7 @@ pub mod debug_info {
     pub use polkavm_common::program::{FrameInfo, FrameKind, LineProgram, RegionInfo, SourceLocation};
 
     #[cfg(feature = "std")]
-    pub use crate::source_cache::SourceCache;
+    pub use crate::polkavm::source_cache::SourceCache;
 }
 
 /// Miscellaneous types related to program blobs.
@@ -138,11 +138,11 @@ pub mod program {
 
 pub type Gas = i64;
 
-pub use crate::api::{Engine, MemoryAccessError, Module, RawInstance, RegValue};
-pub use crate::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
-pub use crate::error::Error;
-pub use crate::linker::{CallError, Caller, Instance, InstancePre, Linker, State};
-pub use crate::utils::{InterruptKind, Segfault};
+pub use crate::polkavm::api::{Engine, MemoryAccessError, Module, RawInstance, RegValue};
+pub use crate::polkavm::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
+pub use crate::polkavm::error::Error;
+pub use crate::polkavm::linker::{CallError, Caller, Instance, InstancePre, Linker, State};
+pub use crate::polkavm::utils::{InterruptKind, Segfault};
 
 pub const RETURN_TO_HOST: u64 = polkavm_common::abi::VM_ADDR_RETURN_TO_HOST as u64;
 
@@ -161,10 +161,10 @@ pub mod bit_mask;
 pub mod _for_testing {
     #[cfg(target_os = "linux")]
     if_compiler_is_supported! {
-        pub use crate::shm_allocator::{ShmAllocation, ShmAllocator};
-        pub fn create_shm_allocator() -> Result<crate::shm_allocator::ShmAllocator, polkavm_linux_raw::Error> {
-            crate::sandbox::init_native_page_size();
-            crate::shm_allocator::ShmAllocator::new()
+        pub use crate::polkavm::shm_allocator::{ShmAllocation, ShmAllocator};
+        pub fn create_shm_allocator() -> Result<crate::polkavm::shm_allocator::ShmAllocator, polkavm_linux_raw::Error> {
+            crate::polkavm::sandbox::init_native_page_size();
+            crate::polkavm::shm_allocator::ShmAllocator::new()
         }
     }
 }

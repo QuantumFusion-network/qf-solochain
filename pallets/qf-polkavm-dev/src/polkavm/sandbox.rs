@@ -4,13 +4,13 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 use polkavm_common::zygote::AddressTable;
 
-use crate::api::{EngineState, Module};
-use crate::compiler::CompiledModule;
-use crate::config::{Config, SandboxKind};
-use crate::error::Error;
-use crate::mutex::Mutex;
-use crate::utils::GuestInit;
-use crate::{Gas, InterruptKind, MemoryAccessError, ProgramCounter, Reg, RegValue};
+use crate::polkavm::api::{EngineState, Module};
+use crate::polkavm::compiler::CompiledModule;
+use crate::polkavm::config::{Config, SandboxKind};
+use crate::polkavm::error::Error;
+use crate::polkavm::mutex::Mutex;
+use crate::polkavm::utils::GuestInit;
+use crate::polkavm::{Gas, InterruptKind, MemoryAccessError, ProgramCounter, Reg, RegValue};
 
 macro_rules! get_field_offset {
     ($struct:expr, |$struct_ident:ident| $get_field:expr) => {{
@@ -161,7 +161,7 @@ where
     S: Sandbox,
 {
     pub fn spawn_and_load_module(engine_state: Arc<EngineState>, module: &Module) -> Result<Self, Error> {
-        use crate::sandbox::SandboxConfig;
+        use crate::polkavm::sandbox::SandboxConfig;
 
         let mut sandbox_config = S::Config::default();
         sandbox_config.enable_logger(is_sandbox_logging_enabled());
@@ -222,9 +222,9 @@ where
 
 pub(crate) enum GlobalStateKind {
     #[cfg(target_os = "linux")]
-    Linux(crate::sandbox::linux::GlobalState),
+    Linux(crate::polkavm::sandbox::linux::GlobalState),
     #[cfg(feature = "generic-sandbox")]
-    Generic(crate::sandbox::generic::GlobalState),
+    Generic(crate::polkavm::sandbox::generic::GlobalState),
 }
 
 impl GlobalStateKind {
@@ -234,7 +234,7 @@ impl GlobalStateKind {
                 #[cfg(target_os = "linux")]
                 {
                     Ok(Self::Linux(
-                        crate::sandbox::linux::GlobalState::new(config)
+                        crate::polkavm::sandbox::linux::GlobalState::new(config)
                             .map_err(|error| format!("failed to initialize Linux sandbox: {error}"))?,
                     ))
                 }
@@ -248,7 +248,7 @@ impl GlobalStateKind {
                 #[cfg(feature = "generic-sandbox")]
                 {
                     Ok(Self::Generic(
-                        crate::sandbox::generic::GlobalState::new(config)
+                        crate::polkavm::sandbox::generic::GlobalState::new(config)
                             .map_err(|error| format!("failed to initialize generic sandbox: {error}"))?,
                     ))
                 }
@@ -264,9 +264,9 @@ impl GlobalStateKind {
 
 pub(crate) enum WorkerCacheKind {
     #[cfg(target_os = "linux")]
-    Linux(WorkerCache<crate::sandbox::linux::Sandbox>),
+    Linux(WorkerCache<crate::polkavm::sandbox::linux::Sandbox>),
     #[cfg(feature = "generic-sandbox")]
-    Generic(WorkerCache<crate::sandbox::generic::Sandbox>),
+    Generic(WorkerCache<crate::polkavm::sandbox::generic::Sandbox>),
 }
 
 impl WorkerCacheKind {
@@ -300,9 +300,9 @@ impl WorkerCacheKind {
     pub(crate) fn spawn(&self, global: &GlobalStateKind) -> Result<(), Error> {
         match self {
             #[cfg(target_os = "linux")]
-            WorkerCacheKind::Linux(ref cache) => cache.spawn(crate::sandbox::linux::Sandbox::downcast_global_state(global)),
+            WorkerCacheKind::Linux(ref cache) => cache.spawn(crate::polkavm::sandbox::linux::Sandbox::downcast_global_state(global)),
             #[cfg(feature = "generic-sandbox")]
-            WorkerCacheKind::Generic(ref cache) => cache.spawn(crate::sandbox::generic::Sandbox::downcast_global_state(global)),
+            WorkerCacheKind::Generic(ref cache) => cache.spawn(crate::polkavm::sandbox::generic::Sandbox::downcast_global_state(global)),
         }
     }
 }
@@ -330,7 +330,7 @@ where
         sandbox_config.enable_logger(is_sandbox_logging_enabled());
 
         let sandbox = S::spawn(global, &sandbox_config)
-            .map_err(crate::Error::from_display)
+            .map_err(crate::polkavm::Error::from_display)
             .map_err(|error| {
                 error.context(format!(
                     "failed to create a worker process ({} already exist)",
