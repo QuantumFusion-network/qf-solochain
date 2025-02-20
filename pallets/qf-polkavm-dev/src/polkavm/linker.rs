@@ -593,18 +593,20 @@ where
 }
 
 pub struct State<T: PalletConfig> {
-    pub from: T::AccountId,
+    pub caller_address: T::AccountId,
     pub address: Vec<u8>,
     pub foo: u32,
+    pub now: fn() -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
     pub fn new(
-        from: T::AccountId,
+        caller_address: T::AccountId,
         address: Vec<u8>,
         foo: u32,
+        now: fn() -> u64,
     ) -> Self {
-        Self { from, address, foo }
+        Self { caller_address, address, foo, now }
     }
 }
 

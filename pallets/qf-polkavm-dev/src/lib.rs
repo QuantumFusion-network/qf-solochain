@@ -66,7 +66,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::prelude::sync::Arc;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::traits::Hash;
+    use sp_runtime::{traits::Hash, SaturatedConversion};
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
@@ -123,7 +123,7 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type CalculationResult<T: Config> =
-        StorageMap<_, Blake2_128Concat, (CodeHash<T>, T::AccountId), u32>;
+        StorageMap<_, Blake2_128Concat, (CodeHash<T>, T::AccountId), u64>;
 
     #[pallet::storage]
     pub(super) type CodeMetadata<T: Config> =
@@ -148,7 +148,7 @@ pub mod pallet {
             who: T::AccountId,
             address: CodeHash<T>,
             /// The new value set.
-            result: u32,
+            result: u64,
         },
         ProgramBlobUploaded {
             /// The account who uploaded ProgramBlob.
@@ -282,10 +282,11 @@ pub mod pallet {
                 who.clone(),
                 Vec::new(),
                 42,
+                || -> u64 { T::Time::now().saturated_into::<u64>() }
             );
 
             let result = instance
-                .call_typed_and_get_result::<u32, (u32, u32)>(&mut state, "add_numbers", (a, b))
+                .call_typed_and_get_result::<u64, (u32, u32)>(&mut state, "add_numbers", (a, b))
                 .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
@@ -340,11 +341,12 @@ pub mod pallet {
             // }
             // linker.define_untyped("transfer", foo).unwrap();
 
-            linker.define_typed("now", move |caller: Caller<T>| -> u32 {
-                match T::Time::now().try_into() {
-                    Ok(now) => now,
-                    _ => 0,
-                }
+            linker.define_typed("now", move |caller: Caller<T>| -> u64 {
+                (caller.user_data.now)()
+                // match T::Time::now().try_into() {
+                //     Ok(now) => now,
+                //     _ => 0,
+                // }
              }).unwrap();
             // linker
             //     .define_typed(
