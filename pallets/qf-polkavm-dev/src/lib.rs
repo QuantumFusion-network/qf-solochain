@@ -275,6 +275,7 @@ pub mod pallet {
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
             let mut state = State::new(
+                who.clone(),
                 Vec::new(),
                 42,
             );
@@ -301,7 +302,7 @@ pub mod pallet {
         type T: Config;
 
         fn prepare(raw_blob: Vec<u8>) -> Result<PolkaVMModule, DispatchError>;
-        fn instantiate(module: PolkaVMModule) -> Result<Instance, DispatchError>;
+        fn instantiate(module: PolkaVMModule) -> Result<Instance<Self::T>, DispatchError>;
     }
 
     impl<T: Config> ModuleLoader for Pallet<T> {
@@ -322,9 +323,9 @@ pub mod pallet {
         }
 
         // fn instantiate(module: PolkaVMModule, stack: Stack<Self::T>) -> Result<Instance, DispatchError> {
-        fn instantiate(module: PolkaVMModule) -> Result<Instance, DispatchError> {
+        fn instantiate(module: PolkaVMModule) -> Result<Instance<T>, DispatchError> {
             // High-level API.
-            let mut linker: Linker = Linker::new();
+            let mut linker: Linker<T> = Linker::<T>::new();
 
             // linker.define_typed("transfer", |stack: Stack<Self::T>, to: &T::AccountId, value: BalanceOf<T>| -> Result<(), DispatchError> {
             //     stack.transfer(to, value)
@@ -335,7 +336,7 @@ pub mod pallet {
             // }
             // linker.define_untyped("transfer", foo).unwrap();
 
-            linker.define_typed("transfer", move |caller: Caller, to: u32, value: u32| -> u32 { todo!() }).unwrap();
+            linker.define_typed("transfer", move |caller: Caller<T>, to: u32, value: u32| -> u32 { todo!() }).unwrap();
             // linker
             //     .define_typed(
             //         "transfer",

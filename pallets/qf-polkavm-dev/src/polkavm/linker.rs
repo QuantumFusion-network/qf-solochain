@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use crate::Config as PalletConfig;
 use crate::polkavm::api::RegValue;
 use crate::polkavm::error::bail;
 use crate::polkavm::program::ProgramSymbol;
@@ -21,22 +22,22 @@ use std::collections::hash_map::Entry;
 #[cfg(feature = "std")]
 use std::collections::HashMap as LookupMap;
 
-trait CallFn<UserError>: Send + Sync {
-    fn call(&self, user_data: &mut State, instance: &mut RawInstance) -> Result<(), UserError>;
+trait CallFn<T: PalletConfig, UserError>: Send + Sync {
+    fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
 }
 
 #[repr(transparent)]
-pub struct CallFnArc<UserError>(Arc<dyn CallFn<UserError>>);
+pub struct CallFnArc<T: PalletConfig, UserError>(Arc<dyn CallFn<T, UserError>>);
 
-type FallbackHandlerArc<UserError> = Arc<dyn Fn(Caller, u32) -> Result<(), UserError> + Send + Sync + 'static>;
+type FallbackHandlerArc<T, UserError> = Arc<dyn Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static>;
 
-impl<UserError> Clone for CallFnArc<UserError> {
+impl<T: PalletConfig, UserError> Clone for CallFnArc<T, UserError> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
 }
 
-pub trait IntoCallFn<UserError, Params, Result>: Send + Sync + 'static {
+pub trait IntoCallFn<T: PalletConfig, UserError, Params, Result>: Send + Sync + 'static {
     #[doc(hidden)]
     const _REGS_REQUIRED_32: usize;
 
@@ -44,7 +45,7 @@ pub trait IntoCallFn<UserError, Params, Result>: Send + Sync + 'static {
     const _REGS_REQUIRED_64: usize;
 
     #[doc(hidden)]
-    fn _into_extern_fn(self) -> CallFnArc<UserError>;
+    fn _into_extern_fn(self) -> CallFnArc<T, UserError>;
 }
 
 /// A type which can be marshalled through the VM's FFI boundary.
@@ -465,13 +466,14 @@ macro_rules! impl_into_extern_fn {
     }};
 
     ($arg_count:tt $($args:ident)*) => {
-        impl<UserError, F, $($args,)* R> CallFn<UserError> for (F, UnsafePhantomData<(R, $($args),*)>)
+        impl<T, UserError, F, $($args,)* R> CallFn<T, UserError> for (F, UnsafePhantomData<(R, $($args),*)>)
             where
-            F: Fn(Caller<'_>, $($args),*) -> R + Send + Sync + 'static,
+            F: Fn(Caller<'_, T>, $($args),*) -> R + Send + Sync + 'static,
             $($args: AbiTy,)*
             R: ReturnTy<UserError>,
+            T: PalletConfig,
         {
-            fn call(&self, user_data: &mut State, instance: &mut RawInstance) -> Result<(), UserError> {
+            fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError> {
                 let is_64_bit = instance.module().blob().is_64_bit();
                 let result = {
                     #[allow(unused_mut)]
@@ -500,34 +502,36 @@ macro_rules! impl_into_extern_fn {
             }
         }
 
-        impl<UserError, F, $($args,)* R> IntoCallFn<UserError, ($($args,)*), R> for F
+        impl<T, UserError, F, $($args,)* R> IntoCallFn<T, UserError, ($($args,)*), R> for F
         where
             F: Fn($($args),*) -> R + Send + Sync + 'static,
             $($args: AbiTy,)*
             R: ReturnTy<UserError>,
+            T: PalletConfig,
         {
             const _REGS_REQUIRED_32: usize = 0 $(+ $args::_REGS_REQUIRED_32)*;
             const _REGS_REQUIRED_64: usize = 0 $(+ $args::_REGS_REQUIRED_64)*;
 
-            fn _into_extern_fn(self) -> CallFnArc<UserError> {
+            fn _into_extern_fn(self) -> CallFnArc<T, UserError> {
                 #[allow(non_snake_case)]
-                let callback = move |_caller: Caller, $($args: $args),*| -> R {
+                let callback = move |_caller: Caller<T>, $($args: $args),*| -> R {
                     self($($args),*)
                 };
                 CallFnArc(Arc::new((callback, UnsafePhantomData(PhantomData::<(R, $($args),*)>))))
             }
         }
 
-        impl<UserError, F, $($args,)* R> IntoCallFn<UserError, (Caller<'_>, $($args,)*), R> for F
+        impl<T, UserError, F, $($args,)* R> IntoCallFn<T, UserError, (Caller<'_, T>, $($args,)*), R> for F
         where
-            F: Fn(Caller<'_>, $($args),*) -> R + Send + Sync + 'static,
+            F: Fn(Caller<'_, T>, $($args),*) -> R + Send + Sync + 'static,
             $($args: AbiTy,)*
             R: ReturnTy<UserError>,
+            T: PalletConfig,
         {
             const _REGS_REQUIRED_32: usize = 0 $(+ $args::_REGS_REQUIRED_32)*;
             const _REGS_REQUIRED_64: usize = 0 $(+ $args::_REGS_REQUIRED_64)*;
 
-            fn _into_extern_fn(self) -> CallFnArc<UserError> {
+            fn _into_extern_fn(self) -> CallFnArc<T, UserError> {
                 CallFnArc(Arc::new((self, UnsafePhantomData(PhantomData::<(R, $($args),*)>))))
             }
         }
@@ -577,51 +581,53 @@ struct DynamicFn<T, F> {
     _phantom: UnsafePhantomData<T>,
 }
 
-impl<UserError, F, T> CallFn<UserError> for DynamicFn<T, F>
+impl<P: PalletConfig, UserError, F, T> CallFn<P, UserError> for DynamicFn<T, F>
 where
-    F: Fn(Caller<'_>) -> Result<(), UserError> + Send + Sync + 'static,
+    F: Fn(Caller<'_, P>) -> Result<(), UserError> + Send + Sync + 'static,
 {
-    fn call(&self, user_data: &mut State, instance: &mut RawInstance) -> Result<(), UserError> {
+    fn call(&self, user_data: &mut State<P>, instance: &mut RawInstance) -> Result<(), UserError> {
         let caller = Caller { user_data, instance };
 
         (self.callback)(caller)
     }
 }
 
-pub struct State {
-     pub address: Vec<u8>,
-     pub foo: u32,
+pub struct State<T: PalletConfig> {
+    pub from: T::AccountId,
+    pub address: Vec<u8>,
+    pub foo: u32,
 }
 
-impl State {
+impl<T: PalletConfig> State<T> {
     pub fn new(
+        from: T::AccountId,
         address: Vec<u8>,
         foo: u32,
     ) -> Self {
-        Self { address, foo }
+        Self { from, address, foo }
     }
 }
 
 #[non_exhaustive]
-pub struct Caller<'a> {
-    pub user_data: &'a mut State,
+pub struct Caller<'a, T: PalletConfig> {
+    pub user_data: &'a mut State<T>,
     pub instance: &'a mut RawInstance,
 }
 
-pub struct Linker<UserError = core::convert::Infallible> {
-    host_functions: LookupMap<Vec<u8>, CallFnArc<UserError>>,
+pub struct Linker<T: PalletConfig, UserError = core::convert::Infallible> {
+    host_functions: LookupMap<Vec<u8>, CallFnArc<T, UserError>>,
     #[allow(clippy::type_complexity)]
-    fallback_handler: Option<FallbackHandlerArc<UserError>>,
+    fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
     phantom: PhantomData<UserError>,
 }
 
-impl<UserError> Default for Linker<UserError> {
+impl<T: PalletConfig, UserError> Default for Linker<T, UserError> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<UserError> Linker<UserError> {
+impl<T: PalletConfig, UserError> Linker<T, UserError> {
     pub fn new() -> Self {
         Self {
             host_functions: Default::default(),
@@ -631,7 +637,7 @@ impl<UserError> Linker<UserError> {
     }
 
     /// Defines a fallback external call handler, in case no other registered functions match.
-    pub fn define_fallback(&mut self, func: impl Fn(Caller, u32) -> Result<(), UserError> + Send + Sync + 'static) {
+    pub fn define_fallback(&mut self, func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static) {
         self.fallback_handler = Some(Arc::new(func));
     }
 
@@ -639,10 +645,11 @@ impl<UserError> Linker<UserError> {
     pub fn define_untyped(
         &mut self,
         symbol: impl AsRef<[u8]>,
-        func: impl Fn(Caller) -> Result<(), UserError> + Send + Sync + 'static,
+        func: impl Fn(Caller<T>) -> Result<(), UserError> + Send + Sync + 'static,
     ) -> Result<&mut Self, Error>
     where
         UserError: 'static,
+        T: PalletConfig,
     {
         let symbol = symbol.as_ref();
         if self.host_functions.contains_key(symbol) {
@@ -667,7 +674,7 @@ impl<UserError> Linker<UserError> {
     pub fn define_typed<Params, Args>(
         &mut self,
         symbol: impl AsRef<[u8]>,
-        func: impl IntoCallFn<UserError, Params, Args>,
+        func: impl IntoCallFn<T, UserError, Params, Args>,
     ) -> Result<&mut Self, Error> {
         let symbol = symbol.as_ref();
         if self.host_functions.contains_key(symbol) {
@@ -682,7 +689,7 @@ impl<UserError> Linker<UserError> {
     }
 
     /// Pre-instantiates a new module, resolving its imports and exports.
-    pub fn instantiate_pre(&self, module: &Module) -> Result<InstancePre<UserError>, Error> {
+    pub fn instantiate_pre(&self, module: &Module) -> Result<InstancePre<T, UserError>, Error> {
         let mut exports = LookupMap::new();
         for export in module.exports() {
             match exports.entry(export.symbol().as_bytes().to_owned()) {
@@ -700,7 +707,7 @@ impl<UserError> Linker<UserError> {
             }
         }
 
-        let mut imports: Vec<Option<CallFnArc<UserError>>> = Vec::with_capacity(module.imports().len() as usize);
+        let mut imports: Vec<Option<CallFnArc<T, UserError>>> = Vec::with_capacity(module.imports().len() as usize);
         for symbol in module.imports() {
             let Some(symbol) = symbol else {
                 if module.is_strict() {
@@ -735,34 +742,34 @@ impl<UserError> Linker<UserError> {
     }
 }
 
-struct InstancePreState<UserError> {
+struct InstancePreState<T: PalletConfig, UserError> {
     module: Module,
-    imports: Vec<Option<CallFnArc<UserError>>>,
+    imports: Vec<Option<CallFnArc<T, UserError>>>,
     exports: LookupMap<Vec<u8>, ProgramCounter>,
-    fallback_handler: Option<FallbackHandlerArc<UserError>>,
+    fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
 }
 
-pub struct InstancePre<UserError = core::convert::Infallible>(Arc<InstancePreState<UserError>>);
+pub struct InstancePre<T: PalletConfig, UserError = core::convert::Infallible>(Arc<InstancePreState<T, UserError>>);
 
-impl<UserError> Clone for InstancePre<UserError> {
+impl<T: PalletConfig, UserError> Clone for InstancePre<T, UserError> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
 }
 
-pub struct Instance<UserError = core::convert::Infallible> {
+pub struct Instance<T: PalletConfig, UserError = core::convert::Infallible> {
     instance: RawInstance,
-    pre: InstancePre<UserError>,
+    pre: InstancePre<T, UserError>,
 }
+impl<T: PalletConfig, UserError> core::ops::Deref for Instance<T, UserError> {
 
-impl<UserError> core::ops::Deref for Instance<UserError> {
     type Target = RawInstance;
     fn deref(&self) -> &Self::Target {
         &self.instance
     }
 }
 
-impl<UserError> core::ops::DerefMut for Instance<UserError> {
+impl<T: PalletConfig, UserError> core::ops::DerefMut for Instance<T, UserError> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.instance
     }
@@ -783,8 +790,8 @@ pub enum CallError<UserError = core::convert::Infallible> {
     User(UserError),
 }
 
-impl<UserError> InstancePre<UserError> {
-    pub fn instantiate(&self) -> Result<Instance<UserError>, Error> {
+impl<T: PalletConfig, UserError> InstancePre<T, UserError> {
+    pub fn instantiate(&self) -> Result<Instance<T, UserError>, Error> {
         Ok(Instance {
             instance: self.0.module.instantiate()?,
             pre: self.clone(),
@@ -818,16 +825,17 @@ impl EntryPoint for ProgramCounter {
     }
 }
 
-impl<UserError> Instance<UserError> {
+impl<T: PalletConfig, UserError> Instance<T, UserError> {
     /// Calls a given exported function with the given arguments.
     pub fn call_typed<FnArgs>(
         &mut self,
-        user_data: &mut State,
+        user_data: &mut State<T>,
         entry_point: impl EntryPoint,
         args: FnArgs,
     ) -> Result<(), CallError<UserError>>
     where
         FnArgs: FuncArgs,
+        T: PalletConfig,
     {
         let entry_point = entry_point
             .get(&self.pre.0.exports)
@@ -921,13 +929,14 @@ impl<UserError> Instance<UserError> {
     /// A conveniance function to call [`Instance::call_typed`] and [`RawInstance::get_result_typed`] in a single function call.
     pub fn call_typed_and_get_result<FnResult, FnArgs>(
         &mut self,
-        user_data: &mut State,
+        user_data: &mut State<T>,
         entry_point: impl EntryPoint,
         args: FnArgs,
     ) -> Result<FnResult, CallError<UserError>>
     where
         FnArgs: FuncArgs,
         FnResult: FuncResult,
+        T: PalletConfig,
     {
         self.call_typed(user_data, entry_point, args)?;
         Ok(self.instance.get_result_typed::<FnResult>())
