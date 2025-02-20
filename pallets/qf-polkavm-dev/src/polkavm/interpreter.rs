@@ -1,6 +1,9 @@
 #![allow(unknown_lints)] // Because of `non_local_definitions` on older rustc versions.
 #![allow(non_local_definitions)]
 #![deny(clippy::as_conversions)]
+
+extern crate alloc;
+
 use crate::polkavm::api::{MemoryAccessError, Module, RegValue};
 use crate::polkavm::error::Error;
 use crate::polkavm::gas::GasVisitor;

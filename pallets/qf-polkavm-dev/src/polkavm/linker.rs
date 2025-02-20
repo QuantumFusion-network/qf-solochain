@@ -1,3 +1,5 @@
+extern crate alloc;
+
 use crate::polkavm::api::RegValue;
 use crate::polkavm::error::bail;
 use crate::polkavm::program::ProgramSymbol;

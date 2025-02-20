@@ -1,3 +1,4 @@
+extern crate alloc;
 use alloc::string::{String, ToString};
 use polkavm_common::program::ProgramParseError;
 

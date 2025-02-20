@@ -1135,7 +1135,7 @@ impl super::Sandbox for Sandbox {
     type JumpTable = JumpTableAllocation;
 
     fn downcast_module(module: &Module) -> &CompiledModule<Self> {
-        let CompiledModuleKind::Linux(ref module) = module.compiled_module() else {
+        let CompiledModuleKind::Linux(module) = module.compiled_module() else {
             unreachable!()
         };
         module
@@ -1143,7 +1143,7 @@ impl super::Sandbox for Sandbox {
 
     fn downcast_global_state(global: &crate::polkavm::sandbox::GlobalStateKind) -> &Self::GlobalState {
         #[allow(irrefutable_let_patterns)]
-        let crate::polkavm::sandbox::GlobalStateKind::Linux(ref global) = global
+        let crate::polkavm::sandbox::GlobalStateKind::Linux(global) = global
         else {
             unreachable!()
         };
@@ -1152,7 +1152,7 @@ impl super::Sandbox for Sandbox {
 
     fn downcast_worker_cache(cache: &WorkerCacheKind) -> &WorkerCache<Self> {
         #[allow(irrefutable_let_patterns)]
-        let crate::polkavm::sandbox::WorkerCacheKind::Linux(ref cache) = cache
+        let crate::polkavm::sandbox::WorkerCacheKind::Linux(cache) = cache
         else {
             unreachable!()
         };

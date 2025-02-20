@@ -1,5 +1,7 @@
 #![allow(clippy::undocumented_unsafe_blocks)]
 
+extern crate alloc;
+
 use polkavm_common::cast::cast;
 
 use crate::polkavm::mutex::Mutex;

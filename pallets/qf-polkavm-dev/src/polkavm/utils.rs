@@ -1,3 +1,5 @@
+extern crate alloc;
+
 use alloc::vec::Vec;
 use polkavm_common::program::RawReg;
 

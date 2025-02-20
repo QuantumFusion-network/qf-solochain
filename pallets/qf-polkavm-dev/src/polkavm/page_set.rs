@@ -1,5 +1,7 @@
 // TODO: This is inefficient. REWRITE THIS.
 
+extern crate alloc;
+
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
 use core::cmp::Ord;

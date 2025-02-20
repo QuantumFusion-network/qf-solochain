@@ -64,13 +64,13 @@ mod source_cache;
 mod utils;
 
 #[cfg(feature = "std")]
-mod mutex_std;
+pub mod mutex_std;
 
 #[cfg(feature = "std")]
 pub(crate) use mutex_std as mutex;
 
 #[cfg(not(feature = "std"))]
-mod mutex_no_std;
+pub mod mutex_no_std;
 
 #[cfg(not(feature = "std"))]
 pub(crate) use mutex_no_std as mutex;

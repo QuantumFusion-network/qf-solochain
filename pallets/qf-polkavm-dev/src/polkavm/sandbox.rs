@@ -1,3 +1,5 @@
+extern crate alloc;
+
 use alloc::sync::Arc;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -35,8 +37,8 @@ pub mod linux;
 const _SC_PAGESIZE: core::ffi::c_int = 30;
 
 #[cfg(target_os = "linux")]
-extern "C" {
-    fn sysconf(name: core::ffi::c_int) -> core::ffi::c_long;
+unsafe extern "C" {
+    unsafe fn sysconf(name: core::ffi::c_int) -> core::ffi::c_long;
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -300,9 +302,9 @@ impl WorkerCacheKind {
     pub(crate) fn spawn(&self, global: &GlobalStateKind) -> Result<(), Error> {
         match self {
             #[cfg(target_os = "linux")]
-            WorkerCacheKind::Linux(ref cache) => cache.spawn(crate::polkavm::sandbox::linux::Sandbox::downcast_global_state(global)),
+            WorkerCacheKind::Linux(cache) => cache.spawn(crate::polkavm::sandbox::linux::Sandbox::downcast_global_state(global)),
             #[cfg(feature = "generic-sandbox")]
-            WorkerCacheKind::Generic(ref cache) => cache.spawn(crate::polkavm::sandbox::generic::Sandbox::downcast_global_state(global)),
+            WorkerCacheKind::Generic(cache) => cache.spawn(crate::polkavm::sandbox::generic::Sandbox::downcast_global_state(global)),
         }
     }
 }
