@@ -45,6 +45,8 @@ pub use pallet::*;
 mod exec;
 use exec::{Ext, Stack};
 
+mod polkavm;
+
 pub mod weights;
 pub use weights::*;
 
