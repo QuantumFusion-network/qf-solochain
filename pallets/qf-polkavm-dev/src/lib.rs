@@ -302,7 +302,7 @@ pub mod pallet {
                 1 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "now", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
-                _ => todo!(),
+                _ => Err(Error::<T>::InvalidOperation)?,
             };
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
@@ -353,34 +353,11 @@ pub mod pallet {
                     caller.user_data.addresses[address_idx as usize].clone(),
                     caller.user_data.balances[balance_idx as usize].clone(),
                 )
-            }).unwrap();
+            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker.define_typed("now", |caller: Caller<T>| -> u64 {
                 (caller.user_data.now)()
-            }).unwrap();
-
-            // linker.define_typed("transfer", |stack: Stack<Self::T>, to: &T::AccountId, value: BalanceOf<T>| -> Result<(), DispatchError> {
-            //     stack.transfer(to, value)
-            // }).unwrap();
-
-            // fn foo(caller: Caller) -> Result<(), core::convert::Infallible> {
-            //     todo!()
-            // }
-            // linker.define_untyped("transfer", foo).unwrap();
-
-            linker.define_typed("now", move |caller: Caller<T>| -> u64 {
-                (caller.user_data.now)()
-                // match T::Time::now().try_into() {
-                //     Ok(now) => now,
-                //     _ => 0,
-                // }
-             }).unwrap();
-            // linker
-            //     .define_typed(
-            //         "transfer",
-            //         |caller: Caller<()>, to: u32, value: u32| -> u32 { todo!() },
-            //     )
-            //     .unwrap();
+            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
             let instance_pre = linker
