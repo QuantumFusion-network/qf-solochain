@@ -60,6 +60,7 @@ pub mod pallet {
         traits::{
             Currency,
             fungible::{Inspect, Mutate},
+            tokens::Preservation,
             Time,
         },
     };
@@ -263,8 +264,8 @@ pub mod pallet {
         pub fn execute(
             origin: OriginFor<T>,
             blob_address: CodeHash<T>,
-            a: u32,
-            b: u32,
+            to: T::AccountId,
+            value: BalanceOf<T>,
             op: u8,
         ) -> DispatchResult {
             // Check that the extrinsic was signed and get the signer.
@@ -280,14 +281,29 @@ pub mod pallet {
 
             let mut state = State::new(
                 who.clone(),
-                Vec::new(),
-                42,
-                || -> u64 { T::Time::now().saturated_into::<u64>() }
+                [to].to_vec(),
+                [value].to_vec(),
+                || -> u64 { T::Time::now().saturated_into::<u64>() },
+                |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
+                    if !value.is_zero() && from != to {
+                        return 0
+                    }
+                    match T::Currency::transfer(&from, &to, value, Preservation::Preserve) {
+                        Ok(_) => 0,
+                        Err(_) => 1,
+                    }
+                }
             );
 
-            let result = instance
-                .call_typed_and_get_result::<u64, (u32, u32)>(&mut state, "add_numbers", (a, b))
-                .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?;
+            let result = match op {
+                0 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "transfer", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                1 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "now", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                _ => todo!(),
+            };
 
             CalculationResult::<T>::insert((&blob_address, &who), result);
 
@@ -327,10 +343,21 @@ pub mod pallet {
             Ok(module)
         }
 
-        // fn instantiate(module: PolkaVMModule, stack: Stack<Self::T>) -> Result<Instance, DispatchError> {
         fn instantiate(module: PolkaVMModule) -> Result<Instance<T>, DispatchError> {
             // High-level API.
             let mut linker: Linker<T> = Linker::<T>::new();
+
+            linker.define_typed("transfer", |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
+                (caller.user_data.transfer)(
+                    caller.user_data.caller_address.clone(),
+                    caller.user_data.addresses[address_idx as usize].clone(),
+                    caller.user_data.balances[balance_idx as usize].clone(),
+                )
+            }).unwrap();
+
+            linker.define_typed("now", |caller: Caller<T>| -> u64 {
+                (caller.user_data.now)()
+            }).unwrap();
 
             // linker.define_typed("transfer", |stack: Stack<Self::T>, to: &T::AccountId, value: BalanceOf<T>| -> Result<(), DispatchError> {
             //     stack.transfer(to, value)

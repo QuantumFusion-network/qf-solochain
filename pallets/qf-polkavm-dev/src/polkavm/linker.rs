@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::Config as PalletConfig;
+use crate::{BalanceOf, Config as PalletConfig};
 use crate::polkavm::api::RegValue;
 use crate::polkavm::error::bail;
 use crate::polkavm::program::ProgramSymbol;
@@ -594,19 +594,21 @@ where
 
 pub struct State<T: PalletConfig> {
     pub caller_address: T::AccountId,
-    pub address: Vec<u8>,
-    pub foo: u32,
+    pub addresses: Vec<T::AccountId>,
+    pub balances: Vec<BalanceOf<T>>,
     pub now: fn() -> u64,
+    pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
     pub fn new(
         caller_address: T::AccountId,
-        address: Vec<u8>,
-        foo: u32,
+        addresses: Vec<T::AccountId>,
+        balances: Vec<BalanceOf<T>>,
         now: fn() -> u64,
+        transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
     ) -> Self {
-        Self { caller_address, address, foo, now }
+        Self { caller_address, addresses, balances, now, transfer }
     }
 }
 
