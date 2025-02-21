@@ -123,7 +123,7 @@ pub mod pallet {
     pub(super) type Code<T: Config> = StorageMap<_, Blake2_128Concat, CodeHash<T>, CodeVec<T>>;
 
     #[pallet::storage]
-    pub(super) type CalculationResult<T: Config> =
+    pub(super) type ExecutionResult<T: Config> =
         StorageMap<_, Blake2_128Concat, (CodeHash<T>, T::AccountId), u64>;
 
     #[pallet::storage]
@@ -144,7 +144,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A user has successfully set a new value.
-        Calculated {
+        ExecutionResult {
             /// The account who set the new value.
             who: T::AccountId,
             address: CodeHash<T>,
@@ -296,18 +296,18 @@ pub mod pallet {
 
             let result = match op {
                 0 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "transfer", ())
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 1 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "now", ())
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_now", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
             };
 
-            CalculationResult::<T>::insert((&blob_address, &who), result);
+            ExecutionResult::<T>::insert((&blob_address, &who), result);
 
             // Emit an event.
-            Self::deposit_event(Event::Calculated {
+            Self::deposit_event(Event::ExecutionResult {
                 who,
                 address: blob_address,
                 result,
@@ -346,7 +346,7 @@ pub mod pallet {
             // High-level API.
             let mut linker: Linker<T> = Linker::<T>::new();
 
-            linker.define_typed("ext_transfer", |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
+            linker.define_typed("transfer", |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
                 (caller.user_data.transfer)(
                     caller.user_data.caller_address.clone(),
                     caller.user_data.addresses[address_idx as usize].clone(),
@@ -354,7 +354,7 @@ pub mod pallet {
                 )
             }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
-            linker.define_typed("ext_now", |caller: Caller<T>| -> u64 {
+            linker.define_typed("now", |caller: Caller<T>| -> u64 {
                 (caller.user_data.now)()
             }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
