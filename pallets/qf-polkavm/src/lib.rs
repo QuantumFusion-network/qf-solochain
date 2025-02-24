@@ -42,9 +42,6 @@
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
-mod exec;
-use exec::{Ext, Stack};
-
 mod polkavm;
 
 pub mod weights;
@@ -285,8 +282,6 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
-            let stack: exec::Stack<T> = Stack::new(who.clone());
-
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
             let mut state = State::new(
@@ -380,11 +375,5 @@ pub mod pallet {
 
             Ok(instance)
         }
-    }
-
-    #[derive(Clone, Encode, Decode, PartialEq, TypeInfo, RuntimeDebugNoBound)]
-    pub enum Origin<T: Config> {
-        Root,
-        Signed(T::AccountId),
     }
 }
