@@ -283,7 +283,6 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
-            sp_runtime::print("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG");
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
@@ -307,6 +306,8 @@ pub mod pallet {
                 }
             );
 
+            sp_runtime::print("====== BEFORE CALL ======");
+
             let result = match op {
                 0 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ())
@@ -319,6 +320,8 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
             };
+
+            sp_runtime::print("====== AFTER CALL ======");
 
             ExecutionResult::<T>::insert((&blob_address, &who), result);
 
