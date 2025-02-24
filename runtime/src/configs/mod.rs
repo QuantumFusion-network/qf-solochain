@@ -180,6 +180,12 @@ impl pallet_qf_polkavm::Config for Runtime {
     type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_qf_polkavm_dev::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCodeLen = PolkaVmMaxCodeLen;
+    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
     pub const FaucetAmount: u64 = 2;
     pub const LockPeriod: u32 = 3600; // ~3h
