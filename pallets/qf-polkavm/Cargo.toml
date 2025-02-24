@@ -1,5 +1,5 @@
 [package]
-name = "pallet-qf-polkavm-dev"
+name = "pallet-qf-polkavm"
 description = "Quantum Fusion pallet for Polkadot VM development"
 version = "0.1.0"
 license.workspace = true

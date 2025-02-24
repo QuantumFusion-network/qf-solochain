@@ -172,12 +172,12 @@ parameter_types! {
     pub const PolkaVmMaxCodeLen: u32 = 1024;
 }
 
-impl pallet_qf_polkavm_dev::Config for Runtime {
+impl pallet_qf_polkavm::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MaxCodeLen = PolkaVmMaxCodeLen;
     type Currency = Balances;
     type Time = Timestamp;
-    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
