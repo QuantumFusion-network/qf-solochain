@@ -596,8 +596,10 @@ pub struct State<T: PalletConfig> {
     pub caller_address: T::AccountId,
     pub addresses: Vec<T::AccountId>,
     pub balances: Vec<BalanceOf<T>>,
+    pub log_message: Vec<u8>,
     pub now: fn() -> u64,
     pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+    pub print: fn(Vec<u8>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -605,10 +607,12 @@ impl<T: PalletConfig> State<T> {
         caller_address: T::AccountId,
         addresses: Vec<T::AccountId>,
         balances: Vec<BalanceOf<T>>,
+        log_message: Vec<u8>,
         now: fn() -> u64,
         transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+        print: fn(Vec<u8>) -> u64,
     ) -> Self {
-        Self { caller_address, addresses, balances, now, transfer }
+        Self { caller_address, addresses, balances, log_message, now, transfer, print }
     }
 }
 

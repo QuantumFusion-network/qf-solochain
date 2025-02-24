@@ -246,6 +246,7 @@ pub mod pallet {
             Code::<T>::insert(address, &raw_blob);
             CodeMetadata::<T>::insert(&who, blob_metadata);
 
+
             Self::deposit_event(Event::ProgramBlobUploaded {
                 who,
                 address,
@@ -282,12 +283,15 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
+            sp_runtime::print("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG");
+
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
             let mut state = State::new(
                 who.clone(),
                 [to].to_vec(),
                 [value].to_vec(),
+                [104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
                 || -> u64 { T::Time::now().saturated_into::<u64>() },
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
@@ -296,6 +300,10 @@ pub mod pallet {
                         }
                     }
                     0
+                },
+                |m: Vec<u8>| -> u64 {
+                    sp_runtime::print(&*m);
+                    return 0
                 }
             );
 
@@ -305,6 +313,9 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 1 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_now", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                2 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
             };
@@ -361,6 +372,12 @@ pub mod pallet {
 
             linker.define_typed("now", |caller: Caller<T>| -> u64 {
                 (caller.user_data.now)()
+            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker.define_typed("print", |caller: Caller<T>| -> u64 {
+                (caller.user_data.print)(
+                    caller.user_data.log_message.clone(),
+                )
             }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
