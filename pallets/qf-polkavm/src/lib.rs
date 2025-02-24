@@ -109,6 +109,9 @@ pub mod pallet {
         #[pallet::constant]
         type MaxCodeLen: Get<u32>;
 
+        #[pallet::constant]
+        type MaxGas: Get<u32>;
+
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
@@ -184,6 +187,7 @@ pub mod pallet {
         PolkaVMModuleExecutionFailed,
         PolkaVMModuleInstantiationFailed,
         PolkaVMModulePreInstantiationFailed,
+        GasIsTooHigh,
 
         /// Performing the requested transfer failed. Probably because there isn't enough
         /// free balance in the sender's account.
@@ -267,9 +271,15 @@ pub mod pallet {
             to: T::AccountId,
             value: BalanceOf<T>,
             op: u8,
+            gas: u32,
         ) -> DispatchResult {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
+
+            let max_gas = <T as Config>::MaxGas::get()
+                .try_into()
+                .map_err(|_| Error::<T>::IntegerOverflow)?;
+            ensure!(gas <= max_gas, Error::<T>::GasIsTooHigh);
 
             let raw_blob = Code::<T>::get(blob_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?

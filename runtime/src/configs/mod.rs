@@ -170,11 +170,13 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
     pub const PolkaVmMaxCodeLen: u32 = 1024;
+    pub const PolkaVmMaxGas: u32 = 2097152;
 }
 
 impl pallet_qf_polkavm::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MaxCodeLen = PolkaVmMaxCodeLen;
+    type MaxGas = PolkaVmMaxGas;
     type Currency = Balances;
     type Time = Timestamp;
     type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
