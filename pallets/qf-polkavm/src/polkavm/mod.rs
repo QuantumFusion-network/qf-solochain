@@ -3,6 +3,7 @@
 #![forbid(clippy::missing_safety_doc)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![deny(clippy::exhaustive_structs)]
+#![allow(dead_code)]
 // TODO: Uncomment this once we get rid of all of the `as` casts:
 // #![deny(clippy::as_conversions)]
 
