@@ -7,7 +7,7 @@ use polkavm_common::cast::cast;
 use crate::polkavm::mutex::Mutex;
 use crate::polkavm::sandbox::get_native_page_size;
 use alloc::sync::Arc;
-use linux_raw::{cstr, Error, Fd};
+use linux_raw::{Error, Fd, cstr};
 use polkavm_linux_raw as linux_raw;
 
 use crate::polkavm::generic_allocator::{GenericAllocation, GenericAllocator};
@@ -66,7 +66,10 @@ impl ShmAllocation {
     ///   or `T` cannot have any niches.
     #[allow(clippy::mut_from_ref)]
     pub unsafe fn as_typed_slice_mut<T>(&self) -> &mut [T] {
-        core::slice::from_raw_parts_mut(self.as_mut_ptr().cast(), self.len() / core::mem::size_of::<T>())
+        core::slice::from_raw_parts_mut(
+            self.as_mut_ptr().cast(),
+            self.len() / core::mem::size_of::<T>(),
+        )
     }
 
     pub fn offset(&self) -> usize {
@@ -122,7 +125,10 @@ impl ShmAllocator {
         assert!(page_size.is_power_of_two() && page_size >= 4096);
         let page_shift = page_size.ilog2();
 
-        let fd = linux_raw::sys_memfd_create(cstr!("global"), linux_raw::MFD_CLOEXEC | linux_raw::MFD_ALLOW_SEALING)?;
+        let fd = linux_raw::sys_memfd_create(
+            cstr!("global"),
+            linux_raw::MFD_CLOEXEC | linux_raw::MFD_ALLOW_SEALING,
+        )?;
         linux_raw::sys_ftruncate(fd.borrow(), linux_raw::c_ulong::from(u32::MAX))?;
 
         let mmap = unsafe {
@@ -139,7 +145,10 @@ impl ShmAllocator {
         linux_raw::sys_fcntl(
             fd.borrow(),
             linux_raw::F_ADD_SEALS,
-            linux_raw::F_SEAL_SEAL | linux_raw::F_SEAL_SHRINK | linux_raw::F_SEAL_GROW | linux_raw::F_SEAL_FUTURE_WRITE,
+            linux_raw::F_SEAL_SEAL
+                | linux_raw::F_SEAL_SHRINK
+                | linux_raw::F_SEAL_GROW
+                | linux_raw::F_SEAL_FUTURE_WRITE,
         )?;
 
         Ok(ShmAllocator(Arc::new(ShmAllocatorState {

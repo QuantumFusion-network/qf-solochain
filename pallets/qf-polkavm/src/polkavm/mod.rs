@@ -12,7 +12,10 @@
     target_arch = "x86_64",
     any(
         target_os = "linux",
-        all(feature = "generic-sandbox", any(target_os = "macos", target_os = "freebsd"))
+        all(
+            feature = "generic-sandbox",
+            any(target_os = "macos", target_os = "freebsd")
+        )
     ),
     feature = "std",
 ))]
@@ -35,7 +38,10 @@ macro_rules! if_compiler_is_supported {
     target_arch = "x86_64",
     any(
         target_os = "linux",
-        all(feature = "generic-sandbox", any(target_os = "macos", target_os = "freebsd"))
+        all(
+            feature = "generic-sandbox",
+            any(target_os = "macos", target_os = "freebsd")
+        )
     ),
     feature = "std",
 )))]
@@ -115,19 +121,14 @@ mod sandbox;
 #[cfg(rustfmt)]
 mod shm_allocator;
 
-pub use polkavm_common::{
-    program::{ProgramBlob, ProgramCounter, Reg},
-};
+pub use polkavm_common::program::{ProgramBlob, ProgramCounter, Reg};
 
 /// Miscellaneous types related to debug info.
-pub mod debug_info {
-}
+pub mod debug_info {}
 
 /// Miscellaneous types related to program blobs.
 pub mod program {
-    pub use polkavm_common::program::{
-        ProgramExport, ProgramSymbol,
-    };
+    pub use polkavm_common::program::{ProgramExport, ProgramSymbol};
 }
 
 pub type Gas = i64;

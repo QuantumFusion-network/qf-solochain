@@ -1,16 +1,16 @@
 use core::sync::atomic::Ordering;
 
-use polkavm_assembler::amd64::addr::*;
-use polkavm_assembler::amd64::inst::*;
 use polkavm_assembler::amd64::Reg::rsp;
 use polkavm_assembler::amd64::RegIndex as NativeReg;
 use polkavm_assembler::amd64::RegIndex::*;
+use polkavm_assembler::amd64::addr::*;
+use polkavm_assembler::amd64::inst::*;
 use polkavm_assembler::amd64::{Condition, LoadKind, MemOp, RegSize, Size};
 use polkavm_assembler::{Label, NonZero, ReservedAssembler, U1, U2, U3, U4};
 
 use polkavm_common::cast::cast;
 use polkavm_common::program::{ProgramCounter, RawReg, Reg};
-use polkavm_common::zygote::{VmCtx, VM_ADDR_VMCTX};
+use polkavm_common::zygote::{VM_ADDR_VMCTX, VmCtx};
 
 use crate::polkavm::compiler::{ArchVisitor, Bitness, CompilerBitness, SandboxKind};
 use crate::polkavm::config::GasMeteringKind;
@@ -92,7 +92,10 @@ macro_rules! load_store_operand {
                         // [address] = ..
                         // (address is in the lower 2GB of the address space)
                         (None, _) if $offset as i32 >= 0 => {
-                            let $op = reg_indirect(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG + $offset as i32);
+                            let $op = reg_indirect(
+                                RegSize::R64,
+                                GENERIC_SANDBOX_MEMORY_REG + $offset as i32,
+                            );
                             $body
                         }
 
@@ -106,7 +109,11 @@ macro_rules! load_store_operand {
                         // [base] = ..
                         (Some($base), 0) => {
                             // NOTE: This assumes that `base` has its upper 32-bits clear.
-                            let $op = base_index(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG, conv_reg($base));
+                            let $op = base_index(
+                                RegSize::R64,
+                                GENERIC_SANDBOX_MEMORY_REG,
+                                conv_reg($base),
+                            );
                             $body
                         }
 
@@ -144,7 +151,12 @@ enum ShiftKind {
 }
 
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn calculate_label_offset(asm_len: usize, rel8_len: usize, rel32_len: usize, offset: isize) -> Result<i8, i32> {
+fn calculate_label_offset(
+    asm_len: usize,
+    rel8_len: usize,
+    rel32_len: usize,
+    offset: isize,
+) -> Result<i8, i32> {
     let offset_near = offset - (asm_len as isize + rel8_len as isize);
     if offset_near <= i8::MAX as isize && offset_near >= i8::MIN as isize {
         Ok(offset_near as i8)
@@ -155,7 +167,11 @@ fn calculate_label_offset(asm_len: usize, rel8_len: usize, rel32_len: usize, off
 }
 
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn branch_to_label<R>(asm: ReservedAssembler<R>, condition: Condition, label: Label) -> ReservedAssembler<R::Next>
+fn branch_to_label<R>(
+    asm: ReservedAssembler<R>,
+    condition: Condition,
+    label: Label,
+) -> ReservedAssembler<R::Next>
 where
     R: NonZero,
 {
@@ -190,7 +206,12 @@ where
     R: NonZero,
 {
     if let Some(offset) = asm.get_label_origin_offset(label) {
-        let offset = calculate_label_offset(asm.len(), jmp_rel8(i8::MAX).len(), jmp_rel32(i32::MAX).len(), offset);
+        let offset = calculate_label_offset(
+            asm.len(),
+            jmp_rel8(i8::MAX).len(),
+            jmp_rel32(i32::MAX).len(),
+            offset,
+        );
 
         match offset {
             Ok(offset) => asm.push(jmp_rel8(offset)),
@@ -211,11 +232,16 @@ enum MemsetKind {
     Trampoline,
 }
 
-fn are_we_executing_memset<S>(compiled_module: &crate::polkavm::compiler::CompiledModule<S>, machine_code_offset: u64) -> Option<MemsetKind>
+fn are_we_executing_memset<S>(
+    compiled_module: &crate::polkavm::compiler::CompiledModule<S>,
+    machine_code_offset: u64,
+) -> Option<MemsetKind>
 where
     S: Sandbox,
 {
-    if machine_code_offset >= compiled_module.memset_trampoline_start && machine_code_offset < compiled_module.memset_trampoline_end {
+    if machine_code_offset >= compiled_module.memset_trampoline_start
+        && machine_code_offset < compiled_module.memset_trampoline_end
+    {
         Some(MemsetKind::Trampoline)
     } else if compiled_module
         .machine_code()
@@ -236,12 +262,20 @@ fn set_program_counter_after_interruption<S>(
 where
     S: Sandbox,
 {
-    let Some(program_counter) = compiled_module.program_counter_by_native_code_offset(machine_code_offset, false) else {
-        return Err("internal error: failed to find the program counter based on the native program counter when handling a page fault");
+    let Some(program_counter) =
+        compiled_module.program_counter_by_native_code_offset(machine_code_offset, false)
+    else {
+        return Err(
+            "internal error: failed to find the program counter based on the native program counter when handling a page fault",
+        );
     };
 
-    vmctx.program_counter.store(program_counter.0, Ordering::Relaxed);
-    vmctx.next_program_counter.store(program_counter.0, Ordering::Relaxed);
+    vmctx
+        .program_counter
+        .store(program_counter.0, Ordering::Relaxed);
+    vmctx
+        .next_program_counter
+        .store(program_counter.0, Ordering::Relaxed);
 
     Ok(program_counter)
 }
@@ -260,7 +294,9 @@ where
 
     // Move the count into the non-temporary register.
     match memset_kind {
-        MemsetKind::Inline => vmctx.regs[Reg::A2 as usize].store(bytes_remaining, Ordering::Relaxed),
+        MemsetKind::Inline => {
+            vmctx.regs[Reg::A2 as usize].store(bytes_remaining, Ordering::Relaxed)
+        }
         MemsetKind::Trampoline => {
             vmctx.regs[Reg::A2 as usize].fetch_add(bytes_remaining, Ordering::Relaxed);
         }
@@ -268,12 +304,17 @@ where
 
     if is_gas_metering_enabled {
         // Give back the gas that we've pre-charged.
-        vmctx.gas.fetch_add(cast(bytes_remaining).to_signed(), Ordering::Relaxed);
+        vmctx
+            .gas
+            .fetch_add(cast(bytes_remaining).to_signed(), Ordering::Relaxed);
     }
 
     let original_offset = match memset_kind {
         MemsetKind::Inline => machine_code_offset,
-        MemsetKind::Trampoline => vmctx.next_native_program_counter.load(Ordering::Relaxed) - compiled_module.native_code_origin,
+        MemsetKind::Trampoline => {
+            vmctx.next_native_program_counter.load(Ordering::Relaxed)
+                - compiled_module.native_code_origin
+        }
     };
 
     set_program_counter_after_interruption(compiled_module, original_offset, vmctx)?;
@@ -344,7 +385,10 @@ where
                 self.push(mov_imm(conv_reg(reg), imm32(0xffffffff)));
             }
             RegSize::R64 => {
-                self.push(mov_imm(conv_reg(reg), imm64(cast(0xffffffff_u32).to_signed())));
+                self.push(mov_imm(
+                    conv_reg(reg),
+                    imm64(cast(0xffffffff_u32).to_signed()),
+                ));
             }
         }
     }
@@ -401,7 +445,14 @@ where
     }
 
     #[cfg_attr(not(debug_assertions), inline(always))]
-    fn shift_imm(&mut self, reg_size: RegSize, d: RawReg, s1: RawReg, mut s2: u32, kind: ShiftKind) {
+    fn shift_imm(
+        &mut self,
+        reg_size: RegSize,
+        d: RawReg,
+        s1: RawReg,
+        mut s2: u32,
+        kind: ShiftKind,
+    ) {
         let d = conv_reg(d);
         let s1 = conv_reg(s1);
         let asm = self.asm.reserve::<polkavm_assembler::U3>();
@@ -430,7 +481,14 @@ where
     }
 
     #[cfg_attr(not(debug_assertions), inline(always))]
-    fn shift(&mut self, reg_size: RegSize, d: RawReg, s1: impl Into<RegImm>, s2: RawReg, kind: ShiftKind) {
+    fn shift(
+        &mut self,
+        reg_size: RegSize,
+        d: RawReg,
+        s1: impl Into<RegImm>,
+        s2: RawReg,
+        kind: ShiftKind,
+    ) {
         let d = conv_reg(d);
         let s2 = conv_reg(s2);
         let asm = self.asm.reserve::<polkavm_assembler::U4>();
@@ -484,7 +542,9 @@ where
     fn branch(&mut self, s1: RawReg, s2: impl Into<RegImm>, target: u32, condition: Condition) {
         let reg_size = self.reg_size();
         let s1 = conv_reg(s1);
-        let label = self.get_or_forward_declare_label(target).unwrap_or(self.invalid_jump_label);
+        let label = self
+            .get_or_forward_declare_label(target)
+            .unwrap_or(self.invalid_jump_label);
 
         let asm = self.asm.reserve::<U2>();
         let asm = match s2.into() {
@@ -531,7 +591,15 @@ where
         asm.assert_reserved_exactly_as_needed();
     }
 
-    fn div_rem(&mut self, reg_size: RegSize, d: RawReg, s1: RawReg, s2: RawReg, div_rem: DivRem, kind: Signedness) {
+    fn div_rem(
+        &mut self,
+        reg_size: RegSize,
+        d: RawReg,
+        s1: RawReg,
+        s2: RawReg,
+        div_rem: DivRem,
+        kind: Signedness,
+    ) {
         // Unlike most other architectures RISC-V doesn't trap on division by zero
         // nor on division with overflow, and has well defined results in such cases.
 
@@ -640,11 +708,15 @@ where
     #[cfg_attr(not(debug_assertions), inline(always))]
     fn vmctx_field(offset: usize) -> MemOp {
         match S::KIND {
-            SandboxKind::Linux => reg_indirect(RegSize::R64, LINUX_SANDBOX_VMCTX_REG + offset as i32),
+            SandboxKind::Linux => {
+                reg_indirect(RegSize::R64, LINUX_SANDBOX_VMCTX_REG + offset as i32)
+            }
             SandboxKind::Generic => {
                 #[cfg(feature = "generic-sandbox")]
                 {
-                    let offset = crate::polkavm::sandbox::generic::GUEST_MEMORY_TO_VMCTX_OFFSET as i32 + offset as i32;
+                    let offset = crate::polkavm::sandbox::generic::GUEST_MEMORY_TO_VMCTX_OFFSET
+                        as i32
+                        + offset as i32;
                     reg_indirect(RegSize::R64, GENERIC_SANDBOX_MEMORY_REG + offset)
                 }
 
@@ -696,7 +768,11 @@ where
     }
 
     fn save_return_address_to_vmctx(&mut self) {
-        self.push(load(LoadKind::U64, TMP_REG, reg_indirect(RegSize::R64, rsp)));
+        self.push(load(
+            LoadKind::U64,
+            TMP_REG,
+            reg_indirect(RegSize::R64, rsp),
+        ));
         self.push(store(
             Size::U64,
             Self::vmctx_field(S::offset_table().next_native_program_counter),
@@ -712,7 +788,9 @@ where
             self.push(mov_imm64(LINUX_SANDBOX_VMCTX_REG, VM_ADDR_VMCTX));
         }
         self.restore_registers_from_vmctx();
-        self.push(jmp(Self::vmctx_field(S::offset_table().next_native_program_counter)));
+        self.push(jmp(Self::vmctx_field(
+            S::offset_table().next_native_program_counter,
+        )));
 
         label
     }
@@ -721,7 +799,10 @@ where
         log::trace!("Emitting trampoline: sysreturn");
         let label = self.asm.create_label();
 
-        self.push(mov_imm(Self::vmctx_field(S::offset_table().next_native_program_counter), imm64(0)));
+        self.push(mov_imm(
+            Self::vmctx_field(S::offset_table().next_native_program_counter),
+            imm64(0),
+        ));
         self.save_registers_to_vmctx();
         self.push(mov_imm64(TMP_REG, S::address_table().syscall_return));
         self.push(jmp(TMP_REG));
@@ -757,7 +838,10 @@ where
         self.define_label(label);
 
         self.save_registers_to_vmctx();
-        self.push(mov_imm(Self::vmctx_field(S::offset_table().next_native_program_counter), imm64(0)));
+        self.push(mov_imm(
+            Self::vmctx_field(S::offset_table().next_native_program_counter),
+            imm64(0),
+        ));
         self.push(mov_imm64(TMP_REG, S::address_table().syscall_trap));
         self.push(jmp(TMP_REG));
     }
@@ -797,7 +881,11 @@ where
         // Grab the amount of gas we have (this will always be negative), and zero the gas counter.
         // (We assume the memset will consume all of the gas.)
         self.push(xor((RegSize::R32, rcx, rcx)));
-        self.push(xchg_mem(RegSize::R64, rcx, Self::vmctx_field(S::offset_table().gas)));
+        self.push(xchg_mem(
+            RegSize::R64,
+            rcx,
+            Self::vmctx_field(S::offset_table().gas),
+        ));
 
         // Calculate the number of bytes we can memset given our gas budget.
         self.push(add((RegSize::R64, rcx, count)));
@@ -806,21 +894,31 @@ where
         self.push(sub((RegSize::R64, count, rcx)));
 
         // Stash the counter, in case we page fault in the middle of the memset.
-        self.push(store(RegSize::R64, Self::vmctx_field(S::offset_table().arg), rcx));
+        self.push(store(
+            RegSize::R64,
+            Self::vmctx_field(S::offset_table().arg),
+            rcx,
+        ));
 
         // Execute the memset.
         self.asm.push_raw(REP_STOSB_MACHINE_CODE);
 
         // We've successfully finished memset without page faulting, so we can run out of gas.
         self.save_registers_to_vmctx();
-        self.push(mov_imm64(TMP_REG, S::address_table().syscall_not_enough_gas));
+        self.push(mov_imm64(
+            TMP_REG,
+            S::address_table().syscall_not_enough_gas,
+        ));
         self.push(jmp(TMP_REG));
     }
 
     pub(crate) fn trace_execution(&mut self, code_offset: u32) {
         let step_label = self.step_label;
         let asm = self.asm.reserve::<U3>();
-        let asm = asm.push(mov_imm(Self::vmctx_field(S::offset_table().program_counter), imm32(code_offset)));
+        let asm = asm.push(mov_imm(
+            Self::vmctx_field(S::offset_table().program_counter),
+            imm32(code_offset),
+        ));
         let asm = asm.push(mov_imm(
             Self::vmctx_field(S::offset_table().next_program_counter),
             imm32(code_offset),
@@ -832,7 +930,10 @@ where
     pub(crate) fn emit_gas_metering_stub(&mut self, kind: GasMeteringKind) {
         let origin = self.asm.len();
 
-        self.push(sub((Self::vmctx_field(S::offset_table().gas), imm64(i32::MAX))));
+        self.push(sub((
+            Self::vmctx_field(S::offset_table().gas),
+            imm64(i32::MAX),
+        )));
         debug_assert_eq!(GAS_COST_OFFSET, self.asm.len() - origin - 4); // Offset to bring us from the start of the stub to the gas cost.
 
         if matches!(kind, GasMeteringKind::Sync) {
@@ -844,10 +945,16 @@ where
             //
             // Note that this is technically a forward-compatibility hazard as this opcode could arguably
             // be reused for something in the future.
-            assert_eq!(Self::vmctx_field(S::offset_table().gas), reg_indirect(RegSize::R64, r15 + 0)); // Sanity check.
+            assert_eq!(
+                Self::vmctx_field(S::offset_table().gas),
+                reg_indirect(RegSize::R64, r15 + 0)
+            ); // Sanity check.
             debug_assert!(self.asm.code_mut().ends_with(&[0x49, 0x83, 0x3F, 0x00]));
             // Offset to bring us from where the trap will trigger to the beginning of the stub.
-            debug_assert_eq!(GAS_METERING_TRAP_OFFSET, (self.asm.len() - origin - 2) as u64);
+            debug_assert_eq!(
+                GAS_METERING_TRAP_OFFSET,
+                (self.asm.len() - origin - 2) as u64
+            );
             self.asm.push_raw(&[0x78, 0xfc]);
         }
     }
@@ -878,14 +985,25 @@ where
 
                 let asm = if let Some((return_register, return_address)) = load_imm {
                     match B::BITNESS {
-                        Bitness::B32 => asm.push(mov_imm(conv_reg(return_register), imm32(return_address))),
-                        Bitness::B64 => asm.push(mov_imm(conv_reg(return_register), imm64(cast(return_address).to_signed()))),
+                        Bitness::B32 => {
+                            asm.push(mov_imm(conv_reg(return_register), imm32(return_address)))
+                        }
+                        Bitness::B64 => asm.push(mov_imm(
+                            conv_reg(return_register),
+                            imm64(cast(return_address).to_signed()),
+                        )),
                     }
                 } else {
                     asm.push_none()
                 };
 
-                let asm = asm.push(jmp(MemOp::IndexScaleOffset(Some(SegReg::gs), RegSize::R64, target, Scale::x8, 0)));
+                let asm = asm.push(jmp(MemOp::IndexScaleOffset(
+                    Some(SegReg::gs),
+                    RegSize::R64,
+                    target,
+                    Scale::x8,
+                    0,
+                )));
                 asm.assert_reserved_exactly_as_needed();
             }
             SandboxKind::Generic => {
@@ -899,12 +1017,21 @@ where
                 }
                 self.push(add((RegSize::R64, TMP_REG, conv_reg(base))));
                 self.push(pop(conv_reg(base)));
-                self.push(load(LoadKind::U64, TMP_REG, reg_indirect(RegSize::R64, TMP_REG)));
+                self.push(load(
+                    LoadKind::U64,
+                    TMP_REG,
+                    reg_indirect(RegSize::R64, TMP_REG),
+                ));
 
                 if let Some((return_register, return_address)) = load_imm {
                     match B::BITNESS {
-                        Bitness::B32 => self.push(mov_imm(conv_reg(return_register), imm32(return_address))),
-                        Bitness::B64 => self.push(mov_imm(conv_reg(return_register), imm64(cast(return_address).to_signed()))),
+                        Bitness::B32 => {
+                            self.push(mov_imm(conv_reg(return_register), imm32(return_address)))
+                        }
+                        Bitness::B64 => self.push(mov_imm(
+                            conv_reg(return_register),
+                            imm64(cast(return_address).to_signed()),
+                        )),
                     }
                 }
 
@@ -917,7 +1044,10 @@ where
     pub fn trap(&mut self, code_offset: u32) {
         let trap_label = self.trap_label;
         let asm = self.asm.reserve::<U2>();
-        let asm = asm.push(mov_imm(Self::vmctx_field(S::offset_table().program_counter), imm32(code_offset)));
+        let asm = asm.push(mov_imm(
+            Self::vmctx_field(S::offset_table().program_counter),
+            imm32(code_offset),
+        ));
         let asm = asm.push(call_label32(trap_label));
         asm.assert_reserved_exactly_as_needed();
     }
@@ -991,7 +1121,8 @@ where
         let reg_size = self.reg_size();
         self.xor(d, s1, s2);
         let asm = self.asm.reserve::<U1>();
-        asm.push(not(reg_size, conv_reg(d))).assert_reserved_exactly_as_needed();
+        asm.push(not(reg_size, conv_reg(d)))
+            .assert_reserved_exactly_as_needed();
     }
 
     #[inline(always)]
@@ -1125,9 +1256,17 @@ where
         let heap_info_base = self.load_vmctx_field_address(offset);
 
         // Calculate new top-of-the-heap pointer.
-        self.push(add((RegSize::R64, dst, reg_indirect(RegSize::R64, heap_info_base))));
+        self.push(add((
+            RegSize::R64,
+            dst,
+            reg_indirect(RegSize::R64, heap_info_base),
+        )));
         // Compare it to the current threshold.
-        self.push(cmp((RegSize::R64, dst, reg_indirect(RegSize::R64, heap_info_base + 8))));
+        self.push(cmp((
+            RegSize::R64,
+            dst,
+            reg_indirect(RegSize::R64, heap_info_base + 8),
+        )));
         // If it was less or equal to the threshold then no extra action is necessary (bump only!).
         self.push(jcc_label8(Condition::BelowOrEqual, label_bump_only));
 
@@ -1141,7 +1280,11 @@ where
 
         self.define_label(label_bump_only);
         // Only a bump was necessary, so just updated the pointer and continue.
-        self.push(store(RegSize::R64, reg_indirect(RegSize::R64, heap_info_base), dst));
+        self.push(store(
+            RegSize::R64,
+            reg_indirect(RegSize::R64, heap_info_base),
+            dst,
+        ));
 
         self.define_label(label_continue);
     }
@@ -1178,9 +1321,14 @@ where
             }
             Some(GasMeteringKind::Sync) => {
                 // Pre charge the gas cost of the memset.
-                self.asm.push(sub((RegSize::R64, Self::vmctx_field(S::offset_table().gas), count)));
+                self.asm.push(sub((
+                    RegSize::R64,
+                    Self::vmctx_field(S::offset_table().gas),
+                    count,
+                )));
                 // Will we have enough gas to finish the operation?
-                self.asm.push(cmp((Self::vmctx_field(S::offset_table().gas), imm64(0))));
+                self.asm
+                    .push(cmp((Self::vmctx_field(S::offset_table().gas), imm64(0))));
                 // If no - jump to a slower version of the routine.
                 let label_slow = self.memset_label;
                 branch_to_label(self.asm.reserve::<U1>(), Condition::Less, label_slow);
@@ -1190,7 +1338,11 @@ where
                 self.asm.push(mov(reg_size, count, rcx));
             }
             Some(GasMeteringKind::Async) => {
-                self.asm.push(sub((RegSize::R64, Self::vmctx_field(S::offset_table().gas), count)));
+                self.asm.push(sub((
+                    RegSize::R64,
+                    Self::vmctx_field(S::offset_table().gas),
+                    count,
+                )));
                 self.asm.push(mov(reg_size, rcx, count));
                 self.asm.push_raw(REP_STOSB_MACHINE_CODE);
                 self.asm.push(mov(reg_size, count, rcx));
@@ -1210,13 +1362,14 @@ where
             Trap,
         }
 
-        let trap_kind = if let Some(kind) = are_we_executing_memset(compiled_module, machine_code_offset) {
-            TrapKind::Memset { kind }
-        } else if is_gas_metering_enabled && vmctx.gas.load(Ordering::Relaxed) < 0 {
-            TrapKind::NotEnoughGas
-        } else {
-            TrapKind::Trap
-        };
+        let trap_kind =
+            if let Some(kind) = are_we_executing_memset(compiled_module, machine_code_offset) {
+                TrapKind::Memset { kind }
+            } else if is_gas_metering_enabled && vmctx.gas.load(Ordering::Relaxed) < 0 {
+                TrapKind::NotEnoughGas
+            } else {
+                TrapKind::Trap
+            };
 
         match trap_kind {
             TrapKind::NotEnoughGas => {
@@ -1225,21 +1378,29 @@ where
                 };
 
                 // If we restart we want to check the gas again, so set the address to point there.
-                vmctx
-                    .next_native_program_counter
-                    .store(compiled_module.native_code_origin + offset, Ordering::Relaxed);
+                vmctx.next_native_program_counter.store(
+                    compiled_module.native_code_origin + offset,
+                    Ordering::Relaxed,
+                );
 
                 // Also set the logical program counter, in case the user wants to stash the location
                 // somewhere and continue some other time.
-                let program_counter = set_program_counter_after_interruption(compiled_module, machine_code_offset, vmctx)?;
+                let program_counter = set_program_counter_after_interruption(
+                    compiled_module,
+                    machine_code_offset,
+                    vmctx,
+                )?;
 
                 // The gas counter is now negative; refund the amount of gas consumed so that it's positive again.
                 let offset = offset as usize + GAS_COST_OFFSET;
                 let Some(gas_cost) = &compiled_module.machine_code().get(offset..offset + 4) else {
-                    return Err("internal error: failed to read back the gas cost from the machine code");
+                    return Err(
+                        "internal error: failed to read back the gas cost from the machine code",
+                    );
                 };
 
-                let gas_cost = u32::from_le_bytes([gas_cost[0], gas_cost[1], gas_cost[2], gas_cost[3]]);
+                let gas_cost =
+                    u32::from_le_bytes([gas_cost[0], gas_cost[1], gas_cost[2], gas_cost[3]]);
                 let gas = vmctx.gas.fetch_add(i64::from(gas_cost), Ordering::Relaxed);
                 log::trace!(
                     "Out of gas; program counter = {program_counter}, reverting gas: {gas} -> {new_gas} (gas cost: {gas_cost})",
@@ -1249,19 +1410,33 @@ where
                 Ok(true)
             }
             TrapKind::Trap => {
-                set_program_counter_after_interruption(compiled_module, machine_code_offset, vmctx)?;
+                set_program_counter_after_interruption(
+                    compiled_module,
+                    machine_code_offset,
+                    vmctx,
+                )?;
 
                 // Traps are unrecoverable.
-                vmctx.next_native_program_counter.store(0, Ordering::Relaxed);
+                vmctx
+                    .next_native_program_counter
+                    .store(0, Ordering::Relaxed);
 
                 Ok(false)
             }
             // Did we prematurely trigger a page fault during a memset?
             TrapKind::Memset { kind } => {
-                handle_interruption_during_memset(kind, compiled_module, is_gas_metering_enabled, machine_code_offset, vmctx)?;
+                handle_interruption_during_memset(
+                    kind,
+                    compiled_module,
+                    is_gas_metering_enabled,
+                    machine_code_offset,
+                    vmctx,
+                )?;
 
                 // We can only be here if dynamic page faulting is disabled, so this situation is unrecoverable.
-                vmctx.next_native_program_counter.store(0, Ordering::Relaxed);
+                vmctx
+                    .next_native_program_counter
+                    .store(0, Ordering::Relaxed);
 
                 Ok(false)
             }
@@ -1276,10 +1451,18 @@ where
         vmctx: &VmCtx,
     ) -> Result<(), &'static str> {
         if let Some(kind) = are_we_executing_memset(compiled_module, machine_code_offset) {
-            handle_interruption_during_memset(kind, compiled_module, is_gas_metering_enabled, machine_code_offset, vmctx)?;
+            handle_interruption_during_memset(
+                kind,
+                compiled_module,
+                is_gas_metering_enabled,
+                machine_code_offset,
+                vmctx,
+            )?;
         } else {
             set_program_counter_after_interruption(compiled_module, machine_code_offset, vmctx)?;
-            vmctx.next_native_program_counter.store(machine_code_address, Ordering::Relaxed);
+            vmctx
+                .next_native_program_counter
+                .store(machine_code_address, Ordering::Relaxed);
         }
 
         Ok(())
@@ -1289,8 +1472,14 @@ where
     pub fn ecalli(&mut self, code_offset: u32, args_length: u32, imm: u32) {
         let ecall_label = self.ecall_label;
         let asm = self.asm.reserve::<U4>();
-        let asm = asm.push(mov_imm(Self::vmctx_field(S::offset_table().arg), imm32(imm)));
-        let asm = asm.push(mov_imm(Self::vmctx_field(S::offset_table().program_counter), imm32(code_offset)));
+        let asm = asm.push(mov_imm(
+            Self::vmctx_field(S::offset_table().arg),
+            imm32(imm),
+        ));
+        let asm = asm.push(mov_imm(
+            Self::vmctx_field(S::offset_table().program_counter),
+            imm32(code_offset),
+        ));
         let asm = asm.push(mov_imm(
             Self::vmctx_field(S::offset_table().next_program_counter),
             imm32(code_offset + args_length + 1),
@@ -1789,7 +1978,11 @@ where
                 self.push(mul(RegSize::R64, TMP_REG));
                 self.push(sar_imm(RegSize::R64, TMP_REG, 63));
                 self.push(imul(RegSize::R64, TMP_REG, AUX_TMP_REG));
-                self.push(lea(RegSize::R64, TMP_REG, base_index(RegSize::R64, TMP_REG, rdx)));
+                self.push(lea(
+                    RegSize::R64,
+                    TMP_REG,
+                    base_index(RegSize::R64, TMP_REG, rdx),
+                ));
 
                 self.push(pop(rdx));
                 self.push(pop(rax));
@@ -2052,7 +2245,13 @@ where
     }
 
     #[inline(always)]
-    pub fn rotate_right_imm_alt_generic(&mut self, reg_size: RegSize, d: RawReg, s: RawReg, c: u32) {
+    pub fn rotate_right_imm_alt_generic(
+        &mut self,
+        reg_size: RegSize,
+        d: RawReg,
+        s: RawReg,
+        c: u32,
+    ) {
         let d = conv_reg(d);
         let s = conv_reg(s);
 
@@ -2368,13 +2567,17 @@ where
 
     #[inline(always)]
     pub fn jump(&mut self, target: u32) {
-        let label = self.get_or_forward_declare_label(target).unwrap_or(self.invalid_jump_label);
+        let label = self
+            .get_or_forward_declare_label(target)
+            .unwrap_or(self.invalid_jump_label);
         self.jump_to_label(label);
     }
 
     #[inline(always)]
     pub fn load_imm_and_jump(&mut self, ra: RawReg, value: u32, target: u32) {
-        let label = self.get_or_forward_declare_label(target).unwrap_or(self.invalid_jump_label);
+        let label = self
+            .get_or_forward_declare_label(target)
+            .unwrap_or(self.invalid_jump_label);
         let asm = self.asm.reserve::<U2>();
         let asm = match B::BITNESS {
             Bitness::B32 => asm.push(mov_imm(conv_reg(ra), imm32(value))),
@@ -2390,7 +2593,13 @@ where
     }
 
     #[inline(always)]
-    pub fn load_imm_and_jump_indirect(&mut self, ra: RawReg, base: RawReg, value: u32, offset: u32) {
+    pub fn load_imm_and_jump_indirect(
+        &mut self,
+        ra: RawReg,
+        base: RawReg,
+        value: u32,
+        offset: u32,
+    ) {
         self.jump_indirect_impl(Some((ra, value)), base, offset)
     }
 }

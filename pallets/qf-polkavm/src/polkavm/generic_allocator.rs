@@ -190,7 +190,8 @@ where
     }
 }
 
-impl<Primary, Secondary, const SECONDARY_LENGTH: usize> BitMaskT for crate::polkavm::bit_mask::BitMask<Primary, Secondary, SECONDARY_LENGTH>
+impl<Primary, Secondary, const SECONDARY_LENGTH: usize> BitMaskT
+    for crate::polkavm::bit_mask::BitMask<Primary, Secondary, SECONDARY_LENGTH>
 where
     Primary: crate::polkavm::bit_mask::RawMask,
     Secondary: crate::polkavm::bit_mask::RawMask,
@@ -285,18 +286,29 @@ macro_rules! _allocator_config {
             type BitMask = $crate::polkavm::bit_mask::bitmask_type!(
                 usize,
                 usize,
-                $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins).bin_count
-                    as usize
+                $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<
+                    usize,
+                    usize,
+                >($max_allocation_size, $max_bins)
+                .bin_count as usize
             );
-            type BinArray =
-                [u32; $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
-                    .bin_count as usize];
+            type BinArray = [u32;
+                $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<
+                    usize,
+                    usize,
+                >($max_allocation_size, $max_bins)
+                .bin_count as usize];
 
             fn to_bin_index<const ROUND_UP: bool>(size: $Size) -> u32 {
                 const MANTISSA_BITS: u32 =
-                    $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<usize, usize>($max_allocation_size, $max_bins)
-                        .mantissa_bits;
-                $crate::polkavm::generic_allocator::$Size::to_bin_index::<MANTISSA_BITS, ROUND_UP>(size)
+                    $crate::polkavm::generic_allocator::$Size::calculate_optimal_bin_config::<
+                        usize,
+                        usize,
+                    >($max_allocation_size, $max_bins)
+                    .mantissa_bits;
+                $crate::polkavm::generic_allocator::$Size::to_bin_index::<MANTISSA_BITS, ROUND_UP>(
+                    size,
+                )
             }
         }
     };
@@ -469,7 +481,9 @@ where
             (bin, self.first_unallocated_for_bin[bin.index()])
         } else {
             // No such bin exists; let's try rounding down and see if maybe we can find an oversized region in the previous bin.
-            let bin = self.bins_with_free_space.find_first(Self::size_to_bin_round_down(size))?;
+            let bin = self
+                .bins_with_free_space
+                .find_first(Self::size_to_bin_round_down(size))?;
             let node = self.first_unallocated_for_bin[bin.index()];
 
             if self.nodes[node as usize].size < size {
@@ -492,7 +506,10 @@ where
         let remaining_free_pages = original_size - size;
         if let Some(new_free_node) = self.insert_free_node(offset + size, remaining_free_pages) {
             // Link the nodes together so that we can later merge them.
-            let next_by_address = replace(&mut self.nodes[node as usize].next_by_address, new_free_node);
+            let next_by_address = replace(
+                &mut self.nodes[node as usize].next_by_address,
+                new_free_node,
+            );
             if let Some(next) = self.nodes.get_mut(next_by_address as usize) {
                 next.prev_by_address = new_free_node;
             } else {
@@ -526,7 +543,8 @@ where
                 self.remove_node(prev_by_address);
 
                 debug_assert_eq!(self.nodes[prev_by_address as usize].next_by_address, node);
-                self.nodes[node as usize].prev_by_address = self.nodes[prev_by_address as usize].prev_by_address;
+                self.nodes[node as usize].prev_by_address =
+                    self.nodes[prev_by_address as usize].prev_by_address;
             }
         }
 
@@ -539,7 +557,8 @@ where
                 self.remove_node(next_by_address);
 
                 debug_assert_eq!(self.nodes[next_by_address as usize].prev_by_address, node);
-                self.nodes[node as usize].next_by_address = self.nodes[next_by_address as usize].next_by_address;
+                self.nodes[node as usize].next_by_address =
+                    self.nodes[next_by_address as usize].next_by_address;
             }
         }
 
@@ -596,8 +615,10 @@ pub mod tests {
 
             let pointer = allocation.offset();
             for (&old_pointer, old_allocation) in &self.allocations {
-                let is_overlapping = (pointer >= old_pointer && pointer < (old_pointer + old_allocation.size()))
-                    || (pointer + allocation.size() > old_pointer && pointer + allocation.size() <= (old_pointer + old_allocation.size()));
+                let is_overlapping = (pointer >= old_pointer
+                    && pointer < (old_pointer + old_allocation.size()))
+                    || (pointer + allocation.size() > old_pointer
+                        && pointer + allocation.size() <= (old_pointer + old_allocation.size()));
 
                 assert!(
                     !is_overlapping,
@@ -610,7 +631,11 @@ pub mod tests {
             }
 
             let offset = allocation.offset();
-            assert!(self.allocations.insert(allocation.offset(), allocation).is_none());
+            assert!(
+                self.allocations
+                    .insert(allocation.offset(), allocation)
+                    .is_none()
+            );
             Some(offset)
         }
 

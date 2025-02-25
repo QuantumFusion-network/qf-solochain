@@ -8,9 +8,10 @@ use polkavm_common::{
     program::Reg,
     utils::{align_to_next_page_usize, slice_assume_init_mut},
     zygote::{
-        AddressTable, AddressTablePacked, ExtTable, ExtTablePacked, VmCtx, VmFd, VmMap, VMCTX_FUTEX_BUSY, VMCTX_FUTEX_GUEST_ECALLI,
-        VMCTX_FUTEX_GUEST_NOT_ENOUGH_GAS, VMCTX_FUTEX_GUEST_PAGEFAULT, VMCTX_FUTEX_GUEST_SIGNAL, VMCTX_FUTEX_GUEST_STEP,
-        VMCTX_FUTEX_GUEST_TRAP, VMCTX_FUTEX_IDLE, VM_ADDR_NATIVE_CODE,
+        AddressTable, AddressTablePacked, ExtTable, ExtTablePacked, VM_ADDR_NATIVE_CODE,
+        VMCTX_FUTEX_BUSY, VMCTX_FUTEX_GUEST_ECALLI, VMCTX_FUTEX_GUEST_NOT_ENOUGH_GAS,
+        VMCTX_FUTEX_GUEST_PAGEFAULT, VMCTX_FUTEX_GUEST_SIGNAL, VMCTX_FUTEX_GUEST_STEP,
+        VMCTX_FUTEX_GUEST_TRAP, VMCTX_FUTEX_IDLE, VmCtx, VmFd, VmMap,
     },
 };
 
@@ -20,13 +21,15 @@ use core::ffi::{c_int, c_uint};
 use core::mem::MaybeUninit;
 use core::sync::atomic::Ordering;
 use core::time::Duration;
-use linux_raw::{abort, cstr, syscall_readonly, Fd, Mmap};
+use linux_raw::{Fd, Mmap, abort, cstr, syscall_readonly};
 use std::sync::Arc;
 use std::time::Instant;
 
-use super::{get_native_page_size, OffsetTable, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind};
+use super::{
+    OffsetTable, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind, get_native_page_size,
+};
 use crate::polkavm::api::{CompiledModuleKind, MemoryAccessError, Module};
-use crate::polkavm::compiler::{Bitness, CompiledModule, B32, B64};
+use crate::polkavm::compiler::{B32, B64, Bitness, CompiledModule};
 use crate::polkavm::config::Config;
 use crate::polkavm::config::GasMeteringKind;
 use crate::polkavm::page_set::PageSet;
@@ -70,7 +73,13 @@ fn clone(flags: u64) -> Result<Fork, Error> {
         tls: 0,
     };
 
-    let mut child_pid = unsafe { linux_raw::syscall!(linux_raw::SYS_clone3, core::ptr::addr_of!(args), core::mem::size_of::<CloneArgs>()) };
+    let mut child_pid = unsafe {
+        linux_raw::syscall!(
+            linux_raw::SYS_clone3,
+            core::ptr::addr_of!(args),
+            core::mem::size_of::<CloneArgs>()
+        )
+    };
 
     if child_pid < 0 {
         // Fallback for Linux versions older than 5.5.
@@ -87,7 +96,11 @@ fn clone(flags: u64) -> Result<Fork, Error> {
     } else {
         Ok(Fork::Host(ChildProcess {
             pid: child_pid as c_int,
-            pidfd: if pidfd < 0 { None } else { Some(Fd::from_raw_unchecked(pidfd)) },
+            pidfd: if pidfd < 0 {
+                None
+            } else {
+                Some(Fd::from_raw_unchecked(pidfd))
+            },
         }))
     }
 }
@@ -115,8 +128,11 @@ impl GlobalState {
                 ..linux_raw::uffdio_api::default()
             };
 
-            linux_raw::sys_uffdio_api(userfaultfd.borrow(), &mut api)
-                .map_err(|error| Error::from(format!("failed to fetch the available userfaultfd features: {error}")))?;
+            linux_raw::sys_uffdio_api(userfaultfd.borrow(), &mut api).map_err(|error| {
+                Error::from(format!(
+                    "failed to fetch the available userfaultfd features: {error}"
+                ))
+            })?;
 
             if (api.features & UFFD_REQUIRED_FEATURES) != UFFD_REQUIRED_FEATURES {
                 return Err(Error::from(
@@ -129,8 +145,13 @@ impl GlobalState {
             let utsname = linux_raw::sys_uname()?;
             fn kernel_version(utsname: &linux_raw::new_utsname) -> Option<(u32, u32)> {
                 let release: &[core::ffi::c_char] = &utsname.release;
-                let release: &[u8] = unsafe { core::slice::from_raw_parts(release.as_ptr().cast(), release.len()) };
-                let mut release = core::ffi::CStr::from_bytes_until_nul(release).ok()?.to_str().ok()?.split('.');
+                let release: &[u8] =
+                    unsafe { core::slice::from_raw_parts(release.as_ptr().cast(), release.len()) };
+                let mut release = core::ffi::CStr::from_bytes_until_nul(release)
+                    .ok()?
+                    .to_str()
+                    .ok()?
+                    .split('.');
                 let major: u32 = release.next()?.parse().ok()?;
                 let minor: u32 = release.next()?.parse().ok()?;
                 Some((major, minor))
@@ -139,9 +160,9 @@ impl GlobalState {
             if let Some((kernel_major, kernel_minor)) = kernel_version(&utsname) {
                 log::debug!("Detected Linux kernel: {kernel_major}.{kernel_minor}");
                 if kernel_major < 6 || (kernel_major == 6 && kernel_minor < 8) {
-                    return Err(Error::from(
-                        format!("too old Linux kernel detected: {kernel_major}.{kernel_minor}; you need to update your Linux kernel to version 6.8 or newer")
-                    ));
+                    return Err(Error::from(format!(
+                        "too old Linux kernel detected: {kernel_major}.{kernel_minor}; you need to update your Linux kernel to version 6.8 or newer"
+                    )));
                 }
             } else {
                 log::warn!("Failed to parse the kernel version; this is a bug, please report it!");
@@ -150,7 +171,11 @@ impl GlobalState {
 
         match clone(SANDBOX_FLAGS)? {
             Fork::Child => {
-                let exit_code = if linux_raw::sys_sethostname("localhost").is_err() { 1 } else { 0 };
+                let exit_code = if linux_raw::sys_sethostname("localhost").is_err() {
+                    1
+                } else {
+                    0
+                };
                 let _ = linux_raw::sys_exit(exit_code);
                 linux_raw::abort();
             }
@@ -161,11 +186,15 @@ impl GlobalState {
                         .map(|blob| blob == b"1\n")
                         .unwrap_or(false)
                     {
-                        return Err(Error::from("failed to create a sandboxed worker process; run 'sysctl -w kernel.apparmor_restrict_unprivileged_userns=0' to enable unprivileged user namespaces"));
+                        return Err(Error::from(
+                            "failed to create a sandboxed worker process; run 'sysctl -w kernel.apparmor_restrict_unprivileged_userns=0' to enable unprivileged user namespaces",
+                        ));
                     }
                 }
                 status => {
-                    return Err(Error::from(format!("unexpected sandbox child status: {status:?}")));
+                    return Err(Error::from(format!(
+                        "unexpected sandbox child status: {status:?}"
+                    )));
                 }
             },
         }
@@ -185,7 +214,9 @@ pub struct SandboxConfig {
 
 impl SandboxConfig {
     pub fn new() -> Self {
-        SandboxConfig { enable_logger: false }
+        SandboxConfig {
+            enable_logger: false,
+        }
     }
 }
 
@@ -268,7 +299,13 @@ impl Sigmask {
     fn block_all_signals() -> Result<Self, Error> {
         let sigset_all: linux_raw::kernel_sigset_t = !0;
         let mut sigset_original: linux_raw::kernel_sigset_t = 0;
-        unsafe { linux_raw::sys_rt_sigprocmask(linux_raw::SIG_SETMASK, &sigset_all, Some(&mut sigset_original))? };
+        unsafe {
+            linux_raw::sys_rt_sigprocmask(
+                linux_raw::SIG_SETMASK,
+                &sigset_all,
+                Some(&mut sigset_original),
+            )?
+        };
 
         Ok(Sigmask { sigset_original })
     }
@@ -282,7 +319,9 @@ impl Sigmask {
 
     /// Unblocks signal delivery.
     fn unblock_inplace(&mut self) -> Result<(), Error> {
-        unsafe { linux_raw::sys_rt_sigprocmask(linux_raw::SIG_SETMASK, &self.sigset_original, None) }
+        unsafe {
+            linux_raw::sys_rt_sigprocmask(linux_raw::SIG_SETMASK, &self.sigset_original, None)
+        }
     }
 }
 
@@ -345,7 +384,9 @@ impl core::fmt::Display for ChildStatus {
             ChildStatus::Running => fmt.write_str("running"),
             ChildStatus::NotRunning => fmt.write_str("not running"),
             ChildStatus::Exited(code) => write!(fmt, "exited (status = {code})"),
-            ChildStatus::ExitedDueToSignal(signum) => write!(fmt, "exited due to signal (signal = {})", Signal(*signum)),
+            ChildStatus::ExitedDueToSignal(signum) => {
+                write!(fmt, "exited due to signal (signal = {})", Signal(*signum))
+            }
             ChildStatus::Trapped => fmt.write_str("trapped"),
         }
     }
@@ -380,22 +421,39 @@ impl ChildProcess {
             Ok(ok) => unsafe {
                 if ok.si_signo() == 0 && ok.si_pid() == 0 {
                     Ok(ChildStatus::Running)
-                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD && ok.si_code() as u32 == linux_raw::CLD_EXITED {
+                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD
+                    && ok.si_code() as u32 == linux_raw::CLD_EXITED
+                {
                     Ok(ChildStatus::Exited(ok.si_status()))
                 } else if ok.si_signo() as u32 == linux_raw::SIGCHLD
-                    && (ok.si_code() as u32 == linux_raw::CLD_KILLED || ok.si_code() as u32 == linux_raw::CLD_DUMPED)
+                    && (ok.si_code() as u32 == linux_raw::CLD_KILLED
+                        || ok.si_code() as u32 == linux_raw::CLD_DUMPED)
                 {
-                    Ok(ChildStatus::ExitedDueToSignal(linux_raw::WTERMSIG(ok.si_status())))
-                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD && ok.si_code() as u32 == linux_raw::CLD_STOPPED {
-                    Err(Error::from_last_os_error("waitid failed: unexpected CLD_STOPPED status"))
-                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD && ok.si_code() as u32 == linux_raw::CLD_TRAPPED {
+                    Ok(ChildStatus::ExitedDueToSignal(linux_raw::WTERMSIG(
+                        ok.si_status(),
+                    )))
+                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD
+                    && ok.si_code() as u32 == linux_raw::CLD_STOPPED
+                {
+                    Err(Error::from_last_os_error(
+                        "waitid failed: unexpected CLD_STOPPED status",
+                    ))
+                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD
+                    && ok.si_code() as u32 == linux_raw::CLD_TRAPPED
+                {
                     Ok(ChildStatus::Trapped)
-                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD && ok.si_code() as u32 == linux_raw::CLD_CONTINUED {
-                    Err(Error::from_last_os_error("waitid failed: unexpected CLD_CONTINUED status"))
+                } else if ok.si_signo() as u32 == linux_raw::SIGCHLD
+                    && ok.si_code() as u32 == linux_raw::CLD_CONTINUED
+                {
+                    Err(Error::from_last_os_error(
+                        "waitid failed: unexpected CLD_CONTINUED status",
+                    ))
                 } else if ok.si_signo() != 0 {
                     Ok(ChildStatus::ExitedDueToSignal(ok.si_signo()))
                 } else {
-                    Err(Error::from_last_os_error("waitid failed: internal error: unexpected state"))
+                    Err(Error::from_last_os_error(
+                        "waitid failed: internal error: unexpected state",
+                    ))
                 }
             },
             Err(error) => {
@@ -424,7 +482,8 @@ impl ChildProcess {
     fn send_signal(&mut self, signal: c_uint) -> Result<(), Error> {
         unsafe {
             if let Some(ref pidfd) = self.pidfd {
-                let errcode = syscall_readonly!(linux_raw::SYS_pidfd_send_signal, pidfd, signal, 0, 0);
+                let errcode =
+                    syscall_readonly!(linux_raw::SYS_pidfd_send_signal, pidfd, signal, 0, 0);
                 Error::from_syscall("pidfd_send_signal", errcode)
             } else {
                 linux_raw::sys_kill(self.pid, signal)
@@ -556,7 +615,11 @@ const ZYGOTE_TABLES: (AddressTable, ExtTable) = {
     }
 
     impl ElfHeader {
-        const fn section_header<'a>(&self, blob: &'a [u8], nth_section: u16) -> &'a ElfSectionHeader {
+        const fn section_header<'a>(
+            &self,
+            blob: &'a [u8],
+            nth_section: u16,
+        ) -> &'a ElfSectionHeader {
             let size = self.e_shentsize.get() as usize;
             assert!(size == core::mem::size_of::<ElfSectionHeader>());
 
@@ -585,11 +648,19 @@ const ZYGOTE_TABLES: (AddressTable, ExtTable) = {
     let mut nth_section = 0;
     while nth_section < header.e_shnum.get() {
         let section_header = header.section_header(ZYGOTE_BLOB_CONST, nth_section);
-        if starts_with(shstr.split_at(section_header.sh_name.get() as usize).1, b".address_table") {
+        if starts_with(
+            shstr.split_at(section_header.sh_name.get() as usize).1,
+            b".address_table",
+        ) {
             let data = section_header.data(ZYGOTE_BLOB_CONST);
             assert!(data.len() == core::mem::size_of::<AddressTablePacked>());
-            address_table = Some(AddressTable::from_packed(cast_slice::<AddressTablePacked>(data)));
-        } else if starts_with(shstr.split_at(section_header.sh_name.get() as usize).1, b".ext_table") {
+            address_table = Some(AddressTable::from_packed(cast_slice::<AddressTablePacked>(
+                data,
+            )));
+        } else if starts_with(
+            shstr.split_at(section_header.sh_name.get() as usize).1,
+            b".ext_table",
+        ) {
             let data = section_header.data(ZYGOTE_BLOB_CONST);
             assert!(data.len() == core::mem::size_of::<ExtTablePacked>());
             ext_table = Some(ExtTable::from_packed(cast_slice::<ExtTablePacked>(data)));
@@ -610,7 +681,11 @@ fn create_empty_memfd(name: &core::ffi::CStr) -> Result<Fd, Error> {
     linux_raw::sys_memfd_create(name, linux_raw::MFD_CLOEXEC | linux_raw::MFD_ALLOW_SEALING)
 }
 
-fn prepare_sealed_memfd<const N: usize>(memfd: Fd, length: usize, data: [&[u8]; N]) -> Result<Fd, Error> {
+fn prepare_sealed_memfd<const N: usize>(
+    memfd: Fd,
+    length: usize,
+    data: [&[u8]; N],
+) -> Result<Fd, Error> {
     let native_page_size = get_native_page_size();
     if length % native_page_size != 0 {
         return Err(Error::from_str("memfd size doesn't end on a page boundary"));
@@ -627,7 +702,10 @@ fn prepare_sealed_memfd<const N: usize>(memfd: Fd, length: usize, data: [&[u8]; 
     linux_raw::sys_fcntl(
         memfd.borrow(),
         linux_raw::F_ADD_SEALS,
-        linux_raw::F_SEAL_SEAL | linux_raw::F_SEAL_SHRINK | linux_raw::F_SEAL_GROW | linux_raw::F_SEAL_WRITE,
+        linux_raw::F_SEAL_SEAL
+            | linux_raw::F_SEAL_SHRINK
+            | linux_raw::F_SEAL_GROW
+            | linux_raw::F_SEAL_WRITE,
     )?;
 
     Ok(memfd)
@@ -637,21 +715,25 @@ fn prepare_zygote() -> Result<Fd, Error> {
     #[cfg(debug_assertions)]
     if cfg!(polkavm_dev_debug_zygote) {
         let paths = [
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../polkavm-zygote/target/x86_64-unknown-linux-gnu/debug/polkavm-zygote"),
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../polkavm-zygote/target/x86_64-unknown-linux-gnu/debug/polkavm-zygote"),
             std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../polkavm-zygote/target/x86_64-unknown-linux-gnu/release/polkavm-zygote"),
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/sandbox/polkavm-zygote"),
             std::path::PathBuf::from("./polkavm-zygote"),
         ];
 
-        let Some(path) = paths
-            .into_iter()
-            .find(|path| path.exists() && std::fs::read(path).map(|data| data == ZYGOTE_BLOB).unwrap_or(false))
-        else {
+        let Some(path) = paths.into_iter().find(|path| {
+            path.exists()
+                && std::fs::read(path)
+                    .map(|data| data == ZYGOTE_BLOB)
+                    .unwrap_or(false)
+        }) else {
             panic!("no matching zygote binary found for debugging");
         };
 
-        let path = std::ffi::CString::new(path.to_str().expect("invalid path to zygote")).expect("invalid path to zygote");
+        let path = std::ffi::CString::new(path.to_str().expect("invalid path to zygote"))
+            .expect("invalid path to zygote");
         return Ok(linux_raw::sys_open(&path, linux_raw::O_CLOEXEC | linux_raw::O_PATH).unwrap());
     }
 
@@ -660,14 +742,20 @@ fn prepare_zygote() -> Result<Fd, Error> {
     #[allow(clippy::unwrap_used)]
     // The size of the zygote blob is always going to be much less than the size of usize, so this never fails.
     let length_aligned = align_to_next_page_usize(native_page_size, ZYGOTE_BLOB.len()).unwrap();
-    prepare_sealed_memfd(create_empty_memfd(cstr!("polkavm_zygote"))?, length_aligned, [ZYGOTE_BLOB])
+    prepare_sealed_memfd(
+        create_empty_memfd(cstr!("polkavm_zygote"))?,
+        length_aligned,
+        [ZYGOTE_BLOB],
+    )
 }
 
 fn prepare_vmctx() -> Result<(Fd, Mmap), Error> {
     let native_page_size = get_native_page_size();
 
-    #[allow(clippy::unwrap_used)] // The size of VmCtx is always going to be much less than the size of usize, so this never fails.
-    let length_aligned = align_to_next_page_usize(native_page_size, core::mem::size_of::<VmCtx>()).unwrap();
+    #[allow(clippy::unwrap_used)]
+    // The size of VmCtx is always going to be much less than the size of usize, so this never fails.
+    let length_aligned =
+        align_to_next_page_usize(native_page_size, core::mem::size_of::<VmCtx>()).unwrap();
 
     let memfd = create_empty_memfd(cstr!("polkavm_vmctx"))?;
     linux_raw::sys_ftruncate(memfd.borrow(), length_aligned as linux_raw::c_ulong)?;
@@ -739,17 +827,32 @@ unsafe fn child_main(uid_map: &str, gid_map: &str, fds: ChildFds) -> Result<(), 
 
         // Disable the 'setgroups' syscall. Probably unnecessary since we'll do it though seccomp anyway, but just in case.
         // (See CVE-2014-8989 for more details.)
-        let proc_self = linux_raw::sys_open(cstr!("/proc/self"), linux_raw::O_CLOEXEC | linux_raw::O_PATH)?;
-        let fd = linux_raw::sys_openat(proc_self.borrow(), cstr!("setgroups"), linux_raw::O_CLOEXEC | linux_raw::O_WRONLY)?;
+        let proc_self = linux_raw::sys_open(
+            cstr!("/proc/self"),
+            linux_raw::O_CLOEXEC | linux_raw::O_PATH,
+        )?;
+        let fd = linux_raw::sys_openat(
+            proc_self.borrow(),
+            cstr!("setgroups"),
+            linux_raw::O_CLOEXEC | linux_raw::O_WRONLY,
+        )?;
         linux_raw::sys_write(fd.borrow(), b"deny")?;
         fd.close()?;
 
         // Set up UID and GID maps. This can only be done once, so if we do it here we'll block the possibility of doing it later.
-        let fd = linux_raw::sys_openat(proc_self.borrow(), cstr!("gid_map"), linux_raw::O_CLOEXEC | linux_raw::O_RDWR)?;
+        let fd = linux_raw::sys_openat(
+            proc_self.borrow(),
+            cstr!("gid_map"),
+            linux_raw::O_CLOEXEC | linux_raw::O_RDWR,
+        )?;
         linux_raw::sys_write(fd.borrow(), gid_map.as_bytes())?;
         fd.close()?;
 
-        let fd = linux_raw::sys_openat(proc_self.borrow(), cstr!("uid_map"), linux_raw::O_CLOEXEC | linux_raw::O_RDWR)?;
+        let fd = linux_raw::sys_openat(
+            proc_self.borrow(),
+            cstr!("uid_map"),
+            linux_raw::O_CLOEXEC | linux_raw::O_RDWR,
+        )?;
         linux_raw::sys_write(fd.borrow(), uid_map.as_bytes())?;
         fd.close()?;
         proc_self.close()?;
@@ -789,7 +892,11 @@ unsafe fn child_main(uid_map: &str, gid_map: &str, fds: ChildFds) -> Result<(), 
     // status to the host, even if the SIGPIPE would normally be ignored!
     //
     // So we just make a unix socket here instead to side step this problem.
-    let (_, fd_dummy) = linux_raw::sys_socketpair(linux_raw::AF_UNIX, linux_raw::SOCK_SEQPACKET | linux_raw::SOCK_CLOEXEC, 0)?;
+    let (_, fd_dummy) = linux_raw::sys_socketpair(
+        linux_raw::AF_UNIX,
+        linux_raw::SOCK_SEQPACKET | linux_raw::SOCK_CLOEXEC,
+        0,
+    )?;
 
     pub use polkavm_common::zygote;
 
@@ -834,8 +941,18 @@ unsafe fn child_main(uid_map: &str, gid_map: &str, fds: ChildFds) -> Result<(), 
 
     if !cfg!(polkavm_dev_debug_zygote) {
         // Hide the host filesystem.
-        let mount_flags = linux_raw::MS_REC | linux_raw::MS_NODEV | linux_raw::MS_NOEXEC | linux_raw::MS_NOSUID | linux_raw::MS_RDONLY;
-        linux_raw::sys_mount(cstr!("none"), cstr!("/tmp"), cstr!("tmpfs"), mount_flags, Some(cstr!("size=0")))?;
+        let mount_flags = linux_raw::MS_REC
+            | linux_raw::MS_NODEV
+            | linux_raw::MS_NOEXEC
+            | linux_raw::MS_NOSUID
+            | linux_raw::MS_RDONLY;
+        linux_raw::sys_mount(
+            cstr!("none"),
+            cstr!("/tmp"),
+            cstr!("tmpfs"),
+            mount_flags,
+            Some(cstr!("size=0")),
+        )?;
         linux_raw::sys_chdir(cstr!("/tmp"))?;
     }
 
@@ -862,11 +979,41 @@ unsafe fn child_main(uid_map: &str, gid_map: &str, fds: ChildFds) -> Result<(), 
         },
     )?;
 
-    linux_raw::sys_setrlimit(linux_raw::RLIMIT_NPROC, &linux_raw::rlimit { rlim_cur: 1, rlim_max: 1 })?;
-    linux_raw::sys_setrlimit(linux_raw::RLIMIT_FSIZE, &linux_raw::rlimit { rlim_cur: 0, rlim_max: 0 })?;
-    linux_raw::sys_setrlimit(linux_raw::RLIMIT_LOCKS, &linux_raw::rlimit { rlim_cur: 0, rlim_max: 0 })?;
-    linux_raw::sys_setrlimit(linux_raw::RLIMIT_MEMLOCK, &linux_raw::rlimit { rlim_cur: 0, rlim_max: 0 })?;
-    linux_raw::sys_setrlimit(linux_raw::RLIMIT_MSGQUEUE, &linux_raw::rlimit { rlim_cur: 0, rlim_max: 0 })?;
+    linux_raw::sys_setrlimit(
+        linux_raw::RLIMIT_NPROC,
+        &linux_raw::rlimit {
+            rlim_cur: 1,
+            rlim_max: 1,
+        },
+    )?;
+    linux_raw::sys_setrlimit(
+        linux_raw::RLIMIT_FSIZE,
+        &linux_raw::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        },
+    )?;
+    linux_raw::sys_setrlimit(
+        linux_raw::RLIMIT_LOCKS,
+        &linux_raw::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        },
+    )?;
+    linux_raw::sys_setrlimit(
+        linux_raw::RLIMIT_MEMLOCK,
+        &linux_raw::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        },
+    )?;
+    linux_raw::sys_setrlimit(
+        linux_raw::RLIMIT_MSGQUEUE,
+        &linux_raw::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        },
+    )?;
 
     if cfg!(polkavm_dev_debug_zygote) {
         let pid = linux_raw::sys_getpid()?;
@@ -1034,7 +1181,9 @@ unsafe fn set_message(vmctx: &VmCtx, message: core::fmt::Arguments) {
     impl<'a> core::fmt::Write for Adapter<'a> {
         fn write_str(&mut self, string: &str) -> Result<(), core::fmt::Error> {
             use std::io::Write;
-            self.0.write_all(string.as_bytes()).map_err(|_| core::fmt::Error)
+            self.0
+                .write_all(string.as_bytes())
+                .map_err(|_| core::fmt::Error)
         }
     }
 
@@ -1110,7 +1259,10 @@ impl AsRef<[usize]> for JumpTableAllocation {
     fn as_ref(&self) -> &[usize] {
         #[allow(clippy::cast_ptr_alignment)] // Allocation is guaranteed to be page aligned.
         unsafe {
-            core::slice::from_raw_parts(self.0.as_ptr().cast::<usize>(), self.0.len() / core::mem::size_of::<usize>())
+            core::slice::from_raw_parts(
+                self.0.as_ptr().cast::<usize>(),
+                self.0.len() / core::mem::size_of::<usize>(),
+            )
         }
     }
 }
@@ -1119,7 +1271,10 @@ impl AsMut<[usize]> for JumpTableAllocation {
     fn as_mut(&mut self) -> &mut [usize] {
         #[allow(clippy::cast_ptr_alignment)] // Allocation is guaranteed to be page aligned.
         unsafe {
-            core::slice::from_raw_parts_mut(self.0.as_mut_ptr().cast::<usize>(), self.0.len() / core::mem::size_of::<usize>())
+            core::slice::from_raw_parts_mut(
+                self.0.as_mut_ptr().cast::<usize>(),
+                self.0.len() / core::mem::size_of::<usize>(),
+            )
         }
     }
 }
@@ -1141,10 +1296,11 @@ impl super::Sandbox for Sandbox {
         module
     }
 
-    fn downcast_global_state(global: &crate::polkavm::sandbox::GlobalStateKind) -> &Self::GlobalState {
+    fn downcast_global_state(
+        global: &crate::polkavm::sandbox::GlobalStateKind,
+    ) -> &Self::GlobalState {
         #[allow(irrefutable_let_patterns)]
-        let crate::polkavm::sandbox::GlobalStateKind::Linux(global) = global
-        else {
+        let crate::polkavm::sandbox::GlobalStateKind::Linux(global) = global else {
             unreachable!()
         };
         global
@@ -1152,16 +1308,23 @@ impl super::Sandbox for Sandbox {
 
     fn downcast_worker_cache(cache: &WorkerCacheKind) -> &WorkerCache<Self> {
         #[allow(irrefutable_let_patterns)]
-        let crate::polkavm::sandbox::WorkerCacheKind::Linux(cache) = cache
-        else {
+        let crate::polkavm::sandbox::WorkerCacheKind::Linux(cache) = cache else {
             unreachable!()
         };
         cache
     }
 
-    fn allocate_jump_table(global: &Self::GlobalState, count: usize) -> Result<Self::JumpTable, Self::Error> {
-        let Some(alloc) = global.shared_memory.alloc(count * core::mem::size_of::<usize>()) else {
-            return Err(Error::from_str("failed to allocate the jump table: out of shared memory"));
+    fn allocate_jump_table(
+        global: &Self::GlobalState,
+        count: usize,
+    ) -> Result<Self::JumpTable, Self::Error> {
+        let Some(alloc) = global
+            .shared_memory
+            .alloc(count * core::mem::size_of::<usize>())
+        else {
+            return Err(Error::from_str(
+                "failed to allocate the jump table: out of shared memory",
+            ));
         };
 
         Ok(JumpTableAllocation(alloc))
@@ -1171,7 +1334,11 @@ impl super::Sandbox for Sandbox {
         Ok(())
     }
 
-    fn prepare_program(global: &Self::GlobalState, init: SandboxInit<Self>, (): Self::AddressSpace) -> Result<Self::Program, Self::Error> {
+    fn prepare_program(
+        global: &Self::GlobalState,
+        init: SandboxInit<Self>,
+        (): Self::AddressSpace,
+    ) -> Result<Self::Program, Self::Error> {
         let cfg = init.guest_init.memory_map()?;
 
         let Some(shm_ro_data) = global.shared_memory.alloc(init.guest_init.ro_data.len()) else {
@@ -1287,7 +1454,11 @@ impl super::Sandbox for Sandbox {
 
     fn spawn(global: &Self::GlobalState, config: &SandboxConfig) -> Result<Self, Error> {
         let sigset = Sigmask::block_all_signals()?;
-        let (socket, child_socket) = linux_raw::sys_socketpair(linux_raw::AF_UNIX, linux_raw::SOCK_SEQPACKET | linux_raw::SOCK_CLOEXEC, 0)?;
+        let (socket, child_socket) = linux_raw::sys_socketpair(
+            linux_raw::AF_UNIX,
+            linux_raw::SOCK_SEQPACKET | linux_raw::SOCK_CLOEXEC,
+            0,
+        )?;
         let (lifetime_pipe_host, lifetime_pipe_child) = linux_raw::sys_pipe2(linux_raw::O_CLOEXEC)?;
         let (logger_rx, logger_tx) = if config.enable_logger {
             let (rx, tx) = linux_raw::sys_pipe2(linux_raw::O_CLOEXEC)?;
@@ -1300,11 +1471,24 @@ impl super::Sandbox for Sandbox {
 
         let (vmctx_memfd, vmctx_mmap) = prepare_vmctx()?;
         let vmctx = unsafe { &*vmctx_mmap.as_ptr().cast::<VmCtx>() };
-        vmctx.init.logging_enabled.store(config.enable_logger, Ordering::Relaxed);
-        vmctx.init.uffd_available.store(global.uffd_available, Ordering::Relaxed);
-        vmctx.init.sandbox_disabled.store(cfg!(polkavm_dev_debug_zygote), Ordering::Relaxed);
+        vmctx
+            .init
+            .logging_enabled
+            .store(config.enable_logger, Ordering::Relaxed);
+        vmctx
+            .init
+            .uffd_available
+            .store(global.uffd_available, Ordering::Relaxed);
+        vmctx
+            .init
+            .sandbox_disabled
+            .store(cfg!(polkavm_dev_debug_zygote), Ordering::Relaxed);
 
-        let sandbox_flags = if !cfg!(polkavm_dev_debug_zygote) { SANDBOX_FLAGS } else { 0 };
+        let sandbox_flags = if !cfg!(polkavm_dev_debug_zygote) {
+            SANDBOX_FLAGS
+        } else {
+            0
+        };
 
         let uid = linux_raw::sys_getuid()?;
         let gid = linux_raw::sys_getgid()?;
@@ -1341,7 +1525,10 @@ impl super::Sandbox for Sandbox {
                         }
                         Err(error) => {
                             let vmctx = &*vmctx_mmap.as_ptr().cast::<VmCtx>();
-                            set_message(vmctx, format_args!("fatal error while spawning child: {error}"));
+                            set_message(
+                                vmctx,
+                                format_args!("fatal error while spawning child: {error}"),
+                            );
 
                             abort();
                         }
@@ -1405,7 +1592,12 @@ impl super::Sandbox for Sandbox {
         // We're in the parent. Restore the signal mask.
         sigset.unblock()?;
 
-        fn wait_for_futex(vmctx: &VmCtx, child: &mut ChildProcess, current_state: u32, target_state: u32) -> Result<(), Error> {
+        fn wait_for_futex(
+            vmctx: &VmCtx,
+            child: &mut ChildProcess,
+            current_state: u32,
+            target_state: u32,
+        ) -> Result<(), Error> {
             let instant = Instant::now();
             loop {
                 let state = vmctx.futex.load(Ordering::Relaxed);
@@ -1414,14 +1606,18 @@ impl super::Sandbox for Sandbox {
                 }
 
                 if state != current_state {
-                    return Err(Error::from_str("failed to initialize sandbox process: unexpected futex state"));
+                    return Err(Error::from_str(
+                        "failed to initialize sandbox process: unexpected futex state",
+                    ));
                 }
 
                 let status = child.check_status(true)?;
                 if !status.is_running() {
                     let message = get_message(vmctx);
                     if let Some(message) = message {
-                        let error = Error::from(format!("failed to initialize sandbox process: {status}: {message}"));
+                        let error = Error::from(format!(
+                            "failed to initialize sandbox process: {status}: {message}"
+                        ));
                         return Err(error);
                     } else {
                         return Err(Error::from(format!(
@@ -1432,17 +1628,23 @@ impl super::Sandbox for Sandbox {
 
                 if !cfg!(polkavm_dev_debug_zygote) && instant.elapsed() > Duration::from_secs(10) {
                     // This should never happen, but just in case.
-                    return Err(Error::from_str("failed to initialize sandbox process: initialization timeout"));
+                    return Err(Error::from_str(
+                        "failed to initialize sandbox process: initialization timeout",
+                    ));
                 }
 
-                match linux_raw::sys_futex_wait(&vmctx.futex, state, Some(Duration::from_millis(100))) {
+                match linux_raw::sys_futex_wait(
+                    &vmctx.futex,
+                    state,
+                    Some(Duration::from_millis(100)),
+                ) {
                     Ok(()) => continue,
                     Err(error)
                         if error.errno() == linux_raw::EAGAIN
                             || error.errno() == linux_raw::EINTR
                             || error.errno() == linux_raw::ETIMEDOUT =>
                     {
-                        continue
+                        continue;
                     }
                     Err(error) => return Err(error),
                 }
@@ -1512,31 +1714,47 @@ impl super::Sandbox for Sandbox {
         // Grab the child process' maps and see what we can unmap.
         //
         // The child process can't do it itself as it's too sandboxed.
-        let maps = std::fs::read(format!("/proc/{}/maps", child_pid))
-            .map_err(|error| Error::from_errno("failed to read child's maps", error.raw_os_error().unwrap_or(0)))?;
+        let maps = std::fs::read(format!("/proc/{}/maps", child_pid)).map_err(|error| {
+            Error::from_errno(
+                "failed to read child's maps",
+                error.raw_os_error().unwrap_or(0),
+            )
+        })?;
 
         for line in maps.split(|&byte| byte == b'\n') {
             if line.is_empty() {
                 continue;
             }
 
-            let map = Map::parse(line).ok_or_else(|| Error::from_str("failed to parse the maps of the child process"))?;
+            let map = Map::parse(line)
+                .ok_or_else(|| Error::from_str("failed to parse the maps of the child process"))?;
             match map.name {
                 b"[stack]" => {
                     vmctx.init.stack_address.store(map.start, Ordering::Relaxed);
-                    vmctx.init.stack_length.store(map.end - map.start, Ordering::Relaxed);
+                    vmctx
+                        .init
+                        .stack_length
+                        .store(map.end - map.start, Ordering::Relaxed);
                 }
                 b"[vdso]" => {
                     vmctx.init.vdso_address.store(map.start, Ordering::Relaxed);
-                    vmctx.init.vdso_length.store(map.end - map.start, Ordering::Relaxed);
+                    vmctx
+                        .init
+                        .vdso_length
+                        .store(map.end - map.start, Ordering::Relaxed);
                 }
                 b"[vvar]" => {
                     vmctx.init.vvar_address.store(map.start, Ordering::Relaxed);
-                    vmctx.init.vvar_length.store(map.end - map.start, Ordering::Relaxed);
+                    vmctx
+                        .init
+                        .vvar_length
+                        .store(map.end - map.start, Ordering::Relaxed);
                 }
                 b"[vsyscall]" => {
                     if map.is_readable {
-                        return Err(Error::from_str("failed to initialize sandbox process: vsyscall region is readable"));
+                        return Err(Error::from_str(
+                            "failed to initialize sandbox process: vsyscall region is readable",
+                        ));
                     }
                 }
                 _ => {}
@@ -1549,7 +1767,8 @@ impl super::Sandbox for Sandbox {
 
         let userfaultfd = if global.uffd_available {
             let userfaultfd = linux_raw::recvfd(socket.borrow()).map_err(|error| {
-                let mut error = format!("failed to fetch the userfaultfd from the child process: {error}");
+                let mut error =
+                    format!("failed to fetch the userfaultfd from the child process: {error}");
                 if let Some(message) = get_message(vmctx) {
                     use core::fmt::Write;
                     write!(&mut error, " (root cause: {message})").unwrap();
@@ -1563,8 +1782,9 @@ impl super::Sandbox for Sandbox {
                 ..Default::default()
             };
 
-            linux_raw::sys_uffdio_api(userfaultfd.borrow(), &mut api)
-                .map_err(|error| Error::from(format!("failed to initialize the userfaultfd API: {error}")))?;
+            linux_raw::sys_uffdio_api(userfaultfd.borrow(), &mut api).map_err(|error| {
+                Error::from(format!("failed to initialize the userfaultfd API: {error}"))
+            })?;
 
             userfaultfd
         } else {
@@ -1602,12 +1822,18 @@ impl super::Sandbox for Sandbox {
         })
     }
 
-    fn load_module(&mut self, global: &Self::GlobalState, module: &Module) -> Result<(), Self::Error> {
+    fn load_module(
+        &mut self,
+        global: &Self::GlobalState,
+        module: &Module,
+    ) -> Result<(), Self::Error> {
         if self.module.is_some() {
             return Err(Error::from("module already loaded"));
         }
 
-        if module.is_dynamic_paging() && get_native_page_size() != module.memory_map().page_size() as usize {
+        if module.is_dynamic_paging()
+            && get_native_page_size() != module.memory_map().page_size() as usize
+        {
             return Err(Error::from(
                 "dynamic paging is currently unsupported if the module's page size doesn't match the native page size",
             ));
@@ -1623,7 +1849,10 @@ impl super::Sandbox for Sandbox {
         let program = &compiled_module.sandbox_program.0;
 
         let memory_map = if !module.is_dynamic_paging() {
-            let Some(memory_map) = global.shared_memory.alloc(core::mem::size_of::<VmMap>() * program.memory_map.len()) else {
+            let Some(memory_map) = global
+                .shared_memory
+                .alloc(core::mem::size_of::<VmMap>() * program.memory_map.len())
+            else {
                 return Err(Error::from_str("out of shared memory"));
             };
 
@@ -1638,7 +1867,12 @@ impl super::Sandbox for Sandbox {
                 *vm_map = VmMap {
                     address: chunk.address,
                     length: chunk.length,
-                    protection: linux_raw::PROT_READ | if chunk.is_writable { linux_raw::PROT_WRITE } else { 0 },
+                    protection: linux_raw::PROT_READ
+                        | if chunk.is_writable {
+                            linux_raw::PROT_WRITE
+                        } else {
+                            0
+                        },
                     flags: if !matches!(chunk.initialize_with, InitializeWith::None) {
                         linux_raw::MAP_FIXED | linux_raw::MAP_PRIVATE
                     } else {
@@ -1668,7 +1902,9 @@ impl super::Sandbox for Sandbox {
                 fd_offset: 0x10000,
             };
 
-            self.vmctx().shm_memory_map_count.store(1, Ordering::Relaxed);
+            self.vmctx()
+                .shm_memory_map_count
+                .store(1, Ordering::Relaxed);
             memory_map
         };
 
@@ -1678,7 +1914,8 @@ impl super::Sandbox for Sandbox {
 
         unsafe {
             *self.vmctx().heap_info.heap_top.get() = u64::from(module.memory_map().heap_base());
-            *self.vmctx().heap_info.heap_threshold.get() = u64::from(module.memory_map().rw_data_range().end);
+            *self.vmctx().heap_info.heap_threshold.get() =
+                u64::from(module.memory_map().rw_data_range().end);
             *self.vmctx().heap_base.get() = module.memory_map().heap_base();
             *self.vmctx().heap_initial_threshold.get() = module.memory_map().rw_data_range().end;
             *self.vmctx().heap_max_size.get() = module.memory_map().max_heap_size();
@@ -1688,19 +1925,29 @@ impl super::Sandbox for Sandbox {
         self.vmctx()
             .shm_code_offset
             .store(program.shm_code.offset() as u64, Ordering::Relaxed);
-        self.vmctx().shm_code_length.store(program.shm_code.len() as u64, Ordering::Relaxed);
+        self.vmctx()
+            .shm_code_length
+            .store(program.shm_code.len() as u64, Ordering::Relaxed);
         self.vmctx()
             .shm_jump_table_offset
             .store(program.shm_jump_table.offset() as u64, Ordering::Relaxed);
         self.vmctx()
             .shm_jump_table_length
             .store(program.shm_jump_table.len() as u64, Ordering::Relaxed);
-        self.vmctx().sysreturn_address.store(program.sysreturn_address, Ordering::Relaxed);
+        self.vmctx()
+            .sysreturn_address
+            .store(program.sysreturn_address, Ordering::Relaxed);
 
         self.vmctx().program_counter.store(0, Ordering::Relaxed);
-        self.vmctx().next_program_counter.store(0, Ordering::Relaxed);
-        self.vmctx().next_native_program_counter.store(0, Ordering::Relaxed);
-        self.vmctx().jump_into.store(ZYGOTE_TABLES.1.ext_load_program, Ordering::Relaxed);
+        self.vmctx()
+            .next_program_counter
+            .store(0, Ordering::Relaxed);
+        self.vmctx()
+            .next_native_program_counter
+            .store(0, Ordering::Relaxed);
+        self.vmctx()
+            .jump_into
+            .store(ZYGOTE_TABLES.1.ext_load_program, Ordering::Relaxed);
         self.vmctx().gas.store(0, Ordering::Relaxed);
         for reg in &self.vmctx().regs {
             reg.store(0, Ordering::Relaxed);
@@ -1723,11 +1970,16 @@ impl super::Sandbox for Sandbox {
                         start: 0x10000,
                         len: u64::from(u32::MAX) + 1 - 0x10000,
                     },
-                    mode: linux_raw::UFFDIO_REGISTER_MODE_MISSING | linux_raw::UFFDIO_REGISTER_MODE_WP,
+                    mode: linux_raw::UFFDIO_REGISTER_MODE_MISSING
+                        | linux_raw::UFFDIO_REGISTER_MODE_WP,
                     ..linux_raw::uffdio_register::default()
                 },
             )
-            .map_err(|error| Error::from(format!("failed to register the guest memory with userfaultfd: {error}")))?;
+            .map_err(|error| {
+                Error::from(format!(
+                    "failed to register the guest memory with userfaultfd: {error}"
+                ))
+            })?;
         }
 
         Ok(())
@@ -1746,7 +1998,9 @@ impl super::Sandbox for Sandbox {
         self.module = None;
         self.page_set.clear();
 
-        self.vmctx().jump_into.store(ZYGOTE_TABLES.1.ext_recycle, Ordering::Relaxed);
+        self.vmctx()
+            .jump_into
+            .store(ZYGOTE_TABLES.1.ext_recycle, Ordering::Relaxed);
         self.wake_oneshot_and_expect_idle()
     }
 
@@ -1764,44 +2018,65 @@ impl super::Sandbox for Sandbox {
 
             let compiled_module = Self::downcast_module(self.module.as_ref().unwrap());
             let Some(address) = compiled_module.lookup_native_code_address(pc) else {
-                log::debug!("Tried to call into {pc} which doesn't have any native code associated with it");
+                log::debug!(
+                    "Tried to call into {pc} which doesn't have any native code associated with it"
+                );
                 self.is_program_counter_valid = true;
                 self.vmctx().program_counter.store(pc.0, Ordering::Relaxed);
                 if self.module.as_ref().unwrap().is_step_tracing() {
-                    self.vmctx().next_program_counter.store(pc.0, Ordering::Relaxed);
                     self.vmctx()
-                        .next_native_program_counter
-                        .store(compiled_module.invalid_code_offset_address, Ordering::Relaxed);
+                        .next_program_counter
+                        .store(pc.0, Ordering::Relaxed);
+                    self.vmctx().next_native_program_counter.store(
+                        compiled_module.invalid_code_offset_address,
+                        Ordering::Relaxed,
+                    );
                     return Ok(InterruptKind::Step);
                 } else {
-                    self.vmctx().next_native_program_counter.store(0, Ordering::Relaxed);
+                    self.vmctx()
+                        .next_native_program_counter
+                        .store(0, Ordering::Relaxed);
                     return Ok(InterruptKind::Trap);
                 }
             };
 
             log::trace!("Jumping into: {pc} (0x{address:x})");
-            self.vmctx().next_program_counter.store(pc.0, Ordering::Relaxed);
-            self.vmctx().next_native_program_counter.store(address, Ordering::Relaxed);
+            self.vmctx()
+                .next_program_counter
+                .store(pc.0, Ordering::Relaxed);
+            self.vmctx()
+                .next_native_program_counter
+                .store(address, Ordering::Relaxed);
         } else {
             log::trace!(
                 "Resuming into: {} (0x{:x})",
                 self.vmctx().next_program_counter.load(Ordering::Relaxed),
-                self.vmctx().next_native_program_counter.load(Ordering::Relaxed)
+                self.vmctx()
+                    .next_native_program_counter
+                    .load(Ordering::Relaxed)
             );
         };
 
         let compiled_module = Self::downcast_module(self.module.as_ref().unwrap());
-        debug_assert_eq!(self.vmctx().futex.load(Ordering::Relaxed) & 1, VMCTX_FUTEX_IDLE);
-        self.vmctx()
-            .jump_into
-            .store(compiled_module.sandbox_program.0.sysenter_address, Ordering::Relaxed);
+        debug_assert_eq!(
+            self.vmctx().futex.load(Ordering::Relaxed) & 1,
+            VMCTX_FUTEX_IDLE
+        );
+        self.vmctx().jump_into.store(
+            compiled_module.sandbox_program.0.sysenter_address,
+            Ordering::Relaxed,
+        );
         self.wake_worker()?;
         self.is_program_counter_valid = true;
 
         let result = self.wait()?;
-        if self.module.as_ref().unwrap().gas_metering() == Some(GasMeteringKind::Async) && self.gas() < 0 {
+        if self.module.as_ref().unwrap().gas_metering() == Some(GasMeteringKind::Async)
+            && self.gas() < 0
+        {
             self.is_program_counter_valid = false;
-            self.vmctx().next_native_program_counter.store(0, Ordering::Relaxed);
+            self.vmctx()
+                .next_native_program_counter
+                .store(0, Ordering::Relaxed);
             return Ok(InterruptKind::NotEnoughGas);
         }
 
@@ -1856,7 +2131,9 @@ impl super::Sandbox for Sandbox {
             return None;
         }
 
-        Some(ProgramCounter(self.vmctx().program_counter.load(Ordering::Relaxed)))
+        Some(ProgramCounter(
+            self.vmctx().program_counter.load(Ordering::Relaxed),
+        ))
     }
 
     fn next_program_counter(&self) -> Option<ProgramCounter> {
@@ -1864,10 +2141,17 @@ impl super::Sandbox for Sandbox {
             return self.next_program_counter;
         }
 
-        if self.vmctx().next_native_program_counter.load(Ordering::Relaxed) == 0 {
+        if self
+            .vmctx()
+            .next_native_program_counter
+            .load(Ordering::Relaxed)
+            == 0
+        {
             None
         } else {
-            Some(ProgramCounter(self.vmctx().next_program_counter.load(Ordering::Relaxed)))
+            Some(ProgramCounter(
+                self.vmctx().next_program_counter.load(Ordering::Relaxed),
+            ))
         }
     }
 
@@ -1880,10 +2164,15 @@ impl super::Sandbox for Sandbox {
     fn next_native_program_counter(&self) -> Option<usize> {
         let compiled_module = Self::downcast_module(self.module.as_ref()?);
         if let Some(pc) = self.next_program_counter {
-            return compiled_module.lookup_native_code_address(pc).map(|value| value as usize);
+            return compiled_module
+                .lookup_native_code_address(pc)
+                .map(|value| value as usize);
         }
 
-        let value = self.vmctx().next_native_program_counter.load(Ordering::Relaxed);
+        let value = self
+            .vmctx()
+            .next_native_program_counter
+            .load(Ordering::Relaxed);
         if value == 0 {
             None
         } else {
@@ -1901,12 +2190,17 @@ impl super::Sandbox for Sandbox {
 
         let module = self.module.as_ref().unwrap();
         self.aux_data_length = size;
-        self.vmctx().arg.store(self.aux_data_address, Ordering::Relaxed);
-        self.vmctx().arg2.store(size, Ordering::Relaxed);
-        self.vmctx().arg3.store(module.memory_map().aux_data_size(), Ordering::Relaxed);
         self.vmctx()
-            .jump_into
-            .store(ZYGOTE_TABLES.1.ext_set_accessible_aux_size, Ordering::Relaxed);
+            .arg
+            .store(self.aux_data_address, Ordering::Relaxed);
+        self.vmctx().arg2.store(size, Ordering::Relaxed);
+        self.vmctx()
+            .arg3
+            .store(module.memory_map().aux_data_size(), Ordering::Relaxed);
+        self.vmctx().jump_into.store(
+            ZYGOTE_TABLES.1.ext_set_accessible_aux_size,
+            Ordering::Relaxed,
+        );
         self.wake_oneshot_and_expect_idle()
     }
 
@@ -1925,14 +2219,20 @@ impl super::Sandbox for Sandbox {
         };
 
         if !self.dynamic_paging_enabled {
-            self.vmctx().jump_into.store(ZYGOTE_TABLES.1.ext_reset_memory, Ordering::Relaxed);
+            self.vmctx()
+                .jump_into
+                .store(ZYGOTE_TABLES.1.ext_reset_memory, Ordering::Relaxed);
             self.wake_oneshot_and_expect_idle()
         } else {
             self.free_pages(0x10000, 0xffff0000)
         }
     }
 
-    fn read_memory_into<'slice>(&self, address: u32, slice: &'slice mut [MaybeUninit<u8>]) -> Result<&'slice mut [u8], MemoryAccessError> {
+    fn read_memory_into<'slice>(
+        &self,
+        address: u32,
+        slice: &'slice mut [MaybeUninit<u8>],
+    ) -> Result<&'slice mut [u8], MemoryAccessError> {
         log::trace!(
             "Reading memory: 0x{:x}-0x{:x} ({} bytes)",
             address,
@@ -1943,19 +2243,26 @@ impl super::Sandbox for Sandbox {
         if !self.dynamic_paging_enabled {
             let length = slice.len();
             match linux_raw::vm_read_memory(self.child.pid, [slice], [(address as usize, length)]) {
-                Ok(actual_length) if actual_length == length => unsafe { Ok(slice_assume_init_mut(slice)) },
+                Ok(actual_length) if actual_length == length => unsafe {
+                    Ok(slice_assume_init_mut(slice))
+                },
                 Ok(_) => Err(MemoryAccessError::Error("incomplete read".into())),
                 Err(error) => Err(MemoryAccessError::Error(error.into())),
             }
         } else {
             let module = self.module.as_ref().unwrap();
             let page_start = module.address_to_page(module.round_to_page_size_down(address));
-            let page_end = module.address_to_page(module.round_to_page_size_down(address + slice.len() as u32));
+            let page_end = module
+                .address_to_page(module.round_to_page_size_down(address + slice.len() as u32));
             if !self.page_set.contains((page_start, page_end)) {
                 return Err(MemoryAccessError::Error("incomplete read".into()));
             } else {
-                let memory: &[core::mem::MaybeUninit<u8>] =
-                    unsafe { core::slice::from_raw_parts(self.memory_mmap.as_ptr().cast(), self.memory_mmap.len()) };
+                let memory: &[core::mem::MaybeUninit<u8>] = unsafe {
+                    core::slice::from_raw_parts(
+                        self.memory_mmap.as_ptr().cast(),
+                        self.memory_mmap.len(),
+                    )
+                };
 
                 slice.copy_from_slice(&memory[address as usize..address as usize + slice.len()]);
             }
@@ -1984,7 +2291,9 @@ impl super::Sandbox for Sandbox {
                 let aux_data_end = module.memory_map().aux_data_address() + aux_data_size;
                 let address_end = address as usize + data.len();
                 if address_end <= aux_data_end as usize {
-                    self.memory_mmap.as_slice_mut()[address as usize..address as usize + data.len()].copy_from_slice(data);
+                    self.memory_mmap.as_slice_mut()
+                        [address as usize..address as usize + data.len()]
+                        .copy_from_slice(data);
                     return Ok(());
                 } else {
                     false
@@ -2013,9 +2322,11 @@ impl super::Sandbox for Sandbox {
             }
         } else {
             let page_start = module.address_to_page(module.round_to_page_size_down(address));
-            let page_end = module.address_to_page(module.round_to_page_size_down(address + data.len() as u32));
+            let page_end =
+                module.address_to_page(module.round_to_page_size_down(address + data.len() as u32));
             self.page_set.insert((page_start, page_end));
-            self.memory_mmap.as_slice_mut()[address as usize..address as usize + data.len()].copy_from_slice(data);
+            self.memory_mmap.as_slice_mut()[address as usize..address as usize + data.len()]
+                .copy_from_slice(data);
             Ok(())
         }
     }
@@ -2032,8 +2343,12 @@ impl super::Sandbox for Sandbox {
         if !self.dynamic_paging_enabled {
             let memory_map = module.memory_map();
             let is_ok = if address >= memory_map.aux_data_address() {
-                if u64::from(address) + u64::from(length) <= u64::from(memory_map.aux_data_range().end) {
-                    self.memory_mmap.as_slice_mut()[address as usize..address as usize + length as usize].fill(0);
+                if u64::from(address) + u64::from(length)
+                    <= u64::from(memory_map.aux_data_range().end)
+                {
+                    self.memory_mmap.as_slice_mut()
+                        [address as usize..address as usize + length as usize]
+                        .fill(0);
                     return Ok(());
                 } else {
                     false
@@ -2080,11 +2395,15 @@ impl super::Sandbox for Sandbox {
                     arg.range.start + arg.range.len
                 );
 
-                if let Err(error) = linux_raw::sys_uffdio_zeropage(self.userfaultfd.borrow(), &mut arg) {
+                if let Err(error) =
+                    linux_raw::sys_uffdio_zeropage(self.userfaultfd.borrow(), &mut arg)
+                {
                     return Err(MemoryAccessError::Error(error.into()));
                 }
             } else {
-                self.memory_mmap.as_slice_mut()[address as usize..address as usize + length as usize].fill(0);
+                self.memory_mmap.as_slice_mut()
+                    [address as usize..address as usize + length as usize]
+                    .fill(0);
             }
 
             self.page_set.insert((page_start, page_end));
@@ -2108,7 +2427,8 @@ impl super::Sandbox for Sandbox {
         arg.range.len = u64::from(length);
         arg.mode = linux_raw::UFFDIO_WRITEPROTECT_MODE_WP;
 
-        if let Err(error) = linux_raw::sys_uffdio_writeprotect(self.userfaultfd.borrow(), &mut arg) {
+        if let Err(error) = linux_raw::sys_uffdio_writeprotect(self.userfaultfd.borrow(), &mut arg)
+        {
             return Err(MemoryAccessError::Error(error.into()));
         }
 
@@ -2132,7 +2452,8 @@ impl super::Sandbox for Sandbox {
             } else {
                 let module = self.module.as_ref().unwrap();
                 let page_start = module.address_to_page(module.round_to_page_size_down(address));
-                let page_end = module.address_to_page(module.round_to_page_size_down(address + length));
+                let page_end =
+                    module.address_to_page(module.round_to_page_size_down(address + length));
                 self.page_set.remove((page_start, page_end));
             }
 
@@ -2148,10 +2469,14 @@ impl super::Sandbox for Sandbox {
 
     fn sbrk(&mut self, size: u32) -> Result<Option<u32>, Error> {
         if size == 0 {
-            return Ok(Some(unsafe { *self.vmctx().heap_info.heap_top.get() as u32 }));
+            return Ok(Some(unsafe {
+                *self.vmctx().heap_info.heap_top.get() as u32
+            }));
         }
 
-        self.vmctx().jump_into.store(ZYGOTE_TABLES.1.ext_sbrk, Ordering::Relaxed);
+        self.vmctx()
+            .jump_into
+            .store(ZYGOTE_TABLES.1.ext_sbrk, Ordering::Relaxed);
         self.vmctx().arg.store(size, Ordering::Relaxed);
         self.wake_worker()?;
         self.wait()?.expect_idle()?;
@@ -2178,8 +2503,12 @@ impl super::Sandbox for Sandbox {
             arg: get_field_offset!(VmCtx::new(), |base| base.arg.as_ptr()),
             gas: get_field_offset!(VmCtx::new(), |base| base.gas.as_ptr()),
             heap_info: get_field_offset!(VmCtx::new(), |base| &base.heap_info),
-            next_native_program_counter: get_field_offset!(VmCtx::new(), |base| base.next_native_program_counter.as_ptr()),
-            next_program_counter: get_field_offset!(VmCtx::new(), |base| base.next_program_counter.as_ptr()),
+            next_native_program_counter: get_field_offset!(VmCtx::new(), |base| base
+                .next_native_program_counter
+                .as_ptr()),
+            next_program_counter: get_field_offset!(VmCtx::new(), |base| base
+                .next_program_counter
+                .as_ptr()),
             program_counter: get_field_offset!(VmCtx::new(), |base| base.program_counter.as_ptr()),
             regs: get_field_offset!(VmCtx::new(), |base| base.regs.as_ptr()),
         }
@@ -2220,7 +2549,9 @@ impl Sandbox {
     }
 
     fn wake_worker(&self) -> Result<(), Error> {
-        self.vmctx().futex.store(VMCTX_FUTEX_BUSY, Ordering::Release);
+        self.vmctx()
+            .futex
+            .store(VMCTX_FUTEX_BUSY, Ordering::Release);
         linux_raw::sys_futex_wake_one(&self.vmctx().futex).map(|_| ())
     }
 
@@ -2233,8 +2564,12 @@ impl Sandbox {
         use crate::polkavm::sandbox::Sandbox;
 
         let compiled_module = Self::downcast_module(self.module.as_ref().unwrap());
-        let Some(machine_code_offset) = machine_code_address.checked_sub(compiled_module.native_code_origin) else {
-            return Err(Error::from_str("internal error: address underflow after a trap"));
+        let Some(machine_code_offset) =
+            machine_code_address.checked_sub(compiled_module.native_code_origin)
+        else {
+            return Err(Error::from_str(
+                "internal error: address underflow after a trap",
+            ));
         };
 
         let is_out_of_gas = match compiled_module.bitness {
@@ -2329,38 +2664,55 @@ impl Sandbox {
                 let page_size = get_native_page_size() as u32;
                 let page_address = address & !(page_size - 1);
 
-                let Some(machine_code_offset) = machine_code_address.checked_sub(compiled_module.native_code_origin) else {
-                    return Err(Error::from_str("internal error: address underflow after a segfault"));
+                let Some(machine_code_offset) =
+                    machine_code_address.checked_sub(compiled_module.native_code_origin)
+                else {
+                    return Err(Error::from_str(
+                        "internal error: address underflow after a segfault",
+                    ));
                 };
 
                 match compiled_module.bitness {
-                    Bitness::B32 => crate::polkavm::compiler::ArchVisitor::<Self, B32>::on_page_fault(
-                        compiled_module,
-                        self.gas_metering.is_some(),
-                        machine_code_address,
-                        machine_code_offset,
-                        self.vmctx(),
-                    ),
-                    Bitness::B64 => crate::polkavm::compiler::ArchVisitor::<Self, B64>::on_page_fault(
-                        compiled_module,
-                        self.gas_metering.is_some(),
-                        machine_code_address,
-                        machine_code_offset,
-                        self.vmctx(),
-                    ),
+                    Bitness::B32 => {
+                        crate::polkavm::compiler::ArchVisitor::<Self, B32>::on_page_fault(
+                            compiled_module,
+                            self.gas_metering.is_some(),
+                            machine_code_address,
+                            machine_code_offset,
+                            self.vmctx(),
+                        )
+                    }
+                    Bitness::B64 => {
+                        crate::polkavm::compiler::ArchVisitor::<Self, B64>::on_page_fault(
+                            compiled_module,
+                            self.gas_metering.is_some(),
+                            machine_code_address,
+                            machine_code_offset,
+                            self.vmctx(),
+                        )
+                    }
                 }
                 .map_err(Error::from_str)?;
 
                 self.is_program_counter_valid = true;
-                return Ok(Interrupt::Segfault(Segfault { page_address, page_size }));
+                return Ok(Interrupt::Segfault(Segfault {
+                    page_address,
+                    page_size,
+                }));
             }
 
             if state != VMCTX_FUTEX_BUSY {
                 log::error!("Unexpected worker process state: {state}");
-                return Err(Error::from_str("internal error: unexpected worker process state"));
+                return Err(Error::from_str(
+                    "internal error: unexpected worker process state",
+                ));
             }
 
-            let spin_target = if self.module.as_ref().map_or(false, |module| module.is_step_tracing()) {
+            let spin_target = if self
+                .module
+                .as_ref()
+                .map_or(false, |module| module.is_step_tracing())
+            {
                 128
             } else {
                 0
@@ -2383,11 +2735,22 @@ impl Sandbox {
             }
 
             self.count_futex_wait += 1;
-            match linux_raw::sys_futex_wait(&self.vmctx().futex, VMCTX_FUTEX_BUSY, Some(Duration::from_millis(100))) {
+            match linux_raw::sys_futex_wait(
+                &self.vmctx().futex,
+                VMCTX_FUTEX_BUSY,
+                Some(Duration::from_millis(100)),
+            ) {
                 Ok(()) => continue,
-                Err(error) if error.errno() == linux_raw::EAGAIN || error.errno() == linux_raw::EINTR => continue,
+                Err(error)
+                    if error.errno() == linux_raw::EAGAIN || error.errno() == linux_raw::EINTR =>
+                {
+                    continue;
+                }
                 Err(error) if error.errno() == linux_raw::ETIMEDOUT => {
-                    log::trace!("Timeout expired while waiting for child #{}...", self.child.pid);
+                    log::trace!(
+                        "Timeout expired while waiting for child #{}...",
+                        self.child.pid
+                    );
                     let status = self.child.check_status(true)?;
                     if let Some(interrupt) = self.handle_child_status(status)? {
                         return Ok(interrupt);
@@ -2411,7 +2774,9 @@ impl Sandbox {
         if let Some(message) = message {
             Err(Error::from(format!("{status}: {message}")))
         } else {
-            Err(Error::from(format!("worker process unexpectedly quit: {status}")))
+            Err(Error::from(format!(
+                "worker process unexpectedly quit: {status}"
+            )))
         }
     }
 }

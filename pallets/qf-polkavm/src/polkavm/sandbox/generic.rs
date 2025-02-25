@@ -3,10 +3,11 @@
 use polkavm_common::{
     error::{ExecutionError, Trap},
     program::Reg,
-    utils::{align_to_next_page_usize, byte_slice_init, AsUninitSliceMut},
+    utils::{AsUninitSliceMut, align_to_next_page_usize, byte_slice_init},
     zygote::{
-        AddressTable, AddressTableRaw, CacheAligned, VM_ADDR_JUMP_TABLE, VM_ADDR_JUMP_TABLE_RETURN_TO_HOST,
-        VM_SANDBOX_MAXIMUM_JUMP_TABLE_VIRTUAL_SIZE, VM_SANDBOX_MAXIMUM_NATIVE_CODE_SIZE,
+        AddressTable, AddressTableRaw, CacheAligned, VM_ADDR_JUMP_TABLE,
+        VM_ADDR_JUMP_TABLE_RETURN_TO_HOST, VM_SANDBOX_MAXIMUM_JUMP_TABLE_VIRTUAL_SIZE,
+        VM_SANDBOX_MAXIMUM_NATIVE_CODE_SIZE,
     },
 };
 
@@ -16,7 +17,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use super::{get_native_page_size, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind};
+use super::{SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind, get_native_page_size};
 use crate::polkavm::api::{CompiledModuleKind, MemoryAccessError, Module};
 use crate::polkavm::compiler::CompiledModule;
 use crate::polkavm::config::Config;
@@ -60,7 +61,9 @@ fn to_usize<T>(value: T) -> Cast<T, usize> {
 #[cfg(target_os = "linux")]
 #[allow(non_camel_case_types)]
 mod sys {
-    pub use polkavm_linux_raw::{c_int, c_void, siginfo_t, size_t, ucontext as ucontext_t, SIG_DFL, SIG_IGN};
+    pub use polkavm_linux_raw::{
+        SIG_DFL, SIG_IGN, c_int, c_void, siginfo_t, size_t, ucontext as ucontext_t,
+    };
     pub const SIGSEGV: c_int = polkavm_linux_raw::SIGSEGV as c_int;
     pub const SIGILL: c_int = polkavm_linux_raw::SIGILL as c_int;
     pub const PROT_READ: c_int = polkavm_linux_raw::PROT_READ as c_int;
@@ -92,7 +95,14 @@ mod sys {
     }
 
     extern "C" {
-        pub fn mmap(addr: *mut c_void, len: size_t, prot: c_int, flags: c_int, fd: c_int, offset: i64) -> *mut c_void;
+        pub fn mmap(
+            addr: *mut c_void,
+            len: size_t,
+            prot: c_int,
+            flags: c_int,
+            fd: c_int,
+            offset: i64,
+        ) -> *mut c_void;
 
         pub fn munmap(addr: *mut c_void, len: size_t) -> c_int;
 
@@ -108,7 +118,7 @@ mod sys {
 use libc as sys;
 
 use core::ffi::c_void;
-use sys::{c_int, size_t, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE};
+use sys::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE, c_int, size_t};
 
 pub(crate) const GUEST_MEMORY_TO_VMCTX_OFFSET: isize = -4096;
 
@@ -149,7 +159,12 @@ unsafe impl Send for Mmap {}
 unsafe impl Sync for Mmap {}
 
 impl Mmap {
-    unsafe fn raw_mmap(address: *mut c_void, length: usize, protection: c_int, flags: c_int) -> Result<Self, Error> {
+    unsafe fn raw_mmap(
+        address: *mut c_void,
+        length: usize,
+        protection: c_int,
+        flags: c_int,
+    ) -> Result<Self, Error> {
         let pointer = {
             let pointer = sys::mmap(address, length, protection, flags, -1, 0);
             if pointer == sys::MAP_FAILED {
@@ -161,8 +176,16 @@ impl Mmap {
         Ok(Self { pointer, length })
     }
 
-    fn mmap_within(&mut self, offset: usize, length: usize, protection: c_int) -> Result<(), Error> {
-        if !offset.checked_add(length).map_or(false, |end| end <= self.length) {
+    fn mmap_within(
+        &mut self,
+        offset: usize,
+        length: usize,
+        protection: c_int,
+    ) -> Result<(), Error> {
+        if !offset
+            .checked_add(length)
+            .map_or(false, |end| end <= self.length)
+        {
             return Err("out of bounds mmap".into());
         }
 
@@ -190,7 +213,9 @@ impl Mmap {
             }
 
             self.length = 0;
-            self.pointer = core::ptr::NonNull::<u8>::dangling().as_ptr().cast::<c_void>();
+            self.pointer = core::ptr::NonNull::<u8>::dangling()
+                .as_ptr()
+                .cast::<c_void>();
         }
 
         Ok(())
@@ -202,11 +227,26 @@ impl Mmap {
 
     pub fn reserve_address_space(length: size_t) -> Result<Self, Error> {
         // SAFETY: `MAP_FIXED` is not specified, so this is always safe.
-        unsafe { Mmap::raw_mmap(core::ptr::null_mut(), length, 0, MAP_ANONYMOUS | MAP_PRIVATE) }
+        unsafe {
+            Mmap::raw_mmap(
+                core::ptr::null_mut(),
+                length,
+                0,
+                MAP_ANONYMOUS | MAP_PRIVATE,
+            )
+        }
     }
 
-    pub fn mprotect(&mut self, offset: usize, length: usize, protection: c_int) -> Result<(), Error> {
-        if !offset.checked_add(length).map_or(false, |end| end <= self.length) {
+    pub fn mprotect(
+        &mut self,
+        offset: usize,
+        length: usize,
+        protection: c_int,
+    ) -> Result<(), Error> {
+        if !offset
+            .checked_add(length)
+            .map_or(false, |end| end <= self.length)
+        {
             return Err("out of bounds mprotect".into());
         }
 
@@ -271,7 +311,9 @@ impl Mmap {
 impl Default for Mmap {
     fn default() -> Self {
         Self {
-            pointer: core::ptr::NonNull::<u8>::dangling().as_ptr().cast::<c_void>(),
+            pointer: core::ptr::NonNull::<u8>::dangling()
+                .as_ptr()
+                .cast::<c_void>(),
             length: 0,
         }
     }
@@ -289,7 +331,11 @@ static mut OLD_SIGILL: sys::sigaction = unsafe { core::mem::zeroed() };
 #[cfg(any(target_os = "macos", target_os = "freebsd"))]
 static mut OLD_SIGBUS: sys::sigaction = unsafe { core::mem::zeroed() };
 
-unsafe extern "C" fn signal_handler(signal: c_int, info: &sys::siginfo_t, context: &sys::ucontext_t) {
+unsafe extern "C" fn signal_handler(
+    signal: c_int,
+    info: &sys::siginfo_t,
+    context: &sys::ucontext_t,
+) {
     let old = match signal {
         sys::SIGSEGV => core::ptr::addr_of!(OLD_SIGSEGV),
         sys::SIGILL => core::ptr::addr_of!(OLD_SIGILL),
@@ -332,7 +378,10 @@ unsafe extern "C" fn signal_handler(signal: c_int, info: &sys::siginfo_t, contex
     }
 
     if old.sa_flags & sys::SA_SIGINFO != 0 {
-        let old_handler = core::mem::transmute::<usize, extern "C" fn(c_int, &sys::siginfo_t, &sys::ucontext_t)>(old.sa_sigaction);
+        let old_handler = core::mem::transmute::<
+            usize,
+            extern "C" fn(c_int, &sys::siginfo_t, &sys::ucontext_t),
+        >(old.sa_sigaction);
         old_handler(signal, info, context);
     } else {
         let old_handler = core::mem::transmute::<usize, extern "C" fn(c_int)>(old.sa_sigaction);
@@ -341,7 +390,10 @@ unsafe extern "C" fn signal_handler(signal: c_int, info: &sys::siginfo_t, contex
 }
 
 #[allow(clippy::fn_to_numeric_cast_any)]
-unsafe fn register_signal_handler_for_signal(signal: c_int, old_sa: *mut sys::sigaction) -> Result<(), Error> {
+unsafe fn register_signal_handler_for_signal(
+    signal: c_int,
+    old_sa: *mut sys::sigaction,
+) -> Result<(), Error> {
     let mut sa: sys::sigaction = core::mem::zeroed();
     sa.sa_flags = sys::SA_SIGINFO | sys::SA_NODEFER;
     sa.sa_sigaction = signal_handler as usize;
@@ -373,7 +425,12 @@ fn register_signal_handlers_if_necessary() -> Result<(), Error> {
         return Ok(());
     }
 
-    match FLAG.compare_exchange(STATE_UNINITIALIZED, STATE_INITIALIZING, Ordering::Acquire, Ordering::Relaxed) {
+    match FLAG.compare_exchange(
+        STATE_UNINITIALIZED,
+        STATE_INITIALIZING,
+        Ordering::Acquire,
+        Ordering::Relaxed,
+    ) {
         Ok(_) => {
             // SAFETY: This can only run once and any parallel invocation will
             // wait for the first one that was triggered, so calling this is safe.
@@ -509,7 +566,9 @@ pub struct GlobalState {}
 impl GlobalState {
     pub fn new(config: &Config) -> Result<Self, Error> {
         if config.dynamic_paging {
-            return Err(Error::from_str("dynamic paging is currently not supported by the generic sandbox"));
+            return Err(Error::from_str(
+                "dynamic paging is currently not supported by the generic sandbox",
+            ));
         }
         Ok(GlobalState {})
     }
@@ -576,7 +635,10 @@ unsafe extern "C" fn syscall_step() -> ! {
     // mutable references to the sandbox can be concurrently alive.
     let sandbox = unsafe { &mut *vmctx.sandbox };
 
-    match hostcall_handler(polkavm_common::HOSTCALL_TRACE, super::Sandbox::access(sandbox).into()) {
+    match hostcall_handler(
+        polkavm_common::HOSTCALL_TRACE,
+        super::Sandbox::access(sandbox).into(),
+    ) {
         Ok(()) => {}
         Err(_) => trigger_trap(vmctx),
     }
@@ -603,16 +665,21 @@ unsafe fn sbrk(vmctx: &mut VmCtx, pending_heap_top: u64) -> Result<Option<u32>, 
         return Ok(None);
     }
 
-    let Some(start) = align_to_next_page_usize(vmctx.page_size as usize, vmctx.heap_info.heap_top as usize) else {
+    let Some(start) =
+        align_to_next_page_usize(vmctx.page_size as usize, vmctx.heap_info.heap_top as usize)
+    else {
         return Err(());
     };
-    let Some(end) = align_to_next_page_usize(vmctx.page_size as usize, pending_heap_top as usize) else {
+    let Some(end) = align_to_next_page_usize(vmctx.page_size as usize, pending_heap_top as usize)
+    else {
         return Err(());
     };
 
     let size = end - start;
     if size > 0 {
-        let guest_memory_base = (vmctx as *mut VmCtx).cast::<u8>().offset(-GUEST_MEMORY_TO_VMCTX_OFFSET);
+        let guest_memory_base = (vmctx as *mut VmCtx)
+            .cast::<u8>()
+            .offset(-GUEST_MEMORY_TO_VMCTX_OFFSET);
         let pointer = guest_memory_base.add(start);
         log::trace!(
             "sbrk: mapping 0x{:x}-0x{:x} (0x{:x}-0x{:x}) (0x{:x})",
@@ -638,8 +705,12 @@ unsafe fn sbrk(vmctx: &mut VmCtx, pending_heap_top: u64) -> Result<Option<u32>, 
         }
     }
 
-    debug_assert!(matches!(vmctx.maps[vmctx.heap_map_index].kind, MapKind::Transient));
-    vmctx.maps[vmctx.heap_map_index].length = ((end as u64) - u64::from(vmctx.heap_initial_threshold)) as u32;
+    debug_assert!(matches!(
+        vmctx.maps[vmctx.heap_map_index].kind,
+        MapKind::Transient
+    ));
+    vmctx.maps[vmctx.heap_map_index].length =
+        ((end as u64) - u64::from(vmctx.heap_initial_threshold)) as u32;
 
     log::trace!(
         "sbrk: heap memory range: 0x{:x}-0x{:x}",
@@ -733,7 +804,8 @@ impl Sandbox {
         let length = self.memory.len() - self.guest_memory_offset;
         let program = self.program.take();
 
-        self.memory.mmap_within(self.guest_memory_offset, length, 0)?;
+        self.memory
+            .mmap_within(self.guest_memory_offset, length, 0)?;
 
         self.vmctx_mut().maps.clear();
         self.vmctx_mut().heap_info.heap_top = 0;
@@ -792,10 +864,15 @@ impl Sandbox {
                         }
 
                         log::trace!("  Clearing: 0x{:x}..0x{:x}", offset, offset + length);
-                        self.memory.mmap_within(offset, length, PROT_READ | PROT_WRITE)?;
+                        self.memory
+                            .mmap_within(offset, length, PROT_READ | PROT_WRITE)?;
                     }
                     MapKind::Transient => {
-                        log::trace!("  Clearing transient: 0x{:x}..0x{:x}", offset, offset + length);
+                        log::trace!(
+                            "  Clearing transient: 0x{:x}..0x{:x}",
+                            offset,
+                            offset + length
+                        );
                         self.memory.mmap_within(offset, length, 0)?;
 
                         map.length = 0;
@@ -833,28 +910,27 @@ impl Sandbox {
             address = map_end;
         }
 
-        if length == 0 {
-            Ok(())
-        } else {
-            Err(())
-        }
+        if length == 0 { Ok(()) } else { Err(()) }
     }
 
     fn get_memory_slice(&self, address: u32, length: u32) -> Option<&[u8]> {
         self.bound_check_access(address, length).ok()?;
-        let range = self.guest_memory_offset + address as usize..self.guest_memory_offset + address as usize + length as usize;
+        let range = self.guest_memory_offset + address as usize
+            ..self.guest_memory_offset + address as usize + length as usize;
         Some(&self.memory.as_slice()[range])
     }
 
     fn get_memory_slice_mut(&mut self, address: u32, length: u32) -> Option<&mut [u8]> {
         self.bound_check_access(address, length).ok()?;
-        let range = self.guest_memory_offset + address as usize..self.guest_memory_offset + address as usize + length as usize;
+        let range = self.guest_memory_offset + address as usize
+            ..self.guest_memory_offset + address as usize + length as usize;
         Some(&mut self.memory.as_slice_mut()[range])
     }
 
     fn execute_impl(&mut self, mut args: ExecuteArgs) -> Result<(), ExecutionError<Error>> {
         if let Some(module) = args.module {
-            let compiled_module = <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(module);
+            let compiled_module =
+                <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(module);
             let program = &compiled_module.sandbox_program.0;
 
             log::trace!("Reconfiguring sandbox...");
@@ -869,14 +945,19 @@ impl Sandbox {
 
                     let offset = self.guest_memory_offset + to_usize(map.address);
                     let length = to_usize(map.length).get();
-                    self.memory.modify_and_protect(offset, length, protection, |slice| match map.kind {
-                        MapKind::Initialized(ref initialize_with) => {
-                            slice.copy_from_slice(initialize_with);
-                        }
-                        MapKind::Zeroed | MapKind::Transient => {
-                            slice.fill(0);
-                        }
-                    })?;
+                    self.memory.modify_and_protect(
+                        offset,
+                        length,
+                        protection,
+                        |slice| match map.kind {
+                            MapKind::Initialized(ref initialize_with) => {
+                                slice.copy_from_slice(initialize_with);
+                            }
+                            MapKind::Zeroed | MapKind::Transient => {
+                                slice.fill(0);
+                            }
+                        },
+                    )?;
 
                     let memory_address = self.memory.as_ptr() as usize + offset;
                     log::trace!(
@@ -899,7 +980,8 @@ impl Sandbox {
             }
 
             self.vmctx_mut().heap_info.heap_top = u64::from(module.memory_map().heap_base());
-            self.vmctx_mut().heap_info.heap_threshold = u64::from(module.memory_map().rw_data_range().end);
+            self.vmctx_mut().heap_info.heap_threshold =
+                u64::from(module.memory_map().rw_data_range().end);
             self.vmctx_mut().heap_base = module.memory_map().heap_base();
             self.vmctx_mut().heap_initial_threshold = module.memory_map().rw_data_range().end;
             self.vmctx_mut().heap_max_size = module.memory_map().max_heap_size();
@@ -914,7 +996,12 @@ impl Sandbox {
             self.vmctx_mut().regs.copy_from_slice(regs);
         }
 
-        if let Some(gas) = crate::polkavm::sandbox::get_gas(&args, self.module.as_ref().and_then(|module| module.gas_metering())) {
+        if let Some(gas) = crate::polkavm::sandbox::get_gas(
+            &args,
+            self.module
+                .as_ref()
+                .and_then(|module| module.gas_metering()),
+        ) {
             self.vmctx_mut().gas = gas;
         }
 
@@ -932,7 +1019,7 @@ impl Sandbox {
                 Ok(None) => {
                     return Err(ExecutionError::Error(
                         "initial sbrk failed: cannot grow the heap over the maximum".into(),
-                    ))
+                    ));
                 }
                 Err(()) => return Err(ExecutionError::Error("initial sbrk failed".into())),
             }
@@ -940,11 +1027,13 @@ impl Sandbox {
 
         let mut trap_kind = TrapKind::None;
         if let Some(entry_point) = args.entry_point {
-            let entry_point = <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(self.module.as_ref().unwrap())
-                .export_trampolines
-                .get(&entry_point)
-                .copied()
-                .unwrap_or(0) as usize;
+            let entry_point = <Self as crate::polkavm::sandbox::Sandbox>::downcast_module(
+                self.module.as_ref().unwrap(),
+            )
+            .export_trampolines
+            .get(&entry_point)
+            .copied()
+            .unwrap_or(0) as usize;
 
             {
                 let Some(program) = self.program.as_ref() else {
@@ -964,7 +1053,8 @@ impl Sandbox {
 
             // SAFETY: Transmuting an arbitrary lifetime into a 'static lifetime is safe as long as the invariants
             // that the shorter lifetime requires are still upheld.
-            let hostcall_handler: Option<HostcallHandler<'static>> = unsafe { core::mem::transmute(hostcall_handler) };
+            let hostcall_handler: Option<HostcallHandler<'static>> =
+                unsafe { core::mem::transmute(hostcall_handler) };
             self.vmctx_mut().hostcall_handler = hostcall_handler;
             self.vmctx_mut().sandbox = self;
             self.vmctx_mut().trap_kind = TrapKind::None;
@@ -974,7 +1064,11 @@ impl Sandbox {
                 let vmctx = vmctx_mut_ptr(&mut self.memory);
                 THREAD_VMCTX.with(|thread_ctx| core::ptr::write(thread_ctx.get(), vmctx));
 
-                let guest_memory = self.memory.as_ptr().cast::<u8>().add(self.guest_memory_offset);
+                let guest_memory = self
+                    .memory
+                    .as_ptr()
+                    .cast::<u8>()
+                    .add(self.guest_memory_offset);
 
                 core::arch::asm!(r#"
                     push rbp
@@ -1020,7 +1114,8 @@ impl Sandbox {
                     in("r15") guest_memory,
                 );
 
-                THREAD_VMCTX.with(|thread_ctx| core::ptr::write(thread_ctx.get(), core::ptr::null_mut()));
+                THREAD_VMCTX
+                    .with(|thread_ctx| core::ptr::write(thread_ctx.get(), core::ptr::null_mut()));
             }
 
             trap_kind = core::mem::replace(&mut self.vmctx_mut().trap_kind, TrapKind::None);
@@ -1068,7 +1163,9 @@ impl super::Sandbox for Sandbox {
         }
     }
 
-    fn downcast_global_state(global: &crate::polkavm::sandbox::GlobalStateKind) -> &Self::GlobalState {
+    fn downcast_global_state(
+        global: &crate::polkavm::sandbox::GlobalStateKind,
+    ) -> &Self::GlobalState {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match global {
             crate::polkavm::sandbox::GlobalStateKind::Generic(global) => global,
@@ -1084,13 +1181,19 @@ impl super::Sandbox for Sandbox {
         }
     }
 
-    fn allocate_jump_table(_global: &Self::GlobalState, count: usize) -> Result<Self::JumpTable, Self::Error> {
+    fn allocate_jump_table(
+        _global: &Self::GlobalState,
+        count: usize,
+    ) -> Result<Self::JumpTable, Self::Error> {
         // TODO: Cache this and don't unnecessarily double-initialize it.
         Ok(vec![0; count])
     }
 
     fn reserve_address_space() -> Result<Self::AddressSpace, Self::Error> {
-        Mmap::reserve_address_space(VM_SANDBOX_MAXIMUM_NATIVE_CODE_SIZE as usize + VM_SANDBOX_MAXIMUM_JUMP_TABLE_VIRTUAL_SIZE as usize)
+        Mmap::reserve_address_space(
+            VM_SANDBOX_MAXIMUM_NATIVE_CODE_SIZE as usize
+                + VM_SANDBOX_MAXIMUM_JUMP_TABLE_VIRTUAL_SIZE as usize,
+        )
     }
 
     fn prepare_program(
@@ -1106,15 +1209,21 @@ impl super::Sandbox for Sandbox {
         let jump_table_size = align_to_next_page_usize(native_page_size, jump_table.len()).unwrap();
 
         let jump_table_offset = code_size as usize;
-        let sysreturn_offset = jump_table_offset + (VM_ADDR_JUMP_TABLE_RETURN_TO_HOST - VM_ADDR_JUMP_TABLE) as usize;
+        let sysreturn_offset =
+            jump_table_offset + (VM_ADDR_JUMP_TABLE_RETURN_TO_HOST - VM_ADDR_JUMP_TABLE) as usize;
 
         map.modify_and_protect(0, code_size as usize, PROT_EXEC, |slice| {
             slice[..init.code.len()].copy_from_slice(init.code);
         })?;
 
-        map.modify_and_protect(jump_table_offset, jump_table_size as usize, PROT_READ, |slice| {
-            slice[..jump_table.len()].copy_from_slice(jump_table);
-        })?;
+        map.modify_and_protect(
+            jump_table_offset,
+            jump_table_size as usize,
+            PROT_READ,
+            |slice| {
+                slice[..jump_table.len()].copy_from_slice(jump_table);
+            },
+        )?;
 
         map.modify_and_protect(sysreturn_offset, native_page_size, PROT_READ, |slice| {
             slice[..8].copy_from_slice(&init.sysreturn_address.to_le_bytes());
@@ -1254,7 +1363,11 @@ impl super::Sandbox for Sandbox {
         })
     }
 
-    fn execute(&mut self, _global: &Self::GlobalState, args: ExecuteArgs) -> Result<(), ExecutionError<Self::Error>> {
+    fn execute(
+        &mut self,
+        _global: &Self::GlobalState,
+        args: ExecuteArgs,
+    ) -> Result<(), ExecutionError<Self::Error>> {
         if !matches!(self.poison, Poison::None) {
             return Err(ExecutionError::Error("sandbox has been poisoned".into()));
         }
@@ -1308,16 +1421,26 @@ impl super::Sandbox for Sandbox {
     }
 
     fn reg(&self, reg: Reg) -> u32 {
-        assert!(!matches!(self.sandbox.poison, Poison::Poisoned), "sandbox has been poisoned");
+        assert!(
+            !matches!(self.sandbox.poison, Poison::Poisoned),
+            "sandbox has been poisoned"
+        );
         self.sandbox.vmctx().regs[reg as usize]
     }
 
     fn set_reg(&mut self, reg: Reg, value: u32) {
-        assert!(!matches!(self.sandbox.poison, Poison::Poisoned), "sandbox has been poisoned");
+        assert!(
+            !matches!(self.sandbox.poison, Poison::Poisoned),
+            "sandbox has been poisoned"
+        );
         self.sandbox.vmctx_mut().regs[reg as usize] = value;
     }
 
-    fn read_memory_into_slice<'slice, T>(&self, address: u32, buffer: &'slice mut T) -> Result<&'slice mut [u8], Self::Error>
+    fn read_memory_into_slice<'slice, T>(
+        &self,
+        address: u32,
+        buffer: &'slice mut T,
+    ) -> Result<&'slice mut [u8], Self::Error>
     where
         T: ?Sized + AsUninitSliceMut,
     {
@@ -1364,7 +1487,10 @@ impl super::Sandbox for Sandbox {
             });
         }
 
-        let Some(slice) = self.sandbox.get_memory_slice_mut(address, data.len() as u32) else {
+        let Some(slice) = self
+            .sandbox
+            .get_memory_slice_mut(address, data.len() as u32)
+        else {
             return Err(MemoryAccessError {
                 address,
                 length: data.len() as u64,

@@ -1,10 +1,10 @@
 extern crate alloc;
 
-use crate::{BalanceOf, Config as PalletConfig};
 use crate::polkavm::api::RegValue;
 use crate::polkavm::error::bail;
 use crate::polkavm::program::ProgramSymbol;
 use crate::polkavm::{Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg};
+use crate::{BalanceOf, Config as PalletConfig};
 use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::String;
@@ -13,14 +13,14 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 #[cfg(not(feature = "std"))]
-use alloc::collections::btree_map::Entry;
-#[cfg(not(feature = "std"))]
 use alloc::collections::BTreeMap as LookupMap;
+#[cfg(not(feature = "std"))]
+use alloc::collections::btree_map::Entry;
 
 #[cfg(feature = "std")]
-use std::collections::hash_map::Entry;
-#[cfg(feature = "std")]
 use std::collections::HashMap as LookupMap;
+#[cfg(feature = "std")]
+use std::collections::hash_map::Entry;
 
 trait CallFn<T: PalletConfig, UserError>: Send + Sync {
     fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
@@ -29,7 +29,8 @@ trait CallFn<T: PalletConfig, UserError>: Send + Sync {
 #[repr(transparent)]
 pub struct CallFnArc<T: PalletConfig, UserError>(Arc<dyn CallFn<T, UserError>>);
 
-type FallbackHandlerArc<T, UserError> = Arc<dyn Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static>;
+type FallbackHandlerArc<T, UserError> =
+    Arc<dyn Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static>;
 
 impl<T: PalletConfig, UserError> Clone for CallFnArc<T, UserError> {
     fn clone(&self) -> Self {
@@ -586,7 +587,10 @@ where
     F: Fn(Caller<'_, P>) -> Result<(), UserError> + Send + Sync + 'static,
 {
     fn call(&self, user_data: &mut State<P>, instance: &mut RawInstance) -> Result<(), UserError> {
-        let caller = Caller { user_data, instance };
+        let caller = Caller {
+            user_data,
+            instance,
+        };
 
         (self.callback)(caller)
     }
@@ -612,7 +616,15 @@ impl<T: PalletConfig> State<T> {
         transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
         print: fn(Vec<u8>) -> u64,
     ) -> Self {
-        Self { caller_address, addresses, balances, log_message, now, transfer, print }
+        Self {
+            caller_address,
+            addresses,
+            balances,
+            log_message,
+            now,
+            transfer,
+            print,
+        }
     }
 }
 
@@ -645,7 +657,10 @@ impl<T: PalletConfig, UserError> Linker<T, UserError> {
     }
 
     /// Defines a fallback external call handler, in case no other registered functions match.
-    pub fn define_fallback(&mut self, func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static) {
+    pub fn define_fallback(
+        &mut self,
+        func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static,
+    ) {
         self.fallback_handler = Some(Arc::new(func));
     }
 
@@ -692,7 +707,8 @@ impl<T: PalletConfig, UserError> Linker<T, UserError> {
             );
         }
 
-        self.host_functions.insert(symbol.to_owned(), func._into_extern_fn());
+        self.host_functions
+            .insert(symbol.to_owned(), func._into_extern_fn());
         Ok(self)
     }
 
@@ -715,7 +731,8 @@ impl<T: PalletConfig, UserError> Linker<T, UserError> {
             }
         }
 
-        let mut imports: Vec<Option<CallFnArc<T, UserError>>> = Vec::with_capacity(module.imports().len() as usize);
+        let mut imports: Vec<Option<CallFnArc<T, UserError>>> =
+            Vec::with_capacity(module.imports().len() as usize);
         for symbol in module.imports() {
             let Some(symbol) = symbol else {
                 if module.is_strict() {
@@ -757,7 +774,9 @@ struct InstancePreState<T: PalletConfig, UserError> {
     fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
 }
 
-pub struct InstancePre<T: PalletConfig, UserError = core::convert::Infallible>(Arc<InstancePreState<T, UserError>>);
+pub struct InstancePre<T: PalletConfig, UserError = core::convert::Infallible>(
+    Arc<InstancePreState<T, UserError>>,
+);
 
 impl<T: PalletConfig, UserError> Clone for InstancePre<T, UserError> {
     fn clone(&self) -> Self {
@@ -770,7 +789,6 @@ pub struct Instance<T: PalletConfig, UserError = core::convert::Infallible> {
     pre: InstancePre<T, UserError>,
 }
 impl<T: PalletConfig, UserError> core::ops::Deref for Instance<T, UserError> {
-
     type Target = RawInstance;
     fn deref(&self) -> &Self::Target {
         &self.instance
@@ -856,8 +874,17 @@ impl<T: PalletConfig, UserError> Instance<T, UserError> {
                 InterruptKind::Finished => break,
                 InterruptKind::Trap => return Err(CallError::Trap),
                 InterruptKind::Ecalli(hostcall) => {
-                    if let Some(host_fn) = self.pre.0.imports.get(hostcall as usize).and_then(|host_fn| host_fn.as_ref()) {
-                        host_fn.0.call(user_data, &mut self.instance).map_err(CallError::User)?;
+                    if let Some(host_fn) = self
+                        .pre
+                        .0
+                        .imports
+                        .get(hostcall as usize)
+                        .and_then(|host_fn| host_fn.as_ref())
+                    {
+                        host_fn
+                            .0
+                            .call(user_data, &mut self.instance)
+                            .map_err(CallError::User)?;
                     } else if let Some(ref fallback_handler) = self.pre.0.fallback_handler {
                         let caller = Caller {
                             user_data,
@@ -874,7 +901,8 @@ impl<T: PalletConfig, UserError> Instance<T, UserError> {
                 InterruptKind::Segfault(segfault) => {
                     let module = self.instance.module().clone();
                     if segfault.page_address >= module.memory_map().stack_address_low()
-                        && segfault.page_address + segfault.page_size <= module.memory_map().stack_address_high()
+                        && segfault.page_address + segfault.page_size
+                            <= module.memory_map().stack_address_high()
                     {
                         self.instance
                             .zero_memory(segfault.page_address, segfault.page_size)

@@ -77,7 +77,10 @@ impl SourceCache {
                 continue;
             }
 
-            let output = match std::process::Command::new(&rustc_path).args(["--version"]).output() {
+            let output = match std::process::Command::new(&rustc_path)
+                .args(["--version"])
+                .output()
+            {
                 Ok(output) => output,
                 Err(error) => {
                     log::warn!("Error extracting version from {rustc_path:?}: {error}");
@@ -94,7 +97,9 @@ impl SourceCache {
             }
 
             let Ok(version_string) = String::from_utf8(output.stdout) else {
-                log::warn!("Error extracting version from {rustc_path:?}: returned version is not valid UTF-8");
+                log::warn!(
+                    "Error extracting version from {rustc_path:?}: returned version is not valid UTF-8"
+                );
                 continue;
             };
 
@@ -153,7 +158,9 @@ impl SourceCache {
             }
 
             let sources = self.rustc_sources();
-            let (_, sources_root) = sources.iter().find(|(sources_hash, _)| hash.starts_with(sources_hash))?;
+            let (_, sources_root) = sources
+                .iter()
+                .find(|(sources_hash, _)| hash.starts_with(sources_hash))?;
             Cow::Owned(sources_root.join(relative_path))
         } else {
             Cow::Borrowed(Path::new(path))
@@ -186,14 +193,18 @@ impl SourceCache {
                 }
             }
 
-            self.cache.insert(path.to_owned(), Some((contents, line_to_offset)));
+            self.cache
+                .insert(path.to_owned(), Some((contents, line_to_offset)));
         }
 
         let cached = self.cache.get(path)?;
         let (contents, line_to_offset) = cached.as_ref()?;
         let line = (line as usize).wrapping_sub(1);
         let offset = *line_to_offset.get(line)?;
-        let next_offset = line_to_offset.get(line.wrapping_add(1)).copied().unwrap_or(contents.len());
+        let next_offset = line_to_offset
+            .get(line.wrapping_add(1))
+            .copied()
+            .unwrap_or(contents.len());
         contents.get(offset..next_offset).map(|s| s.trim_end())
     }
 }

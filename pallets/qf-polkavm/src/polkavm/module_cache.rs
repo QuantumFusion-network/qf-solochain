@@ -68,12 +68,20 @@ impl ModuleCache {
             enabled,
             inner: Mutex::new(ModuleCacheInner {
                 active: BTreeMap::new(),
-                inactive: schnellru::LruMap::new(schnellru::ByLength::new(if enabled { lru_cache_size } else { 0 })),
+                inactive: schnellru::LruMap::new(schnellru::ByLength::new(if enabled {
+                    lru_cache_size
+                } else {
+                    0
+                })),
             }),
         }
     }
 
-    pub fn get(&self, config: &ModuleConfig, blob: &ProgramBlob) -> (Option<ModuleKey>, Option<Module>) {
+    pub fn get(
+        &self,
+        config: &ModuleConfig,
+        blob: &ProgramBlob,
+    ) -> (Option<ModuleKey>, Option<Module>) {
         if !self.enabled {
             return (None, None);
         }

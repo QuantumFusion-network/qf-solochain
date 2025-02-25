@@ -55,14 +55,14 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
+            Time,
             fungible::{Inspect, Mutate},
             tokens::Preservation,
-            Time,
         },
     };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::{traits::Hash, SaturatedConversion};
+    use sp_runtime::{SaturatedConversion, traits::Hash};
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
@@ -244,7 +244,6 @@ pub mod pallet {
             Code::<T>::insert(address, &raw_blob);
             CodeMetadata::<T>::insert(&who, blob_metadata);
 
-
             Self::deposit_event(Event::ProgramBlobUploaded {
                 who,
                 address,
@@ -281,27 +280,31 @@ pub mod pallet {
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
-
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 
             let mut state = State::new(
                 who.clone(),
                 [to].to_vec(),
                 [value].to_vec(),
-                [104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+                [
+                    104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
+                ]
+                .to_vec(),
                 || -> u64 { T::Time::now().saturated_into::<u64>() },
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
-                        if let Err(_) = T::Currency::transfer(&from, &to, value, Preservation::Preserve) {
-                            return 1
+                        if let Err(_) =
+                            T::Currency::transfer(&from, &to, value, Preservation::Preserve)
+                        {
+                            return 1;
                         }
                     }
                     0
                 },
                 |m: Vec<u8>| -> u64 {
                     sp_runtime::print(&*m);
-                    return 0
-                }
+                    return 0;
+                },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -363,23 +366,30 @@ pub mod pallet {
             // High-level API.
             let mut linker: Linker<T> = Linker::<T>::new();
 
-            linker.define_typed("transfer", |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
-                (caller.user_data.transfer)(
-                    caller.user_data.caller_address.clone(),
-                    caller.user_data.addresses[address_idx as usize].clone(),
-                    caller.user_data.balances[balance_idx as usize].clone(),
+            linker
+                .define_typed(
+                    "transfer",
+                    |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
+                        (caller.user_data.transfer)(
+                            caller.user_data.caller_address.clone(),
+                            caller.user_data.addresses[address_idx as usize].clone(),
+                            caller.user_data.balances[balance_idx as usize].clone(),
+                        )
+                    },
                 )
-            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
-            linker.define_typed("now", |caller: Caller<T>| -> u64 {
-                (caller.user_data.now)()
-            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+            linker
+                .define_typed("now", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.now)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
-            linker.define_typed("print", |caller: Caller<T>| -> u64 {
-                (caller.user_data.print)(
-                    caller.user_data.log_message.clone(),
-                )
-            }).map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+            linker
+                .define_typed("print", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.print)(caller.user_data.log_message.clone())
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
             let instance_pre = linker

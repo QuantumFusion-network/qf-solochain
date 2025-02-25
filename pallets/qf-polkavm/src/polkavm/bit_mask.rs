@@ -159,7 +159,8 @@ fn test_bitmask_out_of_range() {
     mask.set(Mask16::index(16));
 }
 
-impl<Primary, Secondary, const SECONDARY_LENGTH: usize> Default for BitMask<Primary, Secondary, SECONDARY_LENGTH>
+impl<Primary, Secondary, const SECONDARY_LENGTH: usize> Default
+    for BitMask<Primary, Secondary, SECONDARY_LENGTH>
 where
     Primary: RawMask,
     Secondary: RawMask,
@@ -170,7 +171,8 @@ where
     }
 }
 
-impl<Primary, Secondary, const SECONDARY_LENGTH: usize> BitMask<Primary, Secondary, SECONDARY_LENGTH>
+impl<Primary, Secondary, const SECONDARY_LENGTH: usize>
+    BitMask<Primary, Secondary, SECONDARY_LENGTH>
 where
     Primary: RawMask,
     Secondary: RawMask,
@@ -180,7 +182,9 @@ where
 
     const ASSERT_TYPES_ARE_BIG_ENOUGH_FOR_THE_DESIRED_BIT_WIDTH: () = {
         if SECONDARY_LENGTH > core::mem::size_of::<Primary>() * 8 {
-            panic!("the given raw mask types are too narrow to fit a bit mask of the the desired bit length");
+            panic!(
+                "the given raw mask types are too narrow to fit a bit mask of the the desired bit length"
+            );
         }
     };
 
@@ -218,7 +222,8 @@ where
     /// Clears the bit at `index`.
     #[inline]
     pub fn unset(&mut self, index: BitIndex<Primary, Secondary>) {
-        self.secondary_masks[cast(index.primary).to_usize()] &= !(Secondary::ONE << index.secondary);
+        self.secondary_masks[cast(index.primary).to_usize()] &=
+            !(Secondary::ONE << index.secondary);
         if self.secondary_masks[cast(index.primary).to_usize()] == Secondary::ZERO {
             self.primary_mask &= !(Primary::ONE << index.primary);
         }
@@ -226,16 +231,22 @@ where
 
     /// Finds the first set bit, starting at `min_index`.
     #[inline]
-    pub fn find_first(&mut self, min_index: BitIndex<Primary, Secondary>) -> Option<BitIndex<Primary, Secondary>> {
+    pub fn find_first(
+        &mut self,
+        min_index: BitIndex<Primary, Secondary>,
+    ) -> Option<BitIndex<Primary, Secondary>> {
         let mut primary = min_index.primary;
         let mut secondary = u32::MAX;
 
         if (self.primary_mask & (Primary::ONE << primary)) != Primary::ZERO {
-            secondary = self.secondary_masks[cast(primary).to_usize()].lowest_set_bit_after(min_index.secondary);
+            secondary = self.secondary_masks[cast(primary).to_usize()]
+                .lowest_set_bit_after(min_index.secondary);
         }
 
         if secondary == u32::MAX {
-            primary = self.primary_mask.lowest_set_bit_after(min_index.primary + 1);
+            primary = self
+                .primary_mask
+                .lowest_set_bit_after(min_index.primary + 1);
             if primary == u32::MAX {
                 return None;
             }

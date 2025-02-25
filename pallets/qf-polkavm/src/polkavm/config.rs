@@ -1,4 +1,4 @@
-use crate::polkavm::error::{bail, Error};
+use crate::polkavm::error::{Error, bail};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum BackendKind {
@@ -190,7 +190,11 @@ impl Config {
             }
 
             if let Some(value) = env_usize("POLKAVM_LRU_CACHE_SIZE")? {
-                config.lru_cache_size = if value > u32::MAX as usize { u32::MAX } else { value as u32 };
+                config.lru_cache_size = if value > u32::MAX as usize {
+                    u32::MAX
+                } else {
+                    value as u32
+                };
             }
         }
 

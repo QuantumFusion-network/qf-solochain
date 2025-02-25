@@ -8,7 +8,8 @@ use alloc::vec::Vec;
 use polkavm_common::abi::{MemoryMap, MemoryMapBuilder, VM_ADDR_RETURN_TO_HOST};
 use polkavm_common::cast::cast;
 use polkavm_common::program::{
-    FrameKind, ISA32_V1_NoSbrk, Imports, InstructionSet, Instructions, JumpTable, Opcode, ProgramBlob, Reg, ISA32_V1, ISA64_V1,
+    FrameKind, ISA32_V1, ISA32_V1_NoSbrk, ISA64_V1, Imports, InstructionSet, Instructions,
+    JumpTable, Opcode, ProgramBlob, Reg,
 };
 use polkavm_common::utils::{ArcBytes, AsUninitSliceMut};
 
@@ -19,7 +20,7 @@ if_compiler_is_supported! {
 }
 
 use crate::polkavm::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
-use crate::polkavm::error::{bail, bail_static, Error};
+use crate::polkavm::error::{Error, bail, bail_static};
 use crate::polkavm::interpreter::{InterpretedInstance, InterpretedModule};
 use crate::polkavm::utils::{GuestInit, InterruptKind};
 use crate::polkavm::{Gas, ProgramCounter};
@@ -116,28 +117,36 @@ impl Engine {
         }
 
         if !config.allow_experimental && config.crosscheck {
-            bail!("cannot enable execution cross-checking: `set_allow_experimental`/`POLKAVM_ALLOW_EXPERIMENTAL` is not enabled");
+            bail!(
+                "cannot enable execution cross-checking: `set_allow_experimental`/`POLKAVM_ALLOW_EXPERIMENTAL` is not enabled"
+            );
         }
 
         let crosscheck = config.crosscheck;
-        let default_backend = if BackendKind::Compiler.is_supported() && SandboxKind::Linux.is_supported() {
-            BackendKind::Compiler
-        } else {
-            BackendKind::Interpreter
-        };
+        let default_backend =
+            if BackendKind::Compiler.is_supported() && SandboxKind::Linux.is_supported() {
+                BackendKind::Compiler
+            } else {
+                BackendKind::Interpreter
+            };
 
         let selected_backend = config.backend.unwrap_or(default_backend);
         log::debug!("Selected backend: '{selected_backend}'");
 
         #[cfg(feature = "module-cache")]
         let module_cache = {
-            log::debug!("Enabling module cache... (LRU cache size = {})", config.lru_cache_size);
+            log::debug!(
+                "Enabling module cache... (LRU cache size = {})",
+                config.lru_cache_size
+            );
             ModuleCache::new(config.cache_enabled, config.lru_cache_size)
         };
 
         #[cfg(not(feature = "module-cache"))]
         if config.cache_enabled {
-            log::warn!("`cache_enabled` is true, but we were not compiled with the `module-cache` feature; caching will be disabled!");
+            log::warn!(
+                "`cache_enabled` is true, but we were not compiled with the `module-cache` feature; caching will be disabled!"
+            );
         }
 
         let (selected_sandbox, state) = if_compiler_is_supported! {
@@ -308,15 +317,25 @@ impl Module {
         cast(self.state().blob.code().len()).assert_always_fits_in_u32()
     }
 
-    pub(crate) fn instructions_bounded_at(&self, offset: ProgramCounter) -> Instructions<RuntimeInstructionSet> {
-        self.state().blob.instructions_bounded_at(self.state().instruction_set, offset)
+    pub(crate) fn instructions_bounded_at(
+        &self,
+        offset: ProgramCounter,
+    ) -> Instructions<RuntimeInstructionSet> {
+        self.state()
+            .blob
+            .instructions_bounded_at(self.state().instruction_set, offset)
     }
 
     pub(crate) fn is_jump_target_valid(&self, offset: ProgramCounter) -> bool {
-        self.state().blob.is_jump_target_valid(self.state().instruction_set, offset)
+        self.state()
+            .blob
+            .is_jump_target_valid(self.state().instruction_set, offset)
     }
 
-    pub(crate) fn find_start_of_basic_block(&self, offset: ProgramCounter) -> Option<ProgramCounter> {
+    pub(crate) fn find_start_of_basic_block(
+        &self,
+        offset: ProgramCounter,
+    ) -> Option<ProgramCounter> {
         polkavm_common::program::find_start_of_basic_block(
             self.state().instruction_set,
             self.state().blob.code(),
@@ -330,7 +349,10 @@ impl Module {
         self.state().blob.jump_table()
     }
 
-    pub fn get_debug_string(&self, offset: u32) -> Result<&str, polkavm_common::program::ProgramParseError> {
+    pub fn get_debug_string(
+        &self,
+        offset: u32,
+    ) -> Result<&str, polkavm_common::program::ProgramParseError> {
         self.state().blob.get_debug_string(offset)
     }
 
@@ -347,7 +369,8 @@ impl Module {
     }
 
     pub(crate) fn round_to_page_size_up(&self, value: u32) -> u32 {
-        self.round_to_page_size_down(value) + (u32::from((value & self.state().page_size_mask) != 0) << self.state().page_shift)
+        self.round_to_page_size_down(value)
+            + (u32::from((value & self.state().page_size_mask) != 0) << self.state().page_shift)
     }
 
     if_compiler_is_supported! {
@@ -369,9 +392,15 @@ impl Module {
     }
 
     /// Creates a new module from a deserialized program `blob`.
-    pub fn from_blob(engine: &Engine, config: &ModuleConfig, blob: ProgramBlob) -> Result<Self, Error> {
+    pub fn from_blob(
+        engine: &Engine,
+        config: &ModuleConfig,
+        blob: ProgramBlob,
+    ) -> Result<Self, Error> {
         if config.dynamic_paging() && !engine.allow_dynamic_paging {
-            bail!("dynamic paging was not enabled; use `Config::set_allow_dynamic_paging` to enable it");
+            bail!(
+                "dynamic paging was not enabled; use `Config::set_allow_dynamic_paging` to enable it"
+            );
         }
 
         log::trace!(
@@ -463,22 +492,27 @@ impl Module {
         #[allow(unused_macros)]
         macro_rules! compile_module {
             ($sandbox_kind:ident, $bitness_kind:ident, $isa:ident, $isa_no_sbrk:ident, $visitor_name:ident, $module_kind:ident) => {{
-                type VisitorTy<'a> = crate::polkavm::compiler::CompilerVisitor<'a, $sandbox_kind, $bitness_kind>;
-                let (mut visitor, aux) = crate::polkavm::compiler::CompilerVisitor::<$sandbox_kind, $bitness_kind>::new(
-                    &engine.state.compiler_cache,
-                    config,
-                    instruction_set,
-                    blob.jump_table(),
-                    blob.code(),
-                    blob.bitmask(),
-                    &exports,
-                    config.step_tracing || engine.crosscheck,
-                    cast(blob.code().len()).assert_always_fits_in_u32(),
-                    init,
-                )?;
+                type VisitorTy<'a> =
+                    crate::polkavm::compiler::CompilerVisitor<'a, $sandbox_kind, $bitness_kind>;
+                let (mut visitor, aux) =
+                    crate::polkavm::compiler::CompilerVisitor::<$sandbox_kind, $bitness_kind>::new(
+                        &engine.state.compiler_cache,
+                        config,
+                        instruction_set,
+                        blob.jump_table(),
+                        blob.code(),
+                        blob.bitmask(),
+                        &exports,
+                        config.step_tracing || engine.crosscheck,
+                        cast(blob.code().len()).assert_always_fits_in_u32(),
+                        init,
+                    )?;
 
                 if config.allow_sbrk {
-                    blob.visit(build_static_dispatch_table!($visitor_name, $isa, VisitorTy<'a>), &mut visitor);
+                    blob.visit(
+                        build_static_dispatch_table!($visitor_name, $isa, VisitorTy<'a>),
+                        &mut visitor,
+                    );
                 } else {
                     blob.visit(
                         build_static_dispatch_table!($visitor_name, $isa_no_sbrk, VisitorTy<'a>),
@@ -486,8 +520,11 @@ impl Module {
                     );
                 }
 
-                let global = $sandbox_kind::downcast_global_state(engine.state.sandbox_global.as_ref().unwrap());
-                let module = visitor.finish_compilation(global, &engine.state.compiler_cache, aux)?;
+                let global = $sandbox_kind::downcast_global_state(
+                    engine.state.sandbox_global.as_ref().unwrap(),
+                );
+                let module =
+                    visitor.finish_compilation(global, &engine.state.compiler_cache, aux)?;
                 Some(CompiledModuleKind::$module_kind(module))
             }};
         }
@@ -669,14 +706,21 @@ impl Module {
 
         let backend = match backend {
             Some(backend) => backend,
-            None => InstanceBackend::Interpreted(InterpretedInstance::new_from_module(self.clone(), false)),
+            None => InstanceBackend::Interpreted(InterpretedInstance::new_from_module(
+                self.clone(),
+                false,
+            )),
         };
 
-        let crosscheck_instance = if self.state().crosscheck && !matches!(backend, InstanceBackend::Interpreted(..)) {
-            Some(Box::new(InterpretedInstance::new_from_module(self.clone(), true)))
-        } else {
-            None
-        };
+        let crosscheck_instance =
+            if self.state().crosscheck && !matches!(backend, InstanceBackend::Interpreted(..)) {
+                Some(Box::new(InterpretedInstance::new_from_module(
+                    self.clone(),
+                    true,
+                )))
+            } else {
+                None
+            };
 
         Ok(RawInstance {
             module: self.clone(),
@@ -696,7 +740,9 @@ impl Module {
     }
 
     /// Returns the module's exports.
-    pub fn exports(&self) -> impl Iterator<Item = crate::polkavm::program::ProgramExport<&[u8]>> + Clone {
+    pub fn exports(
+        &self,
+    ) -> impl Iterator<Item = crate::polkavm::program::ProgramExport<&[u8]>> + Clone {
         self.state().blob.exports()
     }
 
@@ -783,7 +829,8 @@ impl Module {
             return None;
         }
 
-        let gas = crate::polkavm::gas::calculate_for_block(self.instructions_bounded_at(code_offset));
+        let gas =
+            crate::polkavm::gas::calculate_for_block(self.instructions_bounded_at(code_offset));
         Some(i64::from(gas.0))
     }
 
@@ -797,7 +844,9 @@ impl Module {
 
         for _ in 0..128 {
             // Have an upper bound on the number of iterations, just in case.
-            let Ok(Some(region_info)) = line_program.run() else { break };
+            let Ok(Some(region_info)) = line_program.run() else {
+                break;
+            };
 
             if !region_info.instruction_range().contains(&pc) {
                 continue;
@@ -939,7 +988,9 @@ impl RawInstance {
     /// Starts or resumes the execution.
     pub fn run(&mut self) -> Result<InterruptKind, Error> {
         if self.next_program_counter().is_none() {
-            return Err(Error::from_static_str("failed to run: next program counter is not set"));
+            return Err(Error::from_static_str(
+                "failed to run: next program counter is not set",
+            ));
         }
 
         if self.gas() < 0 {
@@ -954,7 +1005,8 @@ impl RawInstance {
 
             if matches!(interruption, InterruptKind::Trap) && log::log_enabled!(log::Level::Debug) {
                 if let Some(program_counter) = self.program_counter() {
-                    self.module.debug_print_location(log::Level::Debug, program_counter);
+                    self.module
+                        .debug_print_location(log::Level::Debug, program_counter);
                 }
             }
 
@@ -962,7 +1014,9 @@ impl RawInstance {
                 let is_step = matches!(interruption, InterruptKind::Step);
                 let expected_interruption = crosscheck.run().expect("crosscheck failed");
                 if interruption != expected_interruption {
-                    panic!("run: crosscheck mismatch, interpreter = {expected_interruption:?}, backend = {interruption:?}");
+                    panic!(
+                        "run: crosscheck mismatch, interpreter = {expected_interruption:?}, backend = {interruption:?}"
+                    );
                 }
 
                 if self.module.gas_metering() != Some(GasMeteringKind::Async) {
@@ -970,7 +1024,9 @@ impl RawInstance {
                         let value = access_backend!(self.backend, |backend| backend.reg(reg));
                         let expected_value = crosscheck.reg(reg);
                         if value != expected_value {
-                            panic!("run: crosscheck mismatch for {reg}, interpreter = 0x{expected_value:x}, backend = 0x{value:x}");
+                            panic!(
+                                "run: crosscheck mismatch for {reg}, interpreter = 0x{expected_value:x}, backend = 0x{value:x}"
+                            );
                         }
                     }
                 }
@@ -981,7 +1037,9 @@ impl RawInstance {
                 if self.module.gas_metering() != Some(GasMeteringKind::Async) {
                     let gas = self.gas();
                     if gas != crosscheck_gas {
-                        panic!("run: crosscheck mismatch for gas, interpreter = {crosscheck_gas}, backend = {gas}");
+                        panic!(
+                            "run: crosscheck mismatch for gas, interpreter = {crosscheck_gas}, backend = {gas}"
+                        );
                     }
                 }
 
@@ -1050,7 +1108,8 @@ impl RawInstance {
             crosscheck.set_next_program_counter(pc);
         }
 
-        access_backend!(self.backend, |mut backend| backend.set_next_program_counter(pc))
+        access_backend!(self.backend, |mut backend| backend
+            .set_next_program_counter(pc))
     }
 
     /// A convenience function which sets all of the registers to zero.
@@ -1063,7 +1122,10 @@ impl RawInstance {
     /// Sets the accessible region of the aux data, rounded up to the nearest page size.
     pub fn set_accessible_aux_size(&mut self, size: u32) -> Result<(), Error> {
         if self.module.is_dynamic_paging() {
-            return Err("setting accessible aux size is only possible on modules without dynamic paging".into());
+            return Err(
+                "setting accessible aux size is only possible on modules without dynamic paging"
+                    .into(),
+            );
         }
 
         if size > self.module.memory_map().aux_data_size() {
@@ -1132,7 +1194,11 @@ impl RawInstance {
             }
 
             let aux_size = access_backend!(self.backend, |backend| backend.accessible_aux_size());
-            if is_within(map.aux_data_address()..map.aux_data_address() + aux_size, address, size) {
+            if is_within(
+                map.aux_data_address()..map.aux_data_address() + aux_size,
+                address,
+                size,
+            ) {
                 return true;
             }
 
@@ -1142,12 +1208,20 @@ impl RawInstance {
 
             false
         } else {
-            access_backend!(self.backend, |backend| backend.is_memory_accessible(address, size, is_writable))
+            access_backend!(self.backend, |backend| backend.is_memory_accessible(
+                address,
+                size,
+                is_writable
+            ))
         }
     }
 
     /// Reads the VM's memory.
-    pub fn read_memory_into<'slice, B>(&self, address: u32, buffer: &'slice mut B) -> Result<&'slice mut [u8], MemoryAccessError>
+    pub fn read_memory_into<'slice, B>(
+        &self,
+        address: u32,
+        buffer: &'slice mut B,
+    ) -> Result<&'slice mut [u8], MemoryAccessError>
     where
         B: ?Sized + AsUninitSliceMut,
     {
@@ -1174,9 +1248,11 @@ impl RawInstance {
         }
 
         let length = slice.len();
-        let result = access_backend!(self.backend, |backend| backend.read_memory_into(address, slice));
+        let result = access_backend!(self.backend, |backend| backend
+            .read_memory_into(address, slice));
         if let Some(ref crosscheck) = self.crosscheck_instance {
-            let mut expected_data: Vec<core::mem::MaybeUninit<u8>> = alloc::vec![core::mem::MaybeUninit::new(0xfa); length];
+            let mut expected_data: Vec<core::mem::MaybeUninit<u8>> =
+                alloc::vec![core::mem::MaybeUninit::new(0xfa); length];
             let expected_result = crosscheck.read_memory_into(address, &mut expected_data);
             let expected_success = expected_result.is_ok();
             let success = result.is_ok();
@@ -1193,13 +1269,16 @@ impl RawInstance {
                         log::trace!("read_memory result (backend):     {result:?}");
                     }
                 }
-                panic!("read_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}");
+                panic!(
+                    "read_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}"
+                );
             }
         }
 
         #[cfg(debug_assertions)]
         {
-            let is_accessible = self.is_memory_accessible(address, cast(length).assert_always_fits_in_u32(), false);
+            let is_accessible =
+                self.is_memory_accessible(address, cast(length).assert_always_fits_in_u32(), false);
             if is_accessible != result.is_ok() {
                 panic!(
                     "'read_memory_into' doesn't match with 'is_memory_accessible' for 0x{:x}-0x{:x} (read_memory_into = {}, is_memory_accessible = {})",
@@ -1237,20 +1316,27 @@ impl RawInstance {
             });
         }
 
-        let result = access_backend!(self.backend, |mut backend| backend.write_memory(address, data));
+        let result = access_backend!(self.backend, |mut backend| backend
+            .write_memory(address, data));
         if let Some(ref mut crosscheck) = self.crosscheck_instance {
             let expected_result = crosscheck.write_memory(address, data);
             let expected_success = expected_result.is_ok();
             let success = result.is_ok();
             if success != expected_success {
                 let address_end = u64::from(address) + cast(data.len()).to_u64();
-                panic!("write_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}");
+                panic!(
+                    "write_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}"
+                );
             }
         }
 
         #[cfg(debug_assertions)]
         {
-            let is_accessible = self.is_memory_accessible(address, cast(data.len()).assert_always_fits_in_u32(), true);
+            let is_accessible = self.is_memory_accessible(
+                address,
+                cast(data.len()).assert_always_fits_in_u32(),
+                true,
+            );
             if is_accessible != result.is_ok() {
                 panic!(
                     "'write_memory' doesn't match with 'is_memory_accessible' for 0x{:x}-0x{:x} (write_memory = {}, is_memory_accessible = {})",
@@ -1364,14 +1450,17 @@ impl RawInstance {
             });
         }
 
-        let result = access_backend!(self.backend, |mut backend| backend.zero_memory(address, length));
+        let result = access_backend!(self.backend, |mut backend| backend
+            .zero_memory(address, length));
         if let Some(ref mut crosscheck) = self.crosscheck_instance {
             let expected_result = crosscheck.zero_memory(address, length);
             let expected_success = expected_result.is_ok();
             let success = result.is_ok();
             if success != expected_success {
                 let address_end = u64::from(address) + u64::from(length);
-                panic!("zero_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}");
+                panic!(
+                    "zero_memory: crosscheck mismatch, range = 0x{address:x}..0x{address_end:x}, interpreter = {expected_success}, backend = {success}"
+                );
             }
         }
 
@@ -1406,7 +1495,8 @@ impl RawInstance {
             });
         }
 
-        access_backend!(self.backend, |mut backend| backend.protect_memory(address, length))
+        access_backend!(self.backend, |mut backend| backend
+            .protect_memory(address, length))
     }
 
     /// Frees the given page(s).
@@ -1438,13 +1528,17 @@ impl RawInstance {
     }
 
     pub fn sbrk(&mut self, size: u32) -> Result<Option<u32>, Error> {
-        let result = access_backend!(self.backend, |mut backend| backend.sbrk(size).into_result("sbrk failed"))?;
+        let result = access_backend!(self.backend, |mut backend| backend
+            .sbrk(size)
+            .into_result("sbrk failed"))?;
         if let Some(ref mut crosscheck) = self.crosscheck_instance {
             let expected_result = crosscheck.sbrk(size);
             let expected_success = expected_result.is_some();
             let success = result.is_some();
             if success != expected_success {
-                panic!("sbrk: crosscheck mismatch, size = {size}, interpreter = {expected_success}, backend = {success}");
+                panic!(
+                    "sbrk: crosscheck mismatch, size = {size}, interpreter = {expected_success}, backend = {success}"
+                );
             }
         }
 
@@ -1502,7 +1596,8 @@ impl RawInstance {
     {
         let mut output_count = 0;
         FnResult::_get(self.module().blob().is_64_bit(), || {
-            let value = access_backend!(self.backend, |backend| backend.reg(Reg::ARG_REGS[output_count]));
+            let value = access_backend!(self.backend, |backend| backend
+                .reg(Reg::ARG_REGS[output_count]));
             output_count += 1;
             value
         })
@@ -1521,6 +1616,7 @@ impl RawInstance {
     /// Will return `None` when running under an interpreter.
     /// Mostly only useful for debugging.
     pub fn next_native_program_counter(&self) -> Option<usize> {
-        access_backend!(self.backend, |backend| backend.next_native_program_counter())
+        access_backend!(self.backend, |backend| backend
+            .next_native_program_counter())
     }
 }
