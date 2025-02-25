@@ -55,14 +55,12 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
-            Currency,
             fungible::{Inspect, Mutate},
             tokens::Preservation,
             Time,
         },
     };
     use frame_system::pallet_prelude::*;
-    use scale_info::prelude::sync::Arc;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::{traits::Hash, SaturatedConversion};
 

@@ -116,33 +116,26 @@ mod sandbox;
 mod shm_allocator;
 
 pub use polkavm_common::{
-    abi::{MemoryMap, MemoryMapBuilder},
-    program::{ProgramBlob, ProgramCounter, ProgramParts, Reg},
-    utils::{ArcBytes, AsUninitSliceMut},
+    program::{ProgramBlob, ProgramCounter, Reg},
 };
 
 /// Miscellaneous types related to debug info.
 pub mod debug_info {
-    pub use polkavm_common::program::{FrameInfo, FrameKind, LineProgram, RegionInfo, SourceLocation};
-
-    #[cfg(feature = "std")]
-    pub use crate::polkavm::source_cache::SourceCache;
 }
 
 /// Miscellaneous types related to program blobs.
 pub mod program {
     pub use polkavm_common::program::{
-        ISA32_V1_NoSbrk, Imports, ImportsIter, Instruction, InstructionSet, Instructions, JumpTable, JumpTableIter, Opcode,
-        ParsedInstruction, ProgramExport, ProgramParseError, ProgramSymbol, RawReg, ISA32_V1, ISA64_V1,
+        ProgramExport, ProgramSymbol,
     };
 }
 
 pub type Gas = i64;
 
 pub use crate::polkavm::api::{Engine, MemoryAccessError, Module, RawInstance, RegValue};
-pub use crate::polkavm::config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind};
+pub use crate::polkavm::config::{Config, GasMeteringKind};
 pub use crate::polkavm::error::Error;
-pub use crate::polkavm::linker::{CallError, Caller, Instance, InstancePre, Linker, State};
+pub use crate::polkavm::linker::{Caller, Instance, Linker, State};
 pub use crate::polkavm::utils::{InterruptKind, Segfault};
 
 pub const RETURN_TO_HOST: u64 = polkavm_common::abi::VM_ADDR_RETURN_TO_HOST as u64;
