@@ -12,7 +12,8 @@ members = [
     "runtime",
     "node",
     "pallets/qf-polkavm-dev",
-    "qf-test-runner"
+    "qf-test-runner",
+    "pvm-test-runner",
 ]
 exclude = [
     "old",
