@@ -10,7 +10,6 @@ use polkavm::{
     Engine, GasMeteringKind, InterruptKind, Module, ModuleConfig,
     ProgramBlob, Reg
 };
-// use polkavm_common::Reg;
 use polkavm_disassembler::{Disassembler, DisassemblyFormat};
 
 // For debugging purposes
