@@ -178,7 +178,6 @@ impl pallet_qf_polkavm::Config for Runtime {
     type MaxCodeLen = PolkaVmMaxCodeLen;
     type MaxGas = PolkaVmMaxGas;
     type Currency = Balances;
-    type Time = Timestamp;
     type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 

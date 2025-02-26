@@ -110,9 +110,6 @@ pub mod pallet {
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
-        /// The time implementation used to supply timestamps to contracts through `seal_now`.
-        type Time: Time;
-
         /// A type representing the weights required by the dispatchables of this pallet.
         type WeightInfo: WeightInfo;
     }
