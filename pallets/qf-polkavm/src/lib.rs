@@ -290,7 +290,6 @@ pub mod pallet {
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
                 ]
                 .to_vec(),
-                || -> u64 { T::Time::now().saturated_into::<u64>() },
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -314,9 +313,6 @@ pub mod pallet {
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 1 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_now", ())
-                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
-                2 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
@@ -377,12 +373,6 @@ pub mod pallet {
                         )
                     },
                 )
-                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
-
-            linker
-                .define_typed("now", |caller: Caller<T>| -> u64 {
-                    (caller.user_data.now)()
-                })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
