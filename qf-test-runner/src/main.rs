@@ -1,17 +1,23 @@
 use clap::Parser;
 use tracing_subscriber::prelude::*;
 
-use polkavm::{Config as PolkaVMConfig, Engine, Linker, Module as PolkaVMModule, ProgramBlob, State};
-use polkavm::Caller;
-use polkavm::InterruptKind;
-use polkavm::Reg;
+use polkavm::{Config as PolkaVMConfig, Engine, Linker, Module as PolkaVMModule, ProgramBlob};
+
 
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(name = "QF polkavm blob runner (for now only for `calc`)")]
+#[command(version = "1.0")]
+#[command(about = "QF polkavm blob runner (for now only for `calc`)", long_about = None)]
 struct Cli {
     /// Path to the PolkaVM program to execute
     #[arg(short, long)]
     program: std::path::PathBuf,
+    /// Entry point of the program
+    #[arg(short, long)]
+    entry: String,
+    /// List of arguments to pass to the program (for example `-a1 -a2`)
+    #[arg(short, long)]
+    args: Vec<String>,
 }
 
 fn main() {
@@ -26,74 +32,60 @@ fn main() {
         .try_init()
         .expect("Failed to initialize tracing");
 
-    let cli = Cli::try_parse().expect("Failed to parse CLI arguments");
+    let cli = Cli::parse();
 
-    let raw_blob = std::fs::read(cli.program).expect("Failed to read program");
-    let blob = ProgramBlob::parse(raw_blob.as_slice().into()).unwrap();
+    let raw_blob = std::fs::read(cli.program)
+        .map_err(|e| {
+            tracing::debug!("Failed to initialize tracing: {}", e);
+            e
+        })
+        .expect("Failed to read program");
+    let blob = ProgramBlob::parse(raw_blob.as_slice().into())
+        .map_err(|e| {
+            tracing::debug!("Failed to parse program blob: {}", e);
+            e
+        }).expect("Failed to parse program blob");
 
-    let mut config = PolkaVMConfig::from_env().unwrap();
+    let mut config = PolkaVMConfig::from_env()
+        .map_err(|e| {
+            tracing::debug!("Failed to load config: {}", e);
+            e
+        }).expect("Failed to load config");
     config.set_allow_dynamic_paging(true);
-    let engine = Engine::new(&config).unwrap();
-    let module = PolkaVMModule::from_blob(&engine, &Default::default(), blob).unwrap();
+    let engine = Engine::new(&config)
+        .map_err(|e| {
+            tracing::debug!("Failed to create engine: {}", e);
+            e
+        }).expect("Failed to create engine");
+    let module = PolkaVMModule::from_blob(&engine, &Default::default(), blob)
+        .map_err(|e| {
+            tracing::debug!("Failed to create module: {}", e);
+            e
+        }).expect("Failed to create module");
 
-    let mut linker: Linker = Linker::new();
-
-    linker.define_typed("foo", |caller: Caller| -> u32 { caller.user_data.foo }).unwrap();
-    linker.define_typed("transfer", |caller: Caller| -> u32 { caller.user_data.address[2].into() }).unwrap();
+    let linker: Linker = Linker::new();
 
     // Link the host functions with the module.
-    let instance_pre = linker.instantiate_pre(&module).unwrap();
+    let instance_pre = linker.instantiate_pre(&module)
+        .map_err(|e| {
+            tracing::debug!("Failed to link module: {}", e);
+            e
+        }).expect("Failed to link module");
 
     // Instantiate the module.
-    let mut instance = instance_pre.instantiate().unwrap();
+    let mut instance = instance_pre.instantiate()
+        .map_err(|e| {
+            tracing::debug!("Failed to instantiate module: {}", e);
+            e
+        }).expect("Failed to instantiate module");
 
-    let mut state = State::new(
-         vec![1,2,3],
-         100,
-    );
-
-    // linker.define_typed("foo", |caller: Caller| -> u32 { 42 }).unwrap();
-    // linker.define_typed("foo", |caller: Caller| -> u32 { 42 }).unwrap();
-    // linker.define_typed("transfer", |caller: Caller| -> u32 { caller.user_data.address[2].into() }).unwrap();
-
+    let args = cli.args.iter().map(|arg| arg.parse::<u32>().unwrap()).collect::<Vec<_>>();
     let res = instance
-        .call_typed_and_get_result::<u32, (u32, u32)>(&mut state, "add_numbers", (1, 2));
-    
-    tracing::info!("res: {:?}", res);
+        .call_typed_and_get_result::<u32, (u32, u32)>(&mut (), cli.entry, (args[0], args[1]))
+        .map_err(|e| {
+            tracing::debug!("Failed to call function: {:?}", e);
+            e
+        }).expect("Failed to call function");
 
-    tracing::info!("Result: {:?}", res.unwrap());
-    
-    let entry_point = module.exports().find(|export| export == "add_numbers").unwrap().program_counter();
-    let mut instance = module.instantiate().unwrap();
-    instance.set_next_program_counter(entry_point);
-    instance.set_reg(Reg::A0, 1);
-    instance.set_reg(Reg::A1, 10);
-    instance.set_reg(Reg::RA, polkavm::RETURN_TO_HOST);
-    instance.set_reg(Reg::SP, module.default_sp());
-
-    println!("Calling into the guest program (low level):");
-    loop {
-        let interrupt_kind = instance.run().unwrap();
-        match interrupt_kind {
-            InterruptKind::Finished => break,
-            InterruptKind::Ecalli(num) => {
-                let Some(name) = module.imports().get(num) else {
-                    panic!("unexpected external call: {num}");
-                };
-
-                println!("name: {}", name);
-
-                if name == "foo" {
-                    instance.set_reg(Reg::A0, 1000);
-                } else if name == "transfer" {
-                    instance.set_reg(Reg::A0, 3);
-                } else {
-                    panic!("unexpected external call: {name} ({num})")
-                }
-            }
-            _ => panic!("unexpected interruption: {interrupt_kind:?}"),
-        }
-    }
-
-    println!("  1 + 10 + 1000 + 3 = {}", instance.reg(Reg::A0));
+    tracing::info!("Result: {:?}", res);
 }
