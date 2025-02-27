@@ -62,7 +62,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::{SaturatedConversion, traits::Hash};
+    use sp_runtime::{SaturatedConversion, traits::{Hash, TrailingZeroInput}};
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
@@ -115,11 +115,11 @@ pub mod pallet {
     }
 
     #[pallet::storage]
-    pub(super) type Code<T: Config> = StorageMap<_, Blake2_128Concat, CodeHash<T>, CodeVec<T>>;
+    pub(super) type Code<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, CodeVec<T>>;
 
     #[pallet::storage]
     pub(super) type ExecutionResult<T: Config> =
-        StorageMap<_, Blake2_128Concat, (CodeHash<T>, T::AccountId), u64>;
+        StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u64>;
 
     #[pallet::storage]
     pub(super) type CodeMetadata<T: Config> =
@@ -142,14 +142,17 @@ pub mod pallet {
         ExecutionResult {
             /// The account who set the new value.
             who: T::AccountId,
-            address: CodeHash<T>,
+            // The smart contract account.
+            contract_address: T::AccountId,
             /// The new value set.
             result: u64,
         },
         ProgramBlobUploaded {
             /// The account who uploaded ProgramBlob.
             who: T::AccountId,
-            address: CodeHash<T>,
+            // The smart contract account.
+            contract_address: T::AccountId,
+            // List of function in the smart contract.
             exports: Vec<Vec<u8>>,
         },
     }
@@ -227,23 +230,23 @@ pub mod pallet {
                     version: 0,
                 },
             };
-            let old_address = T::Hashing::hash_of(&blob_metadata);
+            let old_contract_address = Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
             let old_version = blob_metadata.version;
             blob_metadata.version = blob_metadata
                 .version
                 .checked_add(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
-            let address = T::Hashing::hash_of(&blob_metadata);
+            let contract_address = Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
             if old_version != 0 {
-                Code::<T>::remove(old_address)
+                Code::<T>::remove(old_contract_address)
             }
-            Code::<T>::insert(address, &raw_blob);
+            Code::<T>::insert(&contract_address, &raw_blob);
             CodeMetadata::<T>::insert(&who, blob_metadata);
 
             Self::deposit_event(Event::ProgramBlobUploaded {
                 who,
-                address,
+                contract_address,
                 exports,
             });
 
@@ -259,7 +262,7 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::execute())]
         pub fn execute(
             origin: OriginFor<T>,
-            blob_address: CodeHash<T>,
+            contract_address: T::AccountId,
             to: T::AccountId,
             value: BalanceOf<T>,
             op: u8,
@@ -273,7 +276,7 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
             ensure!(gas <= max_gas, Error::<T>::GasIsTooHigh);
 
-            let raw_blob = Code::<T>::get(blob_address)
+            let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
 
@@ -281,6 +284,7 @@ pub mod pallet {
 
             let mut state = State::new(
                 who.clone(),
+                contract_address.clone(),
                 [to].to_vec(),
                 [value].to_vec(),
                 [
@@ -317,12 +321,12 @@ pub mod pallet {
 
             sp_runtime::print("====== AFTER CALL ======");
 
-            ExecutionResult::<T>::insert((&blob_address, &who), result);
+            ExecutionResult::<T>::insert((&contract_address, &who), result);
 
             // Emit an event.
             Self::deposit_event(Event::ExecutionResult {
                 who,
-                address: blob_address,
+                contract_address,
                 result,
             });
 
@@ -364,7 +368,7 @@ pub mod pallet {
                     "transfer",
                     |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
                         (caller.user_data.transfer)(
-                            caller.user_data.caller_address.clone(),
+                            caller.user_data.contract_address.clone(),
                             caller.user_data.addresses[address_idx as usize].clone(),
                             caller.user_data.balances[balance_idx as usize].clone(),
                         )
@@ -390,5 +394,29 @@ pub mod pallet {
 
             Ok(instance)
         }
+    }
+
+    pub trait AddressGenerator<T: Config> {
+        /// The address of a contract based on the given instantiate parameters.
+        /// 
+        /// Changing the formular for an already deployed chain is fine as long as no collisions
+        /// with the old formular. Changes only affect existing contracts.
+        fn contract_address(
+            deploying_address: &T::AccountId,
+            code_hash: &CodeHash<T>,
+        ) -> T::AccountId;
+    }
+
+    impl<T: Config> AddressGenerator<T> for Pallet<T> {
+        /// Formula: `hash("contract_addr_v1" ++ deploying_address ++ code_hash)`
+        fn contract_address(
+            deploying_address: &T::AccountId,
+            code_hash: &CodeHash<T>,
+        ) -> T::AccountId {
+            let entropy = (b"contract_addr_v1", deploying_address, code_hash)
+                .using_encoded(T::Hashing::hash);
+            Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+                .expect("infinite length input; no invalid inputs for type; qed")
+        }   
     }
 }
