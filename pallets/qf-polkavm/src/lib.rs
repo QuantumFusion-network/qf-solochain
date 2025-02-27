@@ -55,7 +55,6 @@ pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
         traits::{
-            Time,
             fungible::{Inspect, Mutate},
             tokens::Preservation,
         },
@@ -63,7 +62,6 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
     use sp_runtime::{
-        SaturatedConversion,
         traits::{Hash, TrailingZeroInput},
     };
 
