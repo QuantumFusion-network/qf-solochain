@@ -62,7 +62,10 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::{SaturatedConversion, traits::{Hash, TrailingZeroInput}};
+    use sp_runtime::{
+        SaturatedConversion,
+        traits::{Hash, TrailingZeroInput},
+    };
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
@@ -230,13 +233,15 @@ pub mod pallet {
                     version: 0,
                 },
             };
-            let old_contract_address = Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
+            let old_contract_address =
+                Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
             let old_version = blob_metadata.version;
             blob_metadata.version = blob_metadata
                 .version
                 .checked_add(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
-            let contract_address = Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
+            let contract_address =
+                Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
             if old_version != 0 {
                 Code::<T>::remove(old_contract_address)
@@ -398,7 +403,7 @@ pub mod pallet {
 
     pub trait AddressGenerator<T: Config> {
         /// The address of a contract based on the given instantiate parameters.
-        /// 
+        ///
         /// Changing the formular for an already deployed chain is fine as long as no collisions
         /// with the old formular. Changes only affect existing contracts.
         fn contract_address(
@@ -413,10 +418,10 @@ pub mod pallet {
             deploying_address: &T::AccountId,
             code_hash: &CodeHash<T>,
         ) -> T::AccountId {
-            let entropy = (b"contract_addr_v1", deploying_address, code_hash)
-                .using_encoded(T::Hashing::hash);
+            let entropy =
+                (b"contract_addr_v1", deploying_address, code_hash).using_encoded(T::Hashing::hash);
             Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
                 .expect("infinite length input; no invalid inputs for type; qed")
-        }   
+        }
     }
 }
