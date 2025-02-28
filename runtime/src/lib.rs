@@ -186,6 +186,8 @@ pub type Executive = frame_executive::Executive<
 // Create the runtime by composing the FRAME pallets that were previously configured.
 #[frame_support::runtime]
 mod runtime {
+    use crate::aura_session;
+
     #[runtime::runtime]
     #[runtime::derive(
         RuntimeCall,
@@ -226,4 +228,7 @@ mod runtime {
 
     #[runtime::pallet_index(8)]
     pub type Faucet = pallet_faucet;
+
+    #[runtime::pallet_index(9)]
+    pub type AuraSession = aura_session;
 }

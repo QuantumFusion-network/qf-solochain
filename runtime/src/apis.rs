@@ -44,6 +44,7 @@ use spin_primitives::sr25519::AuthorityId as AuraId;
 use super::{
     AccountId, Aura, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
     RuntimeCall, RuntimeGenesisConfig, SessionKeys, System, TransactionPayment, VERSION,
+    aura_session,
 };
 
 impl_runtime_apis! {
@@ -115,6 +116,13 @@ impl_runtime_apis! {
     impl spin_primitives::AuraApi<Block, AuraId> for Runtime {
         fn slot_duration() -> spin_primitives::SlotDuration {
             spin_primitives::SlotDuration::from_millis(Aura::slot_duration())
+        }
+
+        fn aux_data() -> AuraAuxData<AuraId> {
+            let session_idx = aura_session::SessionIndex::<Runtime>::get();
+            let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
+
+            (authorities, session_idx)
         }
 
         fn authorities() -> Vec<AuraId> {
