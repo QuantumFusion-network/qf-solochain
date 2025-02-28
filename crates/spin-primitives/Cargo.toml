@@ -1,16 +1,13 @@
 [package]
-name = "sp-consensus-aura"
-version = "0.32.0"
+name = "spin-primitives"
+version = "0.1.0"
 authors.workspace = true
-description = "Primitives for Aura consensus"
+description = "Primitives for Spin consensus"
 edition.workspace = true
 license = "Apache-2.0"
 homepage.workspace = true
 repository.workspace = true
 readme = "README.md"
-
-[lints]
-workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

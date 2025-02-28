@@ -26,70 +26,70 @@ pub type InherentType = sp_consensus_slots::Slot;
 
 /// Auxiliary trait to extract Aura inherent data.
 pub trait AuraInherentData {
-	/// Get aura inherent data.
-	fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error>;
-	/// Replace aura inherent data.
-	fn aura_replace_inherent_data(&mut self, new: InherentType);
+    /// Get aura inherent data.
+    fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error>;
+    /// Replace aura inherent data.
+    fn aura_replace_inherent_data(&mut self, new: InherentType);
 }
 
 impl AuraInherentData for InherentData {
-	fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error> {
-		self.get_data(&INHERENT_IDENTIFIER)
-	}
+    fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error> {
+        self.get_data(&INHERENT_IDENTIFIER)
+    }
 
-	fn aura_replace_inherent_data(&mut self, new: InherentType) {
-		self.replace_data(INHERENT_IDENTIFIER, &new);
-	}
+    fn aura_replace_inherent_data(&mut self, new: InherentType) {
+        self.replace_data(INHERENT_IDENTIFIER, &new);
+    }
 }
 
 /// Provides the slot duration inherent data for `Aura`.
 // TODO: Remove in the future. https://github.com/paritytech/substrate/issues/8029
 #[cfg(feature = "std")]
 pub struct InherentDataProvider {
-	slot: InherentType,
+    slot: InherentType,
 }
 
 #[cfg(feature = "std")]
 impl InherentDataProvider {
-	/// Create a new instance with the given slot.
-	pub fn new(slot: InherentType) -> Self {
-		Self { slot }
-	}
+    /// Create a new instance with the given slot.
+    pub fn new(slot: InherentType) -> Self {
+        Self { slot }
+    }
 
-	/// Creates the inherent data provider by calculating the slot from the given
-	/// `timestamp` and `duration`.
-	pub fn from_timestamp_and_slot_duration(
-		timestamp: sp_timestamp::Timestamp,
-		slot_duration: sp_consensus_slots::SlotDuration,
-	) -> Self {
-		let slot = InherentType::from_timestamp(timestamp, slot_duration);
+    /// Creates the inherent data provider by calculating the slot from the given
+    /// `timestamp` and `duration`.
+    pub fn from_timestamp_and_slot_duration(
+        timestamp: sp_timestamp::Timestamp,
+        slot_duration: sp_consensus_slots::SlotDuration,
+    ) -> Self {
+        let slot = InherentType::from_timestamp(timestamp, slot_duration);
 
-		Self { slot }
-	}
+        Self { slot }
+    }
 }
 
 #[cfg(feature = "std")]
 impl core::ops::Deref for InherentDataProvider {
-	type Target = InherentType;
+    type Target = InherentType;
 
-	fn deref(&self) -> &Self::Target {
-		&self.slot
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.slot
+    }
 }
 
 #[cfg(feature = "std")]
 #[async_trait::async_trait]
 impl sp_inherents::InherentDataProvider for InherentDataProvider {
-	async fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), Error> {
-		inherent_data.put_data(INHERENT_IDENTIFIER, &self.slot)
-	}
+    async fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), Error> {
+        inherent_data.put_data(INHERENT_IDENTIFIER, &self.slot)
+    }
 
-	async fn try_handle_error(
-		&self,
-		_: &InherentIdentifier,
-		_: &[u8],
-	) -> Option<Result<(), Error>> {
-		// There is no error anymore
-		None
-	}
+    async fn try_handle_error(
+        &self,
+        _: &InherentIdentifier,
+        _: &[u8],
+    ) -> Option<Result<(), Error>> {
+        // There is no error anymore
+        None
+    }
 }
