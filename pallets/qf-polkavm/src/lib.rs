@@ -61,9 +61,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::{
-        traits::{Hash, TrailingZeroInput},
-    };
+    use sp_runtime::traits::{Hash, TrailingZeroInput};
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
