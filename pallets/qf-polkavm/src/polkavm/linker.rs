@@ -604,7 +604,7 @@ pub struct State<T: PalletConfig> {
     pub log_message: Vec<u8>,
     pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
     pub print: fn(Vec<u8>) -> u64,
-    pub balance: fn(T::AccountId) -> u64
+    pub balance: fn(T::AccountId) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {

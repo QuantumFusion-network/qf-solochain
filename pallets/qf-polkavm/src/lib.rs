@@ -306,9 +306,7 @@ pub mod pallet {
                     sp_runtime::print(&*m);
                     return 0;
                 },
-                |address: T::AccountId| -> u64 {
-                    T::Currency::balance(&address).saturated_into()
-                }
+                |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -385,9 +383,7 @@ pub mod pallet {
 
             linker
                 .define_typed("balance", |caller: Caller<T>| -> u64 {
-                    (caller.user_data.balance)(
-                        caller.user_data.contract_address.clone(),
-                    )
+                    (caller.user_data.balance)(caller.user_data.contract_address.clone())
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
