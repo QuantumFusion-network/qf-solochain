@@ -61,7 +61,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use scale_info::{TypeInfo, prelude::vec::Vec};
-    use sp_runtime::traits::{Hash, TrailingZeroInput};
+    use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
@@ -306,6 +306,9 @@ pub mod pallet {
                     sp_runtime::print(&*m);
                     return 0;
                 },
+                |address: T::AccountId| -> u64 {
+                    T::Currency::balance(&address).saturated_into()
+                }
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -315,6 +318,9 @@ pub mod pallet {
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 1 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                2 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
@@ -375,6 +381,14 @@ pub mod pallet {
                         )
                     },
                 )
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("balance", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.balance)(
+                        caller.user_data.contract_address.clone(),
+                    )
+                })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
