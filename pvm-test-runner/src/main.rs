@@ -13,6 +13,7 @@ use polkavm::{
 use polkavm_disassembler::{Disassembler, DisassemblyFormat};
 
 // For debugging purposes
+#[allow(unused_macros)]
 macro_rules! match_interrupt {
     ($interrupt:expr, $pattern:pat) => {
         let i = $interrupt;

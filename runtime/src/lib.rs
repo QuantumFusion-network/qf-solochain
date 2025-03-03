@@ -221,8 +221,11 @@ mod runtime {
     pub type Sudo = pallet_sudo;
 
     #[runtime::pallet_index(7)]
-    pub type QFPolkaVM = pallet_qf_polkavm_dev;
+    pub type QFPolkaVM = pallet_qf_polkavm;
 
     #[runtime::pallet_index(8)]
+    pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
+
+    #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
 }
