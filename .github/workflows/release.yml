@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      refreshDB:
+        description: "Refresh database before release"
+        required: true
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  release:
+    name: Release
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: QuantumFusion-network/infra
+          path: infra
+      
+      - name: Run Release Playbook
+        run: ansible-playbook -i ~/infra/hosts ~/infra/roles/cd/tasks/release.yml --extra-vars "refreshDB=${{ inputs.refreshDB }}"
