@@ -12,7 +12,10 @@ members = [
     "runtime",
     "node",
     "pallets/qf-polkavm-dev",
-    "qf-test-runner"
+    "qf-test-runner",
+    "parachain/runtime",
+    "parachain/pallets/template",
+    "parachain/node",
 ]
 exclude = [
     "old",
@@ -22,19 +25,28 @@ exclude = [
 
 [workspace.dependencies]
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
-scale-info = { version = "2.11.1", default-features = false }
+scale-info = { version = "2.11.6", default-features = false }
 
 # Debug
 tracing = { version = "0.1.40", default-features = false }
 # std
-env_logger = { version = "0.11.3" }
+env_logger = { version = "0.11.6" }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+docify = { version = "0.2.9" }
+hex-literal = { version = "0.4.1", default-features = false }
+log = { version = "0.4.22", default-features = false }
+smallvec = { version = "1.11.0", default-features = false }
+color-print = { version = "0.3.4" }
+serde = { version = "1.0.214", default-features = false }
 
 # Node
+sc-tracing = { path = "./vendor/polkadot-sdk/substrate/client/tracing", default-features = false }
+prometheus-endpoint = { path = "./vendor/polkadot-sdk/substrate/utils/prometheus", default-features = false, package = "substrate-prometheus-endpoint" }
 clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "./vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }
 jsonrpsee = { version = "0.24.7" }
+polkadot-sdk = { path = "./vendor/polkadot-sdk/umbrella", default-features = false }
 polkavm = { path = "./vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 pallet-transaction-payment-rpc = { path = "./vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
 sc-basic-authorship = { path = "./vendor/polkadot-sdk/substrate/client/basic-authorship", default-features = false }
@@ -52,7 +64,7 @@ sc-telemetry = { path = "./vendor/polkadot-sdk/substrate/client/telemetry", defa
 sc-transaction-pool = { path = "./vendor/polkadot-sdk/substrate/client/transaction-pool", default-features = false }
 sc-transaction-pool-api = { path = "./vendor/polkadot-sdk/substrate/client/transaction-pool/api", default-features = false }
 sc-serde-json = { path = "./vendor/polkadot-sdk/substrate/client/serde_json", default-features = false }
-serde_json = { version = "1.0.124", default-features = false }
+serde_json = { version = "1.0.132", default-features = false }
 qf-runtime = { path = "./runtime", default-features = false }
 sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain", default-features = false }
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
@@ -72,6 +84,8 @@ frame-metadata-hash-extension = { path = "./vendor/polkadot-sdk/substrate/frame/
 frame-system-benchmarking = { path = "./vendor/polkadot-sdk/substrate/frame/system/benchmarking", default-features = false }
 frame-system-rpc-runtime-api = { path = "./vendor/polkadot-sdk/substrate/frame/system/rpc/runtime-api", default-features = false }
 
+cumulus-pallet-parachain-system = { path = "./vendor/polkadot-sdk/cumulus/pallets/parachain-system", default-features = false }
+cumulus-primitives-aura = { path = "./vendor/polkadot-sdk/cumulus/primitives/aura", default-features = false}
 pallet-aura = { path = "./vendor/polkadot-sdk/substrate/frame/aura", default-features = false }
 pallet-grandpa = { path = "./vendor/polkadot-sdk/substrate/frame/grandpa", default-features = false }
 pallet-template = { path = "./vendor/polkadot-sdk/substrate/frame/template", default-features = false }
