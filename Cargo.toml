@@ -13,7 +13,8 @@ members = [
     "node",
     "pallets/qf-polkavm",
     "pallets/qf-polkavm-dev",
-#    "qf-test-runner"
+    "qf-test-runner",
+    "pvm-test-runner",
 ]
 exclude = [
     "old",
