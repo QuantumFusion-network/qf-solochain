@@ -232,6 +232,6 @@ mod runtime {
     #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
 
-    #[runtime::pallet_index(9)]
+    #[runtime::pallet_index(10)]
     pub type AuraSession = aura_session;
 }

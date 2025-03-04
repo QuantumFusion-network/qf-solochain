@@ -202,4 +202,5 @@ impl pallet_faucet::Config for Runtime {
 
 impl aura_session::Config for Runtime {
     type SessionLength = ConstU32<MINUTES>;
+    type RuntimeEvent = RuntimeEvent;
 }

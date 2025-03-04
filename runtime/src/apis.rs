@@ -38,6 +38,7 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
+use spin_primitives::AuraAuxData;
 use spin_primitives::sr25519::AuthorityId as AuraId;
 
 // Local module imports
