@@ -40,7 +40,8 @@ use sp_runtime::{
 pub use sc_consensus_slots::check_equivocation;
 
 use super::{
-    AuraApi, AuthorityId, CompatibilityMode, CompatibleDigestItem, LOG_TARGET, SlotDuration,
+    AuraApi, AuraAuxData, AuthorityId, CompatibilityMode, CompatibleDigestItem, LOG_TARGET,
+    SessionIndex, SlotDuration,
 };
 
 /// Get the slot duration for Aura by reading from a runtime API at the best block's state.
@@ -69,12 +70,18 @@ where
 }
 
 /// Get the slot author for given block along with authorities.
-pub fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&AuthorityId<P>> {
+///
+/// Session increment is assumed to be done by the runtime
+pub fn slot_author<P: Pair>(
+    _slot: Slot,
+    session_idx: SessionIndex,
+    authorities: &[AuthorityId<P>],
+) -> Option<&AuthorityId<P>> {
     if authorities.is_empty() {
         return None;
     }
 
-    let idx = *slot % (authorities.len() as u64);
+    let idx = session_idx as u64 % (authorities.len() as u64);
     assert!(
         idx <= usize::MAX as u64,
         "It is impossible to have a vector with length beyond the address space; qed",
@@ -93,10 +100,11 @@ pub fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Optio
 /// with the public key of the slot author.
 pub async fn claim_slot<P: Pair>(
     slot: Slot,
-    authorities: &[AuthorityId<P>],
+    aux_data: &AuraAuxData<AuthorityId<P>>,
     keystore: &KeystorePtr,
 ) -> Option<P::Public> {
-    let expected_author = slot_author::<P>(slot, authorities);
+    let (authorities, session_length) = aux_data;
+    let expected_author = slot_author::<P>(slot, *session_length, authorities);
     expected_author.and_then(|p| {
         if keystore.has_keys(&[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)]) {
             Some(p.clone())
@@ -202,7 +210,7 @@ pub fn fetch_authorities_with_compatibility_mode<A, B, C>(
     parent_hash: B::Hash,
     context_block_number: NumberFor<B>,
     compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<Vec<A>, ConsensusError>
+) -> Result<AuraAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
@@ -233,16 +241,16 @@ where
     }
 
     runtime_api
-        .authorities(parent_hash)
+        .aux_data(parent_hash)
         .ok()
         .ok_or(ConsensusError::InvalidAuthoritiesSet)
 }
 
 /// Load the current set of authorities from a runtime at a specific block.
-pub fn fetch_authorities<A, B, C>(
+pub fn fetch_aux_data<A, B, C>(
     client: &C,
     parent_hash: B::Hash,
-) -> Result<Vec<A>, ConsensusError>
+) -> Result<AuraAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
@@ -251,7 +259,7 @@ where
 {
     client
         .runtime_api()
-        .authorities(parent_hash)
+        .aux_data(parent_hash)
         .ok()
         .ok_or(ConsensusError::InvalidAuthoritiesSet)
 }
@@ -295,12 +303,13 @@ pub enum SealVerificationError<Header> {
 pub fn check_header_slot_and_seal<B: BlockT, P: Pair>(
     slot_now: Slot,
     mut header: B::Header,
-    authorities: &[AuthorityId<P>],
+    aux_data: &AuraAuxData<AuthorityId<P>>,
 ) -> Result<(B::Header, Slot, DigestItem), SealVerificationError<B::Header>>
 where
     P::Signature: Codec,
     P::Public: Codec + PartialEq + Clone,
 {
+    let (authorities, session_idx) = aux_data;
     let seal = header
         .digest_mut()
         .pop()
@@ -317,8 +326,8 @@ where
     } else {
         // check the signature is valid under the expected authority and
         // chain state.
-        let expected_author =
-            slot_author::<P>(slot, authorities).ok_or(SealVerificationError::SlotAuthorNotFound)?;
+        let expected_author = slot_author::<P>(slot, *session_idx, &authorities)
+            .ok_or(SealVerificationError::SlotAuthorNotFound)?;
 
         let pre_hash = header.hash();
 
@@ -356,7 +365,7 @@ mod tests {
         );
 
         assert_eq!(
-            fetch_authorities(&client, client.chain_info().best_hash).unwrap(),
+            fetch_aux_data(&client, client.chain_info().best_hash).unwrap(),
             vec![
                 Keyring::Alice.public().into(),
                 Keyring::Bob.public().into(),

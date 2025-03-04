@@ -72,6 +72,12 @@ pub const AURA_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
 /// The index of an authority.
 pub type AuthorityIndex = u32;
 
+/// The index of the session in Aura.
+pub type SessionIndex = u32;
+
+/// Auxilary data for Aura.
+pub type AuraAuxData<A> = (Vec<A>, SessionIndex);
+
 /// An consensus log item for Aura.
 #[derive(Decode, Encode)]
 pub enum ConsensusLog<AuthorityId: Codec> {
@@ -92,6 +98,9 @@ sp_api::decl_runtime_apis! {
         fn slot_duration() -> SlotDuration;
 
         /// Return the current set of authorities.
+        fn aux_data() -> AuraAuxData<AuthorityId>;
+
+        /// List of authorities
         fn authorities() -> Vec<AuthorityId>;
     }
 }

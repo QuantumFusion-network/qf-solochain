@@ -51,7 +51,7 @@ sc-cli = { path = "./vendor/polkadot-sdk/substrate/client/cli", default-features
 sc-client-api = { path = "./vendor/polkadot-sdk/substrate/client/api", default-features = false }
 sc-consensus = { path = "./vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }
 sc-consensus-slots = { path = "./vendor/polkadot-sdk/substrate/client/consensus/slots", default-features = false }
-sc-consensus-aura = { path = "./vendor/polkadot-sdk/substrate/client/consensus/aura", default-features = false }
+spin-consensus = { path = "./crates/spin-consensus", default-features = false }
 sc-consensus-grandpa = { path = "./vendor/polkadot-sdk/substrate/client/consensus/grandpa", default-features = false }
 sc-executor = { path = "./vendor/polkadot-sdk/substrate/client/executor", default-features = false }
 sc-keystore = { path = "./vendor/polkadot-sdk/substrate/client/keystore", default-features = false }
@@ -71,6 +71,7 @@ sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain"
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "./vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
 sp-timestamp = { path = "./vendor/polkadot-sdk/substrate/primitives/timestamp", default-features = false }
+sp-tracing = { path = "./vendor/polkadot-sdk/substrate/primitives/tracing", default-features = false }
 substrate-frame-rpc-system = { path = "./vendor/polkadot-sdk/substrate/utils/frame/rpc/system", default-features = false }
 substrate-build-script-utils = { path = "./vendor/polkadot-sdk/substrate/utils/build-script-utils", default-features = false }
 
@@ -91,13 +92,13 @@ pallet-template = { path = "./vendor/polkadot-sdk/substrate/frame/template", def
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
 sp-api = { path = "./vendor/polkadot-sdk/substrate/primitives/api", default-features = false }
-sp-application-crypto = { path = "./vendor/polkadot-sdk/substrate/primitives/application-crypto", default-features = false }
 sp-keystore = { path = "./vendor/polkadot-sdk/substrate/primitives/keystore", default-features = false }
+sp-application-crypto = { path = "./vendor/polkadot-sdk/substrate/primitives/application-crypto", default-features = false }
 sp-block-builder = { path = "./vendor/polkadot-sdk/substrate/primitives/block-builder", default-features = false }
+spin-primitives = { path = "./crates/spin-primitives", default-features = false }
+sp-consensus-grandpa = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/grandpa", default-features = false }
 sp-consensus = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/common", default-features = false }
 sp-consensus-slots = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/slots", default-features = false }
-sp-consensus-aura = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/aura", default-features = false }
-sp-consensus-grandpa = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/grandpa", default-features = false }
 sp-core = { path = "./vendor/polkadot-sdk/substrate/primitives/core", default-features = false }
 sp-inherents = { path = "./vendor/polkadot-sdk/substrate/primitives/inherents", default-features = false }
 sp-offchain = { path = "./vendor/polkadot-sdk/substrate/primitives/offchain", default-features = false }
@@ -106,7 +107,6 @@ sp-storage = { path = "./vendor/polkadot-sdk/substrate/primitives/storage", defa
 sp-transaction-pool = { path = "./vendor/polkadot-sdk/substrate/primitives/transaction-pool", default-features = false }
 substrate-wasm-builder = { path = "./vendor/polkadot-sdk/substrate/utils/wasm-builder", default-features = false }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", path = "./vendor/polkadot-sdk/substrate/utils/prometheus", default-features = false }
-substrate-test-runtime-client = { path = "./vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
 
 # pallets that we want to use
 pallet-balances = { path = "./vendor/polkadot-sdk/substrate/frame/balances", default-features = false }
@@ -121,6 +121,8 @@ sp-runtime = { features = ["serde"], path = "./vendor/polkadot-sdk/substrate/pri
 sp-version = { path = "./vendor/polkadot-sdk/substrate/primitives/version", default-features = false }
 sp-version-proc-macro = { path = "./vendor/polkadot-sdk/substrate/primitives/version/proc-macro", default-features = false }
 
+substrate-test-runtime-client = { path = "./vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
+
 # local pallet templates
 pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
 
@@ -131,3 +133,7 @@ spin-primitives = { path = "./crates/spin-primitives", default-features = false 
 # runtime requires unwinding.
 panic = "unwind"
 opt-level = 3
+
+# hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
+[patch.'https://github.com/w3f/fflonk']
+fflonk = { git = "https://www.github.com/w3f/fflonk", rev = "be95d4c971b1d15b5badfc06ff13f5c07987d484" }

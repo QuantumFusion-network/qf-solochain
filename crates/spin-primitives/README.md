@@ -1,3 +1,3 @@
-Primitives for Aura.
+Primitives for SPIN.
 
 License: Apache-2.0

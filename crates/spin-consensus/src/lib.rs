@@ -62,8 +62,8 @@ pub use import_queue::{
 };
 pub use sc_consensus_slots::SlotProportion;
 pub use sp_consensus::SyncOracle;
-pub use sp_consensus_aura::{
-    AURA_ENGINE_ID, AuraApi, ConsensusLog, SlotDuration,
+pub use spin_primitives::{
+    AURA_ENGINE_ID, AuraApi, AuraAuxData, ConsensusLog, SessionIndex, SlotDuration,
     digests::CompatibleDigestItem,
     inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as AuraInherent},
 };
@@ -272,7 +272,7 @@ pub fn build_aura_worker<P, B, C, PF, I, SO, L, BS, Error>(
     SyncOracle = SO,
     JustificationSyncLink = L,
     Claim = P::Public,
-    AuxData = Vec<AuthorityId<P>>,
+    AuxData = (Vec<AuthorityId<P>>, SessionIndex),
 >
 where
     B: BlockT,
@@ -347,7 +347,7 @@ where
         Pin<Box<dyn Future<Output = Result<E::Proposer, ConsensusError>> + Send + 'static>>;
     type Proposer = E::Proposer;
     type Claim = P::Public;
-    type AuxData = Vec<AuthorityId<P>>;
+    type AuxData = AuraAuxData<AuthorityId<P>>;
 
     fn logging_target(&self) -> &'static str {
         "aura"
@@ -358,7 +358,7 @@ where
     }
 
     fn aux_data(&self, header: &B::Header, _slot: Slot) -> Result<Self::AuxData, ConsensusError> {
-        authorities(
+        aux_data(
             self.client.as_ref(),
             header.hash(),
             *header.number() + 1u32.into(),
@@ -366,17 +366,17 @@ where
         )
     }
 
-    fn authorities_len(&self, authorities: &Self::AuxData) -> Option<usize> {
-        Some(authorities.len())
+    fn authorities_len(&self, aux_data: &Self::AuxData) -> Option<usize> {
+        Some(aux_data.0.len())
     }
 
     async fn claim_slot(
         &mut self,
         _header: &B::Header,
         slot: Slot,
-        authorities: &Self::AuxData,
+        aux_data: &Self::AuxData,
     ) -> Option<Self::Claim> {
-        crate::standalone::claim_slot::<P>(slot, authorities, &self.keystore).await
+        crate::standalone::claim_slot::<P>(slot, aux_data, &self.keystore).await
     }
 
     fn pre_digest_data(&self, slot: Slot, _claim: &Self::Claim) -> Vec<sp_runtime::DigestItem> {
@@ -504,12 +504,12 @@ impl<B: BlockT> From<crate::standalone::PreDigestLookupError> for Error<B> {
     }
 }
 
-fn authorities<A, B, C>(
+fn aux_data<A, B, C>(
     client: &C,
     parent_hash: B::Hash,
     context_block_number: NumberFor<B>,
     compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<Vec<A>, ConsensusError>
+) -> Result<AuraAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
@@ -540,7 +540,7 @@ where
     }
 
     runtime_api
-        .authorities(parent_hash)
+        .aux_data(parent_hash)
         .ok()
         .ok_or(ConsensusError::InvalidAuthoritiesSet)
 }
@@ -557,7 +557,6 @@ mod tests {
     use sc_network_test::{Block as TestBlock, *};
     use sp_application_crypto::{AppCrypto, key_types::AURA};
     use sp_consensus::{DisableProofRecording, NoNetwork as DummyOracle, Proposal};
-    use sp_consensus_aura::sr25519::AuthorityPair;
     use sp_inherents::InherentData;
     use sp_keyring::sr25519::Keyring;
     use sp_keystore::Keystore;
@@ -566,6 +565,7 @@ mod tests {
         traits::{Block as BlockT, Header as _},
     };
     use sp_timestamp::Timestamp;
+    use spin_primitives::sr25519::AuthorityPair;
     use std::{
         task::Poll,
         time::{Duration, Instant},

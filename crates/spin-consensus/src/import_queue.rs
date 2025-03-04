@@ -19,7 +19,7 @@
 //! Module implementing the logic for verifying and importing AuRa blocks.
 
 use crate::{
-    AuthorityId, CompatibilityMode, Error, LOG_TARGET, authorities,
+    AuraAuxData, AuthorityId, CompatibilityMode, Error, LOG_TARGET, aux_data,
     standalone::SealVerificationError,
 };
 use codec::Codec;
@@ -36,7 +36,6 @@ use sp_api::{ApiExt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder as BlockBuilderApi;
 use sp_blockchain::HeaderBackend;
 use sp_consensus::Error as ConsensusError;
-use sp_consensus_aura::{AuraApi, inherents::AuraInherentData};
 use sp_consensus_slots::Slot;
 use sp_core::crypto::Pair;
 use sp_inherents::{CreateInherentDataProviders, InherentDataProvider as _};
@@ -44,6 +43,7 @@ use sp_runtime::{
     DigestItem,
     traits::{Block as BlockT, Header, NumberFor},
 };
+use spin_primitives::{AuraApi, inherents::AuraInherentData};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 /// check a header has been signed by the right key. If the slot is too far in the future, an error
@@ -56,7 +56,7 @@ fn check_header<C, B: BlockT, P: Pair>(
     slot_now: Slot,
     header: B::Header,
     hash: B::Hash,
-    authorities: &[AuthorityId<P>],
+    aux_data: &AuraAuxData<AuthorityId<P>>,
     check_for_equivocation: CheckForEquivocation,
 ) -> Result<CheckedHeader<B::Header, (Slot, DigestItem)>, Error<B>>
 where
@@ -65,11 +65,13 @@ where
     C: sc_client_api::backend::AuxStore,
 {
     let check_result =
-        crate::standalone::check_header_slot_and_seal::<B, P>(slot_now, header, authorities);
+        crate::standalone::check_header_slot_and_seal::<B, P>(slot_now, header, aux_data);
 
     match check_result {
         Ok((header, slot, seal)) => {
-            let expected_author = crate::standalone::slot_author::<P>(slot, &authorities);
+            let (authorities, session_index) = aux_data;
+            let expected_author =
+                crate::standalone::slot_author::<P>(slot, *session_index, &authorities);
             let should_equiv_check = check_for_equivocation.check_for_equivocation();
             if let (true, Some(expected)) = (should_equiv_check, expected_author) {
                 if let Some(equivocation_proof) =
@@ -195,7 +197,7 @@ where
 
         let hash = block.header.hash();
         let parent_hash = *block.header.parent_hash();
-        let authorities = authorities(
+        let aux_data = aux_data(
             self.client.as_ref(),
             parent_hash,
             *block.header.number(),
@@ -224,7 +226,7 @@ where
             slot_now + 1,
             block.header,
             hash,
-            &authorities[..],
+            &aux_data,
             self.check_for_equivocation,
         )
         .map_err(|e| e.to_string())?;

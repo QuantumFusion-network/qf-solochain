@@ -1,10 +1,11 @@
-Aura (Authority-round) consensus in Substrate.
+SPIN consensus.
 
-Aura works by having a list of authorities A who are expected to roughly
+SPIN works by having a list of authorities A who are expected to roughly
 agree on the current time. Time is divided up into discrete slots of t
-seconds each. For each slot s, the author of that slot is A[s % |A|].
+seconds each. Several slots make up a session, and every session's author is 
+selected by formula A[session_idx % |A|].
 
-The author is allowed to issue one block but not more during that slot,
+The author is allowed to issue N blocks but not more during that session,
 and it will be built upon the longest valid chain that has been seen.
 
 Blocks from future steps will be either deferred or rejected depending on how
