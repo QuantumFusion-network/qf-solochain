@@ -72,7 +72,6 @@ sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain"
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "./vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
 sp-timestamp = { path = "./vendor/polkadot-sdk/substrate/primitives/timestamp", default-features = false }
-sp-tracing = { path = "./vendor/polkadot-sdk/substrate/primitives/tracing", default-features = false }
 substrate-frame-rpc-system = { path = "./vendor/polkadot-sdk/substrate/utils/frame/rpc/system", default-features = false }
 substrate-build-script-utils = { path = "./vendor/polkadot-sdk/substrate/utils/build-script-utils", default-features = false }
 
@@ -127,9 +126,6 @@ substrate-test-runtime-client = { path = "./vendor/polkadot-sdk/substrate/test-u
 
 # local pallet templates
 pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
-
-spin-consensus = { path = "./crates/spin-consensus", default-features = false }
-spin-primitives = { path = "./crates/spin-primitives", default-features = false }
 
 # polkavm
 image = { version = "0.24.7", default-features = false }
