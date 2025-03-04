@@ -13,6 +13,7 @@ members = [
     "node",
     "pallets/qf-polkavm",
     "pallets/qf-polkavm-dev",
+    "pallets/spin-polkadot",
     "qf-test-runner",
     "pvm-test-runner",
 ]
@@ -80,6 +81,7 @@ pallet-template = { path = "./vendor/polkadot-sdk/substrate/frame/template", def
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
 pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
+pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
 sp-api = { path = "./vendor/polkadot-sdk/substrate/primitives/api", default-features = false }
 sp-block-builder = { path = "./vendor/polkadot-sdk/substrate/primitives/block-builder", default-features = false }
 sp-consensus-aura = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/aura", default-features = false }
