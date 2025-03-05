@@ -1,4 +1,4 @@
-use qf_runtime::{AccountId, Signature, WASM_BINARY};
+use qf_solochain_runtime::{AccountId, Signature, WASM_BINARY};
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;

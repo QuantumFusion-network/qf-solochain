@@ -9,16 +9,15 @@ repository = "https://github.com/QuantumFusion-network"
 resolver = "2"
 
 members = [
-    "runtime",
-    "node",
-    "pallets/qf-polkavm-dev",
+    "runtimes/solochain/runtime",
+    "runtimes/solochain/node",
+    "runtimes/pallets/qf-polkavm-dev",
+    "runtimes/pallets/template",
     "qf-test-runner",
-    "parachain/runtime",
-    "parachain/pallets/template",
-    "parachain/node",
+    "runtimes/parachain/runtime",
+    "runtimes/parachain/node",
 ]
 exclude = [
-    "old",
     "vendor",
     "pvm_prog"
 ]
@@ -65,7 +64,7 @@ sc-transaction-pool = { path = "./vendor/polkadot-sdk/substrate/client/transacti
 sc-transaction-pool-api = { path = "./vendor/polkadot-sdk/substrate/client/transaction-pool/api", default-features = false }
 sc-serde-json = { path = "./vendor/polkadot-sdk/substrate/client/serde_json", default-features = false }
 serde_json = { version = "1.0.132", default-features = false }
-qf-runtime = { path = "./runtime", default-features = false }
+qf-solochain-runtime = { path = "./runtimes/solochain/runtime", default-features = false }
 sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain", default-features = false }
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "./vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
@@ -89,8 +88,8 @@ cumulus-primitives-aura = { path = "./vendor/polkadot-sdk/cumulus/primitives/aur
 pallet-aura = { path = "./vendor/polkadot-sdk/substrate/frame/aura", default-features = false }
 pallet-grandpa = { path = "./vendor/polkadot-sdk/substrate/frame/grandpa", default-features = false }
 pallet-template = { path = "./vendor/polkadot-sdk/substrate/frame/template", default-features = false }
-pallet-faucet = { path = "pallets/faucet", default-features = false }
-pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
+pallet-faucet = { path = "./runtimes/pallets/faucet", default-features = false }
+pallet-qf-polkavm-dev = { path = "./runtimes/pallets/qf-polkavm-dev", default-features = false }
 sp-api = { path = "./vendor/polkadot-sdk/substrate/primitives/api", default-features = false }
 sp-block-builder = { path = "./vendor/polkadot-sdk/substrate/primitives/block-builder", default-features = false }
 sp-consensus-aura = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/aura", default-features = false }
