@@ -307,6 +307,9 @@ pub mod pallet {
                     return 0;
                 },
                 |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
+                || -> u64 {
+                    frame_system::Pallet::<T>::block_number().saturated_into()
+                }
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -320,6 +323,9 @@ pub mod pallet {
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 2 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                3 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_block_number", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
             };
@@ -390,6 +396,12 @@ pub mod pallet {
             linker
                 .define_typed("print", |caller: Caller<T>| -> u64 {
                     (caller.user_data.print)(caller.user_data.log_message.clone())
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("block_number", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.block_number)()
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
