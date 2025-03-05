@@ -73,7 +73,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        /// A type representing the weights required by the dispatchables of this pallet.
         type WeightInfo: crate::weights::WeightInfo;
 
         #[pallet::constant]
@@ -112,6 +111,10 @@ pub mod pallet {
     #[pallet::storage]
     pub type AuthorityList<T: Config> =
         StorageValue<_, sp_consensus_grandpa::AuthorityList, ValueQuery>;
+
+    #[pallet::storage]
+    pub type LastAliveMessage<T: Config> =
+        StorageValue<_, AliveMessageProof<HeaderFor<T>>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -207,6 +210,7 @@ pub mod pallet {
 
             // TODO: validate GRANDPA justification proof on client side
             // proof.validate();
+            <LastAliveMessage<T>>::put(proof);
 
             let current_block_number = frame_system::Pallet::<T>::block_number();
 
