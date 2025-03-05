@@ -1,82 +1,26 @@
 //! # SPIN Pallet
-//!
-//! A pallet with minimal functionality to help developers understand the essential components of
-//! writing a FRAME pallet. It is typically used in beginner tutorials or in Polkadot SDK template
-//! as a starting point for creating a new pallet and **not meant to be used in production**.
-//!
-//! ## Overview
-//!
-//! This template pallet contains basic examples of:
-//! - declaring a storage item that stores a single block-number
-//! - declaring and using events
-//! - declaring and using errors
-//! - a dispatchable function that allows a user to set a new value to storage and emits an event
-//!   upon success
-//! - another dispatchable function that causes a custom error to be thrown
-//!
-//! Each pallet section is annotated with an attribute using the `#[pallet::...]` procedural macro.
-//! This macro generates the necessary code for a pallet to be aggregated into a FRAME runtime.
-//!
-//! To get started with pallet development, consider using this tutorial:
-//!
-//! <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html>
-//!
-//! And reading the main documentation of the `frame` crate:
-//!
-//! <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/polkadot_sdk/frame_runtime/index.html>
-//!
-//! And looking at the frame [`kitchen-sink`](https://paritytech.github.io/polkadot-sdk/master/pallet_example_kitchensink/index.html)
-//! pallet, a showcase of all pallet macros.
-//!
-//! ### Pallet Sections
-//!
-//! The pallet sections in this template are:
-//!
-//! - A **configuration trait** that defines the types and parameters which the pallet depends on
-//!   (denoted by the `#[pallet::config]` attribute). See: [`Config`].
-//! - A **means to store pallet-specific data** (denoted by the `#[pallet::storage]` attribute).
-//!   See: [`storage_types`].
-//! - A **declaration of the events** this pallet emits (denoted by the `#[pallet::event]`
-//!   attribute). See: [`Event`].
-//! - A **declaration of the errors** that this pallet can throw (denoted by the `#[pallet::error]`
-//!   attribute). See: [`Error`].
-//! - A **set of dispatchable functions** that define the pallet's functionality (denoted by the
-//!   `#[pallet::call]` attribute). See: [`dispatchables`].
-//!
-//! Run `cargo doc --package pallet-template --open` to view this pallet's documentation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
 
-const LOG_TARGET: &str = "runtime::template";
+// #[cfg(test)]
+// mod mock;
 
-#[cfg(test)]
-mod mock;
+// #[cfg(test)]
+// mod tests;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
 
 pub mod weights;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
-
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/polkadot_sdk/frame_runtime/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html>
-//
-// To see a full list of `pallet` macros and their use cases, see:
-// <https://paritytech.github.io/polkadot-sdk/master/pallet_example_kitchensink/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/index.html>
 #[frame::pallet]
 pub mod pallet {
     use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
     use polkadot_parachain_primitives::primitives::HeadData;
+    use sp_consensus_grandpa::Commit;
     use sp_runtime::Vec;
-    // use sp_consensus_grandpa::GrandpaJustification;
-    use finality_grandpa::{voter_set::VoterSet, Error as GrandpaError};
-    use sp_consensus_grandpa::{AuthorityId, Commit};
-    use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo, RuntimeDebug)]
     pub struct PersistedValidationData<H = H256, N = BlockNumber> {
@@ -106,13 +50,12 @@ pub mod pallet {
         pub relay_chain_state: sp_trie::StorageProof,
         // /// Downward messages in the order they were sent.
         // pub downward_messages: Vec<InboundDownwardMessage>,
-        // /// HRMP messages grouped by channels. The messages in the inner vec must be in order
-        // they /// were sent. In combination with the rule of no more than one message in a
-        // channel per block, /// this means `sent_at` is **strictly** greater than the previous
-        // one (if any). pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
+        // /// HRMP messages grouped by channels. The messages in the inner vec must be in order they
+        // /// were sent. In combination with the rule of no more than one message in a channel per block,
+        // /// this means `sent_at` is **strictly** greater than the previous one (if any).
+        // pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
     }
 
-    // substrate/primitives/consensus/grandpa/src/lib.rs
     #[derive(Clone, Encode, Decode, RuntimeDebug, PartialEq, Eq, TypeInfo)]
     pub struct GrandpaJustification<H: Header> {
         pub round: u64,
@@ -126,7 +69,6 @@ pub mod pallet {
         pub grandpa_justification: GrandpaJustification<H>,
     }
 
-    /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -157,9 +99,6 @@ pub mod pallet {
         CoolDown {
             start_block_number: BlockNumberFor<T>,
         },
-        SlowMode {
-            start_block_number: BlockNumberFor<T>,
-        },
     }
 
     #[pallet::storage]
@@ -174,8 +113,6 @@ pub mod pallet {
     pub type AuthorityList<T: Config> =
         StorageValue<_, sp_consensus_grandpa::AuthorityList, ValueQuery>;
 
-    /// Pallets use events to inform users when important changes are made.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -192,20 +129,18 @@ pub mod pallet {
         },
     }
 
-    /// Errors inform users that something went wrong.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
     #[pallet::error]
     pub enum Error<T> {
         IntegerOverflow,
         BlockTimeout,
         CoolDownPeriod,
-        Unimplemented,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(current_block_number: BlockNumberFor<T>) -> Weight {
-            let weight = Weight::zero();
+            let mut weight = Weight::zero();
+            weight += T::DbWeight::get().reads(1);
 
             match <State<T>>::get() {
                 SlowchainState::Operational {
@@ -222,12 +157,12 @@ pub mod pallet {
 
                     if current_block_number > deadline_block_number {
                         log::info!(
-                            target: crate::LOG_TARGET,
                             "on_initialize: alive message deadline exceeded. Starting cool down"
                         );
                         <State<T>>::put(SlowchainState::CoolDown {
                             start_block_number: current_block_number,
                         });
+                        weight += T::DbWeight::get().writes(1);
                         Self::deposit_event(Event::StartedCoolDown {
                             block_number: current_block_number,
                             last_alive_message_block_number,
@@ -247,27 +182,20 @@ pub mod pallet {
                         <State<T>>::put(SlowchainState::Operational {
                             last_alive_message_block_number: current_block_number,
                         });
+                        weight += T::DbWeight::get().writes(1);
                         Self::deposit_event(Event::FinishedCoolDown {
                             block_number: current_block_number,
                         });
                     }
                 }
-                _ => (),
             }
 
-            weight // TODO
+            weight
         }
     }
 
-    /// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-    /// These functions materialize as "extrinsics", which are often compared to transactions.
-    /// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#dispatchables>
     #[pallet::call]
-    impl<T: Config> Pallet<T>
-    where
-        NumberFor<<T as frame_system::Config>::Block>: finality_grandpa::BlockNumberOps,
-    {
+    impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
         #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn handle_alive_message(
@@ -286,11 +214,10 @@ pub mod pallet {
                 SlowchainState::Operational {
                     last_alive_message_block_number,
                 } => {
-                    // i'm online pallet
                     ensure!(
                         current_block_number > last_alive_message_block_number,
                         "BlockNumberDecreased"
-                    ); // '>=' ?
+                    );
                     <State<T>>::put(SlowchainState::Operational {
                         last_alive_message_block_number: current_block_number,
                     });
@@ -317,11 +244,6 @@ pub mod pallet {
                     } else {
                         return Err(Error::<T>::CoolDownPeriod.into());
                     }
-                }
-                SlowchainState::SlowMode {
-                    start_block_number: _,
-                } => {
-                    return Err(Error::<T>::Unimplemented.into());
                 }
             }
 

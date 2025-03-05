@@ -20,8 +20,6 @@ log = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 sp-trie = { workspace = true }
 sp-consensus-grandpa = { workspace = true }
-# sc-consensus-grandpa = { workspace = true }
-finality-grandpa = { workspace = true, default-features = false }
 sp-runtime = { workspace = true }
 
 [features]
