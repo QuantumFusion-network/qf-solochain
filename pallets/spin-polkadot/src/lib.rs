@@ -8,17 +8,6 @@
 
 pub use pallet::*;
 
-// #[cfg(test)]
-// mod mock;
-
-// #[cfg(test)]
-// mod tests;
-
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
-
-// pub mod weights;
-
 #[frame::pallet]
 pub mod pallet {
     use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
@@ -107,22 +96,20 @@ pub mod pallet {
     #[derive(
         Encode, Decode, MaxEncodedLen, TypeInfo, CloneNoBound, PartialEqNoBound, DefaultNoBound,
     )]
-    #[scale_info(skip_type_params(T))]
-    pub enum SlowchainState<T: Config> {
+    pub enum SlowchainState<BlockNumber: Clone + PartialEq + Default> {
         #[default]
         Operational {
-            last_alive_message_block_number: BlockNumberFor<T>,
+            last_alive_message_block_number: BlockNumber,
         },
         CoolDown {
-            start_block_number: BlockNumberFor<T>,
+            start_block_number: BlockNumber,
         },
     }
 
     /// State of the slowchain: Operational or CoolDown
     #[pallet::storage]
-    pub type State<T: Config> = StorageValue<_, SlowchainState<T>, ValueQuery>;
+    pub type State<T: Config> = StorageValue<_, SlowchainState<BlockNumberFor<T>>, ValueQuery>;
 
-    // TODO: reuse pallet-staking
     /// Set of fastchain validators used to verify alive messages and elect a leader
     #[pallet::storage]
     pub type ValidatorSet<T: Config> =
@@ -136,7 +123,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new alive message has been received.
-        Heartbeat {
+        HeartbeatReceived {
             block_number: BlockNumberFor<T>,
             who: T::AccountId,
         },
@@ -152,8 +139,8 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         IntegerOverflow,
-        BlockTimeout,
         CoolDownPeriod,
+        BlockNumberDecreased,
     }
 
     #[pallet::hooks]
@@ -230,12 +217,12 @@ pub mod pallet {
                 } => {
                     ensure!(
                         current_block_number > last_alive_message_block_number,
-                        "BlockNumberDecreased"
+                        Error::<T>::BlockNumberDecreased
                     );
                     <State<T>>::put(SlowchainState::Operational {
                         last_alive_message_block_number: current_block_number,
                     });
-                    Self::deposit_event(Event::Heartbeat {
+                    Self::deposit_event(Event::HeartbeatReceived {
                         block_number: current_block_number,
                         who,
                     });
