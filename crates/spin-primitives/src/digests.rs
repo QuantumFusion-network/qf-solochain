@@ -15,48 +15,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Aura (Authority-Round) digests
+//! SPIN digests.
 //!
-//! This implements the digests for AuRa, to allow the private
+//! This implements the digests for SPIN, to allow the private
 //! `CompatibleDigestItem` trait to appear in public interfaces.
 
-use crate::AURA_ENGINE_ID;
+use crate::SPIN_ENGINE_ID;
 use codec::{Codec, Encode};
 use sp_consensus_slots::Slot;
 use sp_runtime::generic::DigestItem;
 
-/// A digest item which is usable with aura consensus.
+/// A digest item which is usable with spin consensus.
 pub trait CompatibleDigestItem<Signature>: Sized {
     /// Construct a digest item which contains a signature on the hash.
-    fn aura_seal(signature: Signature) -> Self;
+    fn spin_seal(signature: Signature) -> Self;
 
-    /// If this item is an Aura seal, return the signature.
-    fn as_aura_seal(&self) -> Option<Signature>;
+    /// If this item is an SPIN seal, return the signature.
+    fn as_spin_seal(&self) -> Option<Signature>;
 
     /// Construct a digest item which contains the slot number
-    fn aura_pre_digest(slot: Slot) -> Self;
+    fn spin_pre_digest(slot: Slot) -> Self;
 
-    /// If this item is an AuRa pre-digest, return the slot number
-    fn as_aura_pre_digest(&self) -> Option<Slot>;
+    /// If this item is an SPIN pre-digest, return the slot number
+    fn as_spin_pre_digest(&self) -> Option<Slot>;
 }
 
 impl<Signature> CompatibleDigestItem<Signature> for DigestItem
 where
     Signature: Codec,
 {
-    fn aura_seal(signature: Signature) -> Self {
-        DigestItem::Seal(AURA_ENGINE_ID, signature.encode())
+    fn spin_seal(signature: Signature) -> Self {
+        DigestItem::Seal(SPIN_ENGINE_ID, signature.encode())
     }
 
-    fn as_aura_seal(&self) -> Option<Signature> {
-        self.seal_try_to(&AURA_ENGINE_ID)
+    fn as_spin_seal(&self) -> Option<Signature> {
+        self.seal_try_to(&SPIN_ENGINE_ID)
     }
 
-    fn aura_pre_digest(slot: Slot) -> Self {
-        DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())
+    fn spin_pre_digest(slot: Slot) -> Self {
+        DigestItem::PreRuntime(SPIN_ENGINE_ID, slot.encode())
     }
 
-    fn as_aura_pre_digest(&self) -> Option<Slot> {
-        self.pre_runtime_try_to(&AURA_ENGINE_ID)
+    fn as_spin_pre_digest(&self) -> Option<Slot> {
+        self.pre_runtime_try_to(&SPIN_ENGINE_ID)
     }
 }

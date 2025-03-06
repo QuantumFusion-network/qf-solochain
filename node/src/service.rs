@@ -7,8 +7,8 @@ use sc_consensus_grandpa::SharedVoterState;
 use sc_service::{Configuration, TaskManager, WarpSyncConfig, error::Error as ServiceError};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
-use spin_consensus::{ImportQueueParams, SlotProportion, StartAuraParams};
-use spin_primitives::sr25519::AuthorityPair as AuraPair;
+use spin_consensus::{ImportQueueParams, SlotProportion, StartSpinParams};
+use spin_primitives::sr25519::AuthorityPair as SpinPair;
 use std::{sync::Arc, time::Duration};
 
 pub(crate) type FullClient = sc_service::TFullClient<
@@ -87,7 +87,7 @@ pub fn new_partial(config: &Configuration) -> Result<Service, ServiceError> {
 
     let cidp_client = client.clone();
     let import_queue =
-        spin_consensus::import_queue::<AuraPair, _, _, _, _, _>(ImportQueueParams {
+        spin_consensus::import_queue::<SpinPair, _, _, _, _, _>(ImportQueueParams {
             block_import: grandpa_block_import.clone(),
             justification_import: Some(Box::new(grandpa_block_import.clone())),
             client: client.clone(),
@@ -256,8 +256,8 @@ pub fn new_full<
 
         let slot_duration = spin_consensus::slot_duration(&*client)?;
 
-        let aura = spin_consensus::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _>(
-            StartAuraParams {
+        let spin = spin_consensus::start_spin::<SpinPair, _, _, _, _, _, _, _, _, _, _>(
+            StartSpinParams {
                 slot_duration,
                 client,
                 select_chain,
@@ -286,11 +286,11 @@ pub fn new_full<
             },
         )?;
 
-        // the AURA authoring task is considered essential, i.e. if it
+        // the SPIN authoring task is considered essential, i.e. if it
         // fails we take down the service with it.
         task_manager
             .spawn_essential_handle()
-            .spawn_blocking("aura", Some("block-authoring"), aura);
+            .spawn_blocking("spin", Some("block-authoring"), spin);
     }
 
     if enable_grandpa {

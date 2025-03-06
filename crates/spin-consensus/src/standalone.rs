@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Standalone functions used within the implementation of Aura.
+//! Standalone functions used within the implementation of SPIN.
 
 use std::fmt::Debug;
 
@@ -40,28 +40,28 @@ use sp_runtime::{
 pub use sc_consensus_slots::check_equivocation;
 
 use super::{
-    AuraApi, AuraAuxData, AuthorityId, CompatibilityMode, CompatibleDigestItem, LOG_TARGET,
-    SessionLength, SlotDuration,
+    AuthorityId, CompatibilityMode, CompatibleDigestItem, LOG_TARGET, SessionLength, SlotDuration,
+    SpinApi, SpinAuxData,
 };
 
-/// Get the slot duration for Aura by reading from a runtime API at the best block's state.
+/// Get the slot duration for SPIN by reading from a runtime API at the best block's state.
 pub fn slot_duration<A, B, C>(client: &C) -> CResult<SlotDuration>
 where
     A: Codec,
     B: BlockT,
     C: ProvideRuntimeApi<B> + UsageProvider<B>,
-    C::Api: AuraApi<B, A>,
+    C::Api: SpinApi<B, A>,
 {
     slot_duration_at(client, client.usage_info().chain.best_hash)
 }
 
-/// Get the slot duration for Aura by reading from a runtime API at a given block's state.
+/// Get the slot duration for SPIN by reading from a runtime API at a given block's state.
 pub fn slot_duration_at<A, B, C>(client: &C, block_hash: B::Hash) -> CResult<SlotDuration>
 where
     A: Codec,
     B: BlockT,
     C: ProvideRuntimeApi<B>,
-    C::Api: AuraApi<B, A>,
+    C::Api: SpinApi<B, A>,
 {
     client
         .runtime_api()
@@ -103,12 +103,13 @@ pub fn slot_author<P: Pair>(
 /// with the public key of the slot author.
 pub async fn claim_slot<P: Pair>(
     slot: Slot,
-    aux_data: &AuraAuxData<AuthorityId<P>>,
+    aux_data: &SpinAuxData<AuthorityId<P>>,
     keystore: &KeystorePtr,
 ) -> Option<P::Public> {
     let (authorities, session_length) = aux_data;
     let expected_author = slot_author::<P>(slot, *session_length, authorities);
     expected_author.and_then(|p| {
+        // TODO: add SPIN key type
         if keystore.has_keys(&[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)]) {
             Some(p.clone())
         } else {
@@ -125,7 +126,7 @@ pub fn pre_digest<P: Pair>(slot: Slot) -> sp_runtime::DigestItem
 where
     P::Signature: Codec,
 {
-    <DigestItem as CompatibleDigestItem<P::Signature>>::aura_pre_digest(slot)
+    <DigestItem as CompatibleDigestItem<P::Signature>>::spin_pre_digest(slot)
 }
 
 /// Produce the seal digest item by signing the hash of a block.
@@ -160,7 +161,7 @@ where
         .map_err(|_| ConsensusError::InvalidSignature(signature, public.to_raw_vec()))?;
 
     let signature_digest_item =
-        <DigestItem as CompatibleDigestItem<P::Signature>>::aura_seal(signature);
+        <DigestItem as CompatibleDigestItem<P::Signature>>::spin_seal(signature);
 
     Ok(signature_digest_item)
 }
@@ -168,11 +169,11 @@ where
 /// Errors in pre-digest lookup.
 #[derive(Debug, thiserror::Error)]
 pub enum PreDigestLookupError {
-    /// Multiple Aura pre-runtime headers
-    #[error("Multiple Aura pre-runtime headers")]
+    /// Multiple SPIN pre-runtime headers
+    #[error("Multiple SPIN pre-runtime headers")]
     MultipleHeaders,
-    /// No Aura pre-runtime digest found
-    #[error("No Aura pre-runtime digest found")]
+    /// No SPIN pre-runtime digest found
+    #[error("No SPIN pre-runtime digest found")]
     NoDigestFound,
 }
 
@@ -192,7 +193,7 @@ pub fn find_pre_digest<B: BlockT, Signature: Codec>(
     for log in header.digest().logs() {
         trace!(target: LOG_TARGET, "Checking log {:?}", log);
         match (
-            CompatibleDigestItem::<Signature>::as_aura_pre_digest(log),
+            CompatibleDigestItem::<Signature>::as_spin_pre_digest(log),
             pre_digest.is_some(),
         ) {
             (Some(_), true) => return Err(PreDigestLookupError::MultipleHeaders),
@@ -213,12 +214,12 @@ pub fn fetch_authorities_with_compatibility_mode<A, B, C>(
     parent_hash: B::Hash,
     context_block_number: NumberFor<B>,
     compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<AuraAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
     C: ProvideRuntimeApi<B>,
-    C::Api: AuraApi<B, A>,
+    C::Api: SpinApi<B, A>,
 {
     let runtime_api = client.runtime_api();
 
@@ -253,12 +254,12 @@ where
 pub fn fetch_aux_data<A, B, C>(
     client: &C,
     parent_hash: B::Hash,
-) -> Result<AuraAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
     C: ProvideRuntimeApi<B>,
-    C::Api: AuraApi<B, A>,
+    C::Api: SpinApi<B, A>,
 {
     client
         .runtime_api()
@@ -302,11 +303,11 @@ pub enum SealVerificationError<Header> {
 /// Note that this does not check for equivocations, and [`check_equivocation`] is recommended
 /// for that purpose.
 ///
-/// This digest item will always return `Some` when used with `as_aura_seal`.
+/// This digest item will always return `Some` when used with `as_SPIN_seal`.
 pub fn check_header_slot_and_seal<B: BlockT, P: Pair>(
     slot_now: Slot,
     mut header: B::Header,
-    aux_data: &AuraAuxData<AuthorityId<P>>,
+    aux_data: &SpinAuxData<AuthorityId<P>>,
 ) -> Result<(B::Header, Slot, DigestItem), SealVerificationError<B::Header>>
 where
     P::Signature: Codec,
@@ -318,7 +319,7 @@ where
         .pop()
         .ok_or(SealVerificationError::Unsealed)?;
 
-    let sig = seal.as_aura_seal().ok_or(SealVerificationError::BadSeal)?;
+    let sig = seal.as_spin_seal().ok_or(SealVerificationError::BadSeal)?;
 
     let slot = find_pre_digest::<B, P::Signature>(&header)
         .map_err(SealVerificationError::InvalidPreDigest)?;

@@ -3,7 +3,7 @@ use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{Pair, Public, sr25519};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use spin_primitives::sr25519::AuthorityId as AuraId;
+use spin_primitives::sr25519::AuthorityId as SpinId;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -28,9 +28,9 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Generate an Aura authority key.
-pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-    (get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
+/// Generate an SPIN authority key.
+pub fn authority_keys_from_seed(s: &str) -> (SpinId, GrandpaId) {
+    (get_from_seed::<SpinId>(s), get_from_seed::<GrandpaId>(s))
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
@@ -96,7 +96,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-    initial_authorities: Vec<(AuraId, GrandpaId)>,
+    initial_authorities: Vec<(SpinId, GrandpaId)>,
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,

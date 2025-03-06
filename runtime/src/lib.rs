@@ -10,7 +10,6 @@ pub mod configs;
 
 extern crate alloc;
 use alloc::vec::Vec;
-use frame_support::parameter_types;
 use sp_runtime::{
     Cow, MultiAddress, MultiSignature, generic, impl_opaque_keys,
     traits::{BlakeTwo256, IdentifyAccount, Verify},

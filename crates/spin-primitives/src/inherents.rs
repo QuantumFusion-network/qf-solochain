@@ -15,34 +15,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Contains the inherents for the AURA module
+/// Contains the inherents for the SPIN module
 use sp_inherents::{Error, InherentData, InherentIdentifier};
 
-/// The Aura inherent identifier.
+/// The SPIN inherent identifier.
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"auraslot";
 
-/// The type of the Aura inherent.
+/// The type of the SPIN inherent.
 pub type InherentType = sp_consensus_slots::Slot;
 
-/// Auxiliary trait to extract Aura inherent data.
-pub trait AuraInherentData {
-    /// Get aura inherent data.
-    fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error>;
-    /// Replace aura inherent data.
-    fn aura_replace_inherent_data(&mut self, new: InherentType);
+/// Auxiliary trait to extract SPIN inherent data.
+pub trait SpinInherentData {
+    /// Get SPIN inherent data.
+    fn spin_inherent_data(&self) -> Result<Option<InherentType>, Error>;
+    /// Replace SPIN inherent data.
+    fn spin_replace_inherent_data(&mut self, new: InherentType);
 }
 
-impl AuraInherentData for InherentData {
-    fn aura_inherent_data(&self) -> Result<Option<InherentType>, Error> {
+impl SpinInherentData for InherentData {
+    fn spin_inherent_data(&self) -> Result<Option<InherentType>, Error> {
         self.get_data(&INHERENT_IDENTIFIER)
     }
 
-    fn aura_replace_inherent_data(&mut self, new: InherentType) {
+    fn spin_replace_inherent_data(&mut self, new: InherentType) {
         self.replace_data(INHERENT_IDENTIFIER, &new);
     }
 }
 
-/// Provides the slot duration inherent data for `Aura`.
+/// Provides the slot duration inherent data for `SPIN`.
 // TODO: Remove in the future. https://github.com/paritytech/substrate/issues/8029
 #[cfg(feature = "std")]
 pub struct InherentDataProvider {

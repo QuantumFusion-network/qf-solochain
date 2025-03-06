@@ -39,12 +39,12 @@ use sp_runtime::{
     traits::{Get, One},
 };
 use sp_version::RuntimeVersion;
-use spin_primitives::sr25519::AuthorityId as AuraId;
+use spin_primitives::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
-    AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, MINUTES,
-    Nonce, PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
+    AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
+    PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
     RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, VERSION,
 };
 
@@ -102,7 +102,7 @@ impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
 }
 
 impl pallet_aura::Config for Runtime {
-    type AuthorityId = AuraId;
+    type AuthorityId = SpinId;
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;

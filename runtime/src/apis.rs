@@ -38,8 +38,8 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
-use spin_primitives::AuraAuxData;
-use spin_primitives::sr25519::AuthorityId as AuraId;
+use spin_primitives::SpinAuxData;
+use spin_primitives::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -113,19 +113,15 @@ impl_runtime_apis! {
         }
     }
 
-    impl spin_primitives::AuraApi<Block, AuraId> for Runtime {
+    impl spin_primitives::SpinApi<Block, SpinId> for Runtime {
         fn slot_duration() -> spin_primitives::SlotDuration {
             spin_primitives::SlotDuration::from_millis(Aura::slot_duration())
         }
 
-        fn aux_data() -> AuraAuxData<AuraId> {
+        fn aux_data() -> SpinAuxData<SpinId> {
             let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
 
             (authorities, crate::SESSION_LENGTH)
-        }
-
-        fn authorities() -> Vec<AuraId> {
-            pallet_aura::Authorities::<Runtime>::get().into_inner()
         }
     }
 

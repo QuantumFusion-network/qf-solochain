@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Primitives for Aura.
+//! Primitives for SPIN.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -35,14 +35,14 @@ pub mod sr25519 {
     }
 
     sp_application_crypto::with_pair! {
-        /// An Aura authority keypair using S/R 25519 as its crypto.
+        /// A SPIN authority keypair using S/R 25519 as its crypto.
         pub type AuthorityPair = app_sr25519::Pair;
     }
 
-    /// An Aura authority signature using S/R 25519 as its crypto.
+    /// A SPIN authority signature using S/R 25519 as its crypto.
     pub type AuthoritySignature = app_sr25519::Signature;
 
-    /// An Aura authority identifier using S/R 25519 as its crypto.
+    /// A SPIN authority identifier using S/R 25519 as its crypto.
     pub type AuthorityId = app_sr25519::Public;
 }
 
@@ -53,21 +53,22 @@ pub mod ed25519 {
     }
 
     sp_application_crypto::with_pair! {
-        /// An Aura authority keypair using Ed25519 as its crypto.
+        /// A SPIN authority keypair using Ed25519 as its crypto.
         pub type AuthorityPair = app_ed25519::Pair;
     }
 
-    /// An Aura authority signature using Ed25519 as its crypto.
+    /// A SPIN authority signature using Ed25519 as its crypto.
     pub type AuthoritySignature = app_ed25519::Signature;
 
-    /// An Aura authority identifier using Ed25519 as its crypto.
+    /// A SPIN authority identifier using Ed25519 as its crypto.
     pub type AuthorityId = app_ed25519::Public;
 }
 
 pub use sp_consensus_slots::{Slot, SlotDuration};
 
-/// The `ConsensusEngineId` of AuRa.
-pub const AURA_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
+/// The `ConsensusEngineId` of SPIN.
+/// TODO: this should be changed as well, once we have a fork of `pallet-aura`
+pub const SPIN_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
 
 /// The index of an authority.
 pub type AuthorityIndex = u32;
@@ -75,10 +76,10 @@ pub type AuthorityIndex = u32;
 /// The length of the session.
 pub type SessionLength = u32;
 
-/// Auxilary data for Aura.
-pub type AuraAuxData<A> = (Vec<A>, SessionLength);
+/// Auxilary data for SPIN
+pub type SpinAuxData<A> = (Vec<A>, SessionLength);
 
-/// An consensus log item for Aura.
+/// An consensus log item for SPIN.
 #[derive(Decode, Encode)]
 pub enum ConsensusLog<AuthorityId: Codec> {
     /// The authorities have changed.
@@ -90,17 +91,14 @@ pub enum ConsensusLog<AuthorityId: Codec> {
 }
 
 sp_api::decl_runtime_apis! {
-    /// API necessary for block authorship with aura.
-    pub trait AuraApi<AuthorityId: Codec> {
-        /// Returns the slot duration for Aura.
+    /// API necessary for block authorship with SPIN.
+    pub trait SpinApi<AuthorityId: Codec> {
+        /// Returns the slot duration for SPIN.
         ///
         /// Currently, only the value provided by this type at genesis will be used.
         fn slot_duration() -> SlotDuration;
 
         /// Return the current set of authorities.
-        fn aux_data() -> AuraAuxData<AuthorityId>;
-
-        /// List of authorities
-        fn authorities() -> Vec<AuthorityId>;
+        fn aux_data() -> SpinAuxData<AuthorityId>;
     }
 }

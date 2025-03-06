@@ -16,19 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Aura (Authority-round) consensus in substrate.
+//! SPIN consensus over Spin (Authority-round) consensus in substrate.
 //!
-//! Aura works by having a list of authorities A who are expected to roughly
+//! SPIN works by having a list of authorities A who are expected to roughly
 //! agree on the current time. Time is divided up into discrete slots of t
-//! seconds each. For each slot s, the author of that slot is A[s % |A|].
+//! seconds each. And slots are grouped into sessions of n slots each. For a given
+//! session s, the author of that slot is A[s % |A|].
 //!
-//! The author is allowed to issue one block but not more during that slot,
-//! and it will be built upon the longest valid chain that has been seen.
+//! The author is allowed to issue one block but not more during that slot and
+//! exactly n blocks are expected to be produced during each session.
+//! Blocks will be built upon the longest valid chain that has been seen.
 //!
 //! Blocks from future steps will be either deferred or rejected depending on how
 //! far in the future they are.
 //!
-//! NOTE: Aura itself is designed to be generic over the crypto used.
+//! NOTE: SPIN and AuRa are designed to be generic over the crypto used.
 #![forbid(missing_docs, unsafe_code)]
 use std::{fmt::Debug, marker::PhantomData, pin::Pin, sync::Arc};
 
@@ -57,22 +59,22 @@ pub mod standalone;
 
 pub use crate::standalone::{find_pre_digest, slot_duration};
 pub use import_queue::{
-    AuraVerifier, BuildVerifierParams, CheckForEquivocation, ImportQueueParams, build_verifier,
+    BuildVerifierParams, CheckForEquivocation, ImportQueueParams, SpinVerifier, build_verifier,
     import_queue,
 };
 pub use sc_consensus_slots::SlotProportion;
 pub use sp_consensus::SyncOracle;
 pub use spin_primitives::{
-    AURA_ENGINE_ID, AuraApi, AuraAuxData, ConsensusLog, SessionLength, SlotDuration,
+    ConsensusLog, SPIN_ENGINE_ID, SessionLength, SlotDuration, SpinApi, SpinAuxData,
     digests::CompatibleDigestItem,
-    inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as AuraInherent},
+    inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as SpinInherent},
 };
 
-const LOG_TARGET: &str = "aura";
+const LOG_TARGET: &str = "spin";
 
 type AuthorityId<P> = <P as Pair>::Public;
 
-/// Run `AURA` in a compatibility mode.
+/// Run `SPIN` in a compatibility mode.
 ///
 /// This is required for when the chain was launched and later there
 /// was a consensus breaking change.
@@ -109,8 +111,8 @@ impl<N> Default for CompatibilityMode<N> {
     }
 }
 
-/// Parameters of [`start_aura`].
-pub struct StartAuraParams<C, SC, I, PF, SO, L, CIDP, BS, N> {
+/// Parameters of [`start_spin`].
+pub struct StartSpinParams<C, SC, I, PF, SO, L, CIDP, BS, N> {
     /// The duration of a slot.
     pub slot_duration: SlotDuration,
     /// The client to interact with the chain.
@@ -150,9 +152,9 @@ pub struct StartAuraParams<C, SC, I, PF, SO, L, CIDP, BS, N> {
     pub compatibility_mode: CompatibilityMode<N>,
 }
 
-/// Start the aura worker. The returned future should be run in a futures executor.
-pub fn start_aura<P, B, C, SC, I, PF, SO, L, CIDP, BS, Error>(
-    StartAuraParams {
+/// Start the spin worker. The returned future should be run in a futures executor.
+pub fn start_spin<P, B, C, SC, I, PF, SO, L, CIDP, BS, Error>(
+    StartSpinParams {
         slot_duration,
         client,
         select_chain,
@@ -168,7 +170,7 @@ pub fn start_aura<P, B, C, SC, I, PF, SO, L, CIDP, BS, Error>(
         max_block_proposal_slot_portion,
         telemetry,
         compatibility_mode,
-    }: StartAuraParams<C, SC, I, PF, SO, L, CIDP, BS, NumberFor<B>>,
+    }: StartSpinParams<C, SC, I, PF, SO, L, CIDP, BS, NumberFor<B>>,
 ) -> Result<impl Future<Output = ()>, ConsensusError>
 where
     P: Pair,
@@ -176,7 +178,7 @@ where
     P::Signature: TryFrom<Vec<u8>> + Member + Codec,
     B: BlockT,
     C: ProvideRuntimeApi<B> + BlockOf + AuxStore + HeaderBackend<B> + Send + Sync,
-    C::Api: AuraApi<B, AuthorityId<P>>,
+    C::Api: SpinApi<B, AuthorityId<P>>,
     SC: SelectChain<B>,
     I: BlockImport<B> + Send + Sync + 'static,
     PF: Environment<B, Error = Error> + Send + Sync + 'static,
@@ -188,7 +190,7 @@ where
     BS: BackoffAuthoringBlocksStrategy<NumberFor<B>> + Send + Sync + 'static,
     Error: std::error::Error + Send + From<ConsensusError> + 'static,
 {
-    let worker = build_aura_worker::<P, _, _, _, _, _, _, _, _>(BuildAuraWorkerParams {
+    let worker = build_spin_worker::<P, _, _, _, _, _, _, _, _>(BuildSpinWorkerParams {
         client,
         block_import,
         proposer_factory,
@@ -212,8 +214,8 @@ where
     ))
 }
 
-/// Parameters of [`build_aura_worker`].
-pub struct BuildAuraWorkerParams<C, I, PF, SO, L, BS, N> {
+/// Parameters of [`build_spin_worker`].
+pub struct BuildSpinWorkerParams<C, I, PF, SO, L, BS, N> {
     /// The client to interact with the chain.
     pub client: Arc<C>,
     /// The block import.
@@ -247,11 +249,11 @@ pub struct BuildAuraWorkerParams<C, I, PF, SO, L, BS, N> {
     pub compatibility_mode: CompatibilityMode<N>,
 }
 
-/// Build the aura worker.
+/// Build the SPIN worker.
 ///
 /// The caller is responsible for running this worker, otherwise it will do nothing.
-pub fn build_aura_worker<P, B, C, PF, I, SO, L, BS, Error>(
-    BuildAuraWorkerParams {
+pub fn build_spin_worker<P, B, C, PF, I, SO, L, BS, Error>(
+    BuildSpinWorkerParams {
         client,
         block_import,
         proposer_factory,
@@ -264,7 +266,7 @@ pub fn build_aura_worker<P, B, C, PF, I, SO, L, BS, Error>(
         telemetry,
         force_authoring,
         compatibility_mode,
-    }: BuildAuraWorkerParams<C, I, PF, SO, L, BS, NumberFor<B>>,
+    }: BuildSpinWorkerParams<C, I, PF, SO, L, BS, NumberFor<B>>,
 ) -> impl sc_consensus_slots::SimpleSlotWorker<
     B,
     Proposer = PF::Proposer,
@@ -277,7 +279,7 @@ pub fn build_aura_worker<P, B, C, PF, I, SO, L, BS, Error>(
 where
     B: BlockT,
     C: ProvideRuntimeApi<B> + BlockOf + AuxStore + HeaderBackend<B> + Send + Sync,
-    C::Api: AuraApi<B, AuthorityId<P>>,
+    C::Api: SpinApi<B, AuthorityId<P>>,
     PF: Environment<B, Error = Error> + Send + Sync + 'static,
     PF::Proposer: Proposer<B, Error = Error>,
     P: Pair,
@@ -289,7 +291,7 @@ where
     L: sc_consensus::JustificationSyncLink<B>,
     BS: BackoffAuthoringBlocksStrategy<NumberFor<B>> + Send + Sync + 'static,
 {
-    AuraWorker {
+    SpinWorker {
         client,
         block_import,
         env: proposer_factory,
@@ -306,7 +308,7 @@ where
     }
 }
 
-struct AuraWorker<C, E, I, P, SO, L, BS, N> {
+struct SpinWorker<C, E, I, P, SO, L, BS, N> {
     client: Arc<C>,
     block_import: I,
     env: E,
@@ -324,11 +326,11 @@ struct AuraWorker<C, E, I, P, SO, L, BS, N> {
 
 #[async_trait::async_trait]
 impl<B, C, E, I, P, Error, SO, L, BS> sc_consensus_slots::SimpleSlotWorker<B>
-    for AuraWorker<C, E, I, P, SO, L, BS, NumberFor<B>>
+    for SpinWorker<C, E, I, P, SO, L, BS, NumberFor<B>>
 where
     B: BlockT,
     C: ProvideRuntimeApi<B> + BlockOf + HeaderBackend<B> + Sync,
-    C::Api: AuraApi<B, AuthorityId<P>>,
+    C::Api: SpinApi<B, AuthorityId<P>>,
     E: Environment<B, Error = Error> + Send + Sync,
     E::Proposer: Proposer<B, Error = Error>,
     I: BlockImport<B> + Send + Sync + 'static,
@@ -347,10 +349,10 @@ where
         Pin<Box<dyn Future<Output = Result<E::Proposer, ConsensusError>> + Send + 'static>>;
     type Proposer = E::Proposer;
     type Claim = P::Public;
-    type AuxData = AuraAuxData<AuthorityId<P>>;
+    type AuxData = SpinAuxData<AuthorityId<P>>;
 
     fn logging_target(&self) -> &'static str {
-        "aura"
+        "spin"
     }
 
     fn block_import(&mut self) -> &mut Self::BlockImport {
@@ -457,14 +459,14 @@ where
     }
 }
 
-/// Aura Errors
+/// Spin Errors
 #[derive(Debug, thiserror::Error)]
 pub enum Error<B: BlockT> {
-    /// Multiple Aura pre-runtime headers
-    #[error("Multiple Aura pre-runtime headers")]
+    /// Multiple Spin pre-runtime headers
+    #[error("Multiple Spin pre-runtime headers")]
     MultipleHeaders,
-    /// No Aura pre-runtime digest found
-    #[error("No Aura pre-runtime digest found")]
+    /// No Spin pre-runtime digest found
+    #[error("No Spin pre-runtime digest found")]
     NoDigestFound,
     /// Header is unsealed
     #[error("Header {0:?} is unsealed")]
@@ -509,12 +511,12 @@ fn aux_data<A, B, C>(
     parent_hash: B::Hash,
     context_block_number: NumberFor<B>,
     compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<AuraAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A>, ConsensusError>
 where
     A: Codec + Debug,
     B: BlockT,
     C: ProvideRuntimeApi<B>,
-    C::Api: AuraApi<B, A>,
+    C::Api: SpinApi<B, A>,
 {
     let runtime_api = client.runtime_api();
 
@@ -622,7 +624,7 @@ where
 //         }
 //     }
 
-//     type AuraVerifier = import_queue::AuraVerifier<
+//     type SpinVerifier = import_queue::SpinVerifier<
 //         PeersFullClient,
 //         AuthorityPair,
 //         Box<
@@ -634,15 +636,15 @@ where
 //         >,
 //         u64,
 //     >;
-//     type AuraPeer = Peer<(), PeersClient>;
+//     type SpinPeer = Peer<(), PeersClient>;
 
 //     #[derive(Default)]
-//     pub struct AuraTestNet {
-//         peers: Vec<AuraPeer>,
+//     pub struct SpinTestNet {
+//         peers: Vec<SpinPeer>,
 //     }
 
-//     impl TestNetFactory for AuraTestNet {
-//         type Verifier = AuraVerifier;
+//     impl TestNetFactory for SpinTestNet {
+//         type Verifier = SpinVerifier;
 //         type PeerData = ();
 //         type BlockImport = PeersClient;
 
@@ -651,7 +653,7 @@ where
 //             let slot_duration = slot_duration(&*client).expect("slot duration available");
 
 //             assert_eq!(slot_duration.as_millis() as u64, SLOT_DURATION_MS);
-//             import_queue::AuraVerifier::new(
+//             import_queue::SpinVerifier::new(
 //                 client,
 //                 Box::new(|_, _| async {
 //                     let slot = InherentDataProvider::from_timestamp_and_slot_duration(
@@ -677,19 +679,19 @@ where
 //             (client.as_block_import(), None, ())
 //         }
 
-//         fn peer(&mut self, i: usize) -> &mut AuraPeer {
+//         fn peer(&mut self, i: usize) -> &mut SpinPeer {
 //             &mut self.peers[i]
 //         }
 
-//         fn peers(&self) -> &Vec<AuraPeer> {
+//         fn peers(&self) -> &Vec<SpinPeer> {
 //             &self.peers
 //         }
 
-//         fn peers_mut(&mut self) -> &mut Vec<AuraPeer> {
+//         fn peers_mut(&mut self) -> &mut Vec<SpinPeer> {
 //             &mut self.peers
 //         }
 
-//         fn mut_peers<F: FnOnce(&mut Vec<AuraPeer>)>(&mut self, closure: F) {
+//         fn mut_peers<F: FnOnce(&mut Vec<SpinPeer>)>(&mut self, closure: F) {
 //             closure(&mut self.peers);
 //         }
 //     }
@@ -697,7 +699,7 @@ where
 //     #[tokio::test]
 //     async fn authoring_blocks() {
 //         sp_tracing::try_init_simple();
-//         let net = AuraTestNet::new(3);
+//         let net = SpinTestNet::new(3);
 
 //         let peers = &[
 //             (0, Keyring::Alice),
@@ -738,7 +740,7 @@ where
 //             let slot_duration = slot_duration(&*client).expect("slot duration available");
 
 //             aura_futures.push(
-//                 start_aura::<AuthorityPair, _, _, _, _, _, _, _, _, _, _>(StartAuraParams {
+//                 start_spin::<AuthorityPair, _, _, _, _, _, _, _, _, _, _>(StartSpinParams {
 //                     slot_duration,
 //                     block_import: client.clone(),
 //                     select_chain,
@@ -783,7 +785,7 @@ where
 
 //     #[tokio::test]
 //     async fn current_node_authority_should_claim_slot() {
-//         let net = AuraTestNet::new(4);
+//         let net = SpinTestNet::new(4);
 
 //         let mut authorities = vec![
 //             Keyring::Alice.public().into(),
@@ -805,7 +807,7 @@ where
 //         let client = peer.client().as_client();
 //         let environ = DummyFactory(client.clone());
 
-//         let mut worker = AuraWorker {
+//         let mut worker = SpinWorker {
 //             client: client.clone(),
 //             block_import: client,
 //             env: environ,
@@ -880,7 +882,7 @@ where
 
 //     #[tokio::test]
 //     async fn on_slot_returns_correct_block() {
-//         let net = AuraTestNet::new(4);
+//         let net = SpinTestNet::new(4);
 
 //         let keystore_path = tempfile::tempdir().expect("Creates keystore path");
 //         let keystore = LocalKeystore::open(keystore_path.path(), None).expect("Creates keystore.");
@@ -895,7 +897,7 @@ where
 //         let client = peer.client().as_client();
 //         let environ = DummyFactory(client.clone());
 
-//         let mut worker = AuraWorker {
+//         let mut worker = SpinWorker {
 //             client: client.clone(),
 //             block_import: client.clone(),
 //             env: environ,

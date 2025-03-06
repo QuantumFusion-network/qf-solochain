@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Module implementing the logic for verifying and importing AuRa blocks.
+//! Module implementing the logic for verifying and importing SPIN blocks.
 
 use crate::{
-    AuraAuxData, AuthorityId, CompatibilityMode, Error, LOG_TARGET, aux_data,
+    AuthorityId, CompatibilityMode, Error, LOG_TARGET, SpinAuxData, aux_data,
     standalone::SealVerificationError,
 };
 use codec::Codec;
@@ -43,20 +43,20 @@ use sp_runtime::{
     DigestItem,
     traits::{Block as BlockT, Header, NumberFor},
 };
-use spin_primitives::{AuraApi, inherents::AuraInherentData};
+use spin_primitives::{SpinApi, inherents::SpinInherentData};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 /// check a header has been signed by the right key. If the slot is too far in the future, an error
 /// will be returned. If it's successful, returns the pre-header and the digest item
 /// containing the seal.
 ///
-/// This digest item will always return `Some` when used with `as_aura_seal`.
+/// This digest item will always return `Some` when used with `as_spin_seal`.
 fn check_header<C, B: BlockT, P: Pair>(
     client: &C,
     slot_now: Slot,
     header: B::Header,
     hash: B::Hash,
-    aux_data: &AuraAuxData<AuthorityId<P>>,
+    aux_data: &SpinAuxData<AuthorityId<P>>,
     check_for_equivocation: CheckForEquivocation,
 ) -> Result<CheckedHeader<B::Header, (Slot, DigestItem)>, Error<B>>
 where
@@ -101,8 +101,8 @@ where
     }
 }
 
-/// A verifier for Aura blocks.
-pub struct AuraVerifier<C, P, CIDP, N> {
+/// A verifier for SPIN blocks.
+pub struct SpinVerifier<C, P, CIDP, N> {
     client: Arc<C>,
     create_inherent_data_providers: CIDP,
     check_for_equivocation: CheckForEquivocation,
@@ -111,7 +111,7 @@ pub struct AuraVerifier<C, P, CIDP, N> {
     _phantom: PhantomData<fn() -> P>,
 }
 
-impl<C, P, CIDP, N> AuraVerifier<C, P, CIDP, N> {
+impl<C, P, CIDP, N> SpinVerifier<C, P, CIDP, N> {
     pub(crate) fn new(
         client: Arc<C>,
         create_inherent_data_providers: CIDP,
@@ -130,7 +130,7 @@ impl<C, P, CIDP, N> AuraVerifier<C, P, CIDP, N> {
     }
 }
 
-impl<C, P, CIDP, N> AuraVerifier<C, P, CIDP, N>
+impl<C, P, CIDP, N> SpinVerifier<C, P, CIDP, N>
 where
     CIDP: Send,
 {
@@ -169,10 +169,10 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT, C, P, CIDP> Verifier<B> for AuraVerifier<C, P, CIDP, NumberFor<B>>
+impl<B: BlockT, C, P, CIDP> Verifier<B> for SpinVerifier<C, P, CIDP, NumberFor<B>>
 where
     C: ProvideRuntimeApi<B> + Send + Sync + sc_client_api::backend::AuxStore,
-    C::Api: BlockBuilderApi<B> + AuraApi<B, AuthorityId<P>> + ApiExt<B>,
+    C::Api: BlockBuilderApi<B> + SpinApi<B, AuthorityId<P>> + ApiExt<B>,
     P: Pair,
     P::Public: Codec + Debug,
     P::Signature: Codec,
@@ -238,7 +238,7 @@ where
                 if let Some(inner_body) = block.body.take() {
                     let new_block = B::new(pre_header.clone(), inner_body);
 
-                    inherent_data.aura_replace_inherent_data(slot);
+                    inherent_data.spin_replace_inherent_data(slot);
 
                     // skip the inherents verification if the runtime API is old or not expected to
                     // exist.
@@ -266,7 +266,7 @@ where
                 telemetry!(
                     self.telemetry;
                     CONSENSUS_TRACE;
-                    "aura.checked_and_importing";
+                    "spin.checked_and_importing";
                     "pre_header" => ?pre_header,
                 );
 
@@ -282,7 +282,7 @@ where
                 telemetry!(
                     self.telemetry;
                     CONSENSUS_DEBUG;
-                    "aura.header_too_far_in_future";
+                    "spin.header_too_far_in_future";
                     "hash" => ?hash,
                     "a" => ?a,
                     "b" => ?b,
@@ -341,7 +341,7 @@ pub struct ImportQueueParams<'a, Block: BlockT, I, C, S, CIDP> {
     pub compatibility_mode: CompatibilityMode<NumberFor<Block>>,
 }
 
-/// Start an import queue for the Aura consensus algorithm.
+/// Start an import queue for the SPIN consensus algorithm.
 pub fn import_queue<P, Block, I, C, S, CIDP>(
     ImportQueueParams {
         block_import,
@@ -357,7 +357,7 @@ pub fn import_queue<P, Block, I, C, S, CIDP>(
 ) -> Result<DefaultImportQueue<Block>, sp_consensus::Error>
 where
     Block: BlockT,
-    C::Api: BlockBuilderApi<Block> + AuraApi<Block, AuthorityId<P>> + ApiExt<Block>,
+    C::Api: BlockBuilderApi<Block> + SpinApi<Block, AuthorityId<P>> + ApiExt<Block>,
     C: 'static
         + ProvideRuntimeApi<Block>
         + BlockOf
@@ -407,7 +407,7 @@ pub struct BuildVerifierParams<C, CIDP, N> {
     pub compatibility_mode: CompatibilityMode<N>,
 }
 
-/// Build the [`AuraVerifier`]
+/// Build the [`SpinVerifier`]
 pub fn build_verifier<P, C, CIDP, N>(
     BuildVerifierParams {
         client,
@@ -416,8 +416,8 @@ pub fn build_verifier<P, C, CIDP, N>(
         telemetry,
         compatibility_mode,
     }: BuildVerifierParams<C, CIDP, N>,
-) -> AuraVerifier<C, P, CIDP, N> {
-    AuraVerifier::<_, P, _, _>::new(
+) -> SpinVerifier<C, P, CIDP, N> {
+    SpinVerifier::<_, P, _, _>::new(
         client,
         create_inherent_data_providers,
         check_for_equivocation,
