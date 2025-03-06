@@ -116,14 +116,14 @@ paste = "1.0.15"
 ruzstd = { version = "0.5.0", default-features = false }
 schnellru = { version = "0.2.3" }
 
-polkavm-assembler         = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-disassembler      = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-common            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-derive            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-derive-impl       = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-derive-impl-macro = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-linker            = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
-polkavm-linux-raw         = { git = "https://github.com/andor0/polkavm.git", branch = "andor0/remove-userdata", default-features = false }
+polkavm-assembler         = { path = "./vendor/polkavm/crates/polkavm-assembler", default-features = false }
+polkavm-disassembler      = { path = "./vendor/polkavm/crates/polkavm-disassembler", default-features = false }
+polkavm-common            = { path = "./vendor/polkavm/crates/polkavm-common", default-features = false }
+polkavm-derive            = { path = "./vendor/polkavm/crates/polkavm-derive", default-features = false }
+polkavm-derive-impl       = { path = "./vendor/polkavm/crates/polkavm-derive-impl", default-features = false }
+polkavm-derive-impl-macro = { path = "./vendor/polkavm/crates/polkavm-derive-impl-macro", default-features = false }
+polkavm-linker            = { path = "./vendor/polkavm/crates/polkavm-linker", default-features = false }
+polkavm-linux-raw         = { path = "./vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
 
 # hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
 [patch.'https://github.com/w3f/fflonk']
