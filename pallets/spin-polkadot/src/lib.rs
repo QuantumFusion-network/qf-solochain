@@ -93,9 +93,7 @@ pub mod pallet {
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
-    #[derive(
-        Encode, Decode, MaxEncodedLen, TypeInfo, CloneNoBound, PartialEqNoBound, DefaultNoBound,
-    )]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, Default)]
     pub enum SlowchainState<BlockNumber: Clone + PartialEq + Default> {
         #[default]
         Operational {
@@ -155,10 +153,11 @@ pub mod pallet {
                 } => {
                     let timeout_blocks: BlockNumberFor<T> = T::TimeoutBlocks::get().into();
 
-                    let deadline_block_number = match  last_alive_message_block_number.checked_add(&timeout_blocks) {
-                        Some(deadline_block_number) => deadline_block_number,
-                        None => return weight,
-                    };
+                    let deadline_block_number =
+                        match last_alive_message_block_number.checked_add(&timeout_blocks) {
+                            Some(deadline_block_number) => deadline_block_number,
+                            None => return weight,
+                        };
 
                     if current_block_number > deadline_block_number {
                         <State<T>>::put(SlowchainState::CoolDown {
@@ -172,12 +171,12 @@ pub mod pallet {
                     }
                 }
                 SlowchainState::CoolDown { start_block_number } => {
-                    let cool_down_period_blocks =
-                        T::CoolDownPeriodBlocks::get().into();
-                    let cool_down_period_deadline = match start_block_number.checked_add(&cool_down_period_blocks) {
-                        Some(cool_down_period_deadline) => cool_down_period_deadline,
-                        None => return weight,
-                    };
+                    let cool_down_period_blocks = T::CoolDownPeriodBlocks::get().into();
+                    let cool_down_period_deadline =
+                        match start_block_number.checked_add(&cool_down_period_blocks) {
+                            Some(cool_down_period_deadline) => cool_down_period_deadline,
+                            None => return weight,
+                        };
                     if current_block_number > cool_down_period_deadline {
                         <State<T>>::put(SlowchainState::Operational {
                             last_alive_message_block_number: current_block_number,
