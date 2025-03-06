@@ -39,7 +39,7 @@ use sp_runtime::{
     traits::{Get, One},
 };
 use sp_version::RuntimeVersion;
-use spin_primitives::sr25519::AuthorityId as SpinId;
+use qfp_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{

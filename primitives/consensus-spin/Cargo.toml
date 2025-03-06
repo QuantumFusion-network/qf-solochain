@@ -1,5 +1,5 @@
 [package]
-name = "spin-primitives"
+name = "qfp-spin"
 version = "0.1.0"
 authors.workspace = true
 description = "Primitives for Spin consensus"

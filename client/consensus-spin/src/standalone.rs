@@ -361,7 +361,7 @@ mod tests {
 
         let slot = 0.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -370,7 +370,7 @@ mod tests {
         );
         let slot = 1.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -379,7 +379,7 @@ mod tests {
         );
         let slot = 2.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -388,7 +388,7 @@ mod tests {
         );
         let slot = 3.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -397,7 +397,7 @@ mod tests {
         );
         let slot = 4.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -407,7 +407,7 @@ mod tests {
 
         let slot = 30.into();
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -418,7 +418,7 @@ mod tests {
         let slot = 311.into();
         // session_idx is 103, which is 3 % 5 = 3
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -429,7 +429,7 @@ mod tests {
         let slot = u64::MAX.into();
         // session_idx is 6148914691236517203, which is 0 % 5 = 0
         assert_eq!(
-            slot_author::<spin_primitives::sr25519::AuthorityPair>(
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(
                 slot,
                 session_length,
                 &authorities
@@ -451,7 +451,7 @@ mod tests {
         let session_length = 0;
 
         let slot = 0.into();
-        slot_author::<spin_primitives::sr25519::AuthorityPair>(slot, session_length, &authorities);
+        slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities);
     }
 
     // #[test]

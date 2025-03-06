@@ -64,7 +64,7 @@ pub use import_queue::{
 };
 pub use sc_consensus_slots::SlotProportion;
 pub use sp_consensus::SyncOracle;
-pub use spin_primitives::{
+pub use qfp_spin::{
     ConsensusLog, SPIN_ENGINE_ID, SessionLength, SlotDuration, SpinApi, SpinAuxData,
     digests::CompatibleDigestItem,
     inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as SpinInherent},
@@ -567,7 +567,7 @@ where
 //         traits::{Block as BlockT, Header as _},
 //     };
 //     use sp_timestamp::Timestamp;
-//     use spin_primitives::sr25519::AuthorityPair;
+//     use qfp_spin::sr25519::AuthorityPair;
 //     use std::{
 //         task::Poll,
 //         time::{Duration, Instant},

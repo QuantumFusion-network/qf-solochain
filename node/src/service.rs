@@ -2,13 +2,13 @@
 
 use futures::FutureExt;
 use qf_runtime::{self, apis::RuntimeApi, opaque::Block};
+use qfc_spin::{ImportQueueParams, SlotProportion, StartSpinParams};
+use qfp_spin::sr25519::AuthorityPair as SpinPair;
 use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_grandpa::SharedVoterState;
 use sc_service::{Configuration, TaskManager, WarpSyncConfig, error::Error as ServiceError};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
-use spin_consensus::{ImportQueueParams, SlotProportion, StartSpinParams};
-use spin_primitives::sr25519::AuthorityPair as SpinPair;
 use std::{sync::Arc, time::Duration};
 
 pub(crate) type FullClient = sc_service::TFullClient<
@@ -86,33 +86,32 @@ pub fn new_partial(config: &Configuration) -> Result<Service, ServiceError> {
     )?;
 
     let cidp_client = client.clone();
-    let import_queue =
-        spin_consensus::import_queue::<SpinPair, _, _, _, _, _>(ImportQueueParams {
-            block_import: grandpa_block_import.clone(),
-            justification_import: Some(Box::new(grandpa_block_import.clone())),
-            client: client.clone(),
-            create_inherent_data_providers: move |parent_hash, _| {
-                let cidp_client = cidp_client.clone();
-                async move {
-                    let slot_duration =
-                        spin_consensus::standalone::slot_duration_at(&*cidp_client, parent_hash)?;
-                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+    let import_queue = qfc_spin::import_queue::<SpinPair, _, _, _, _, _>(ImportQueueParams {
+        block_import: grandpa_block_import.clone(),
+        justification_import: Some(Box::new(grandpa_block_import.clone())),
+        client: client.clone(),
+        create_inherent_data_providers: move |parent_hash, _| {
+            let cidp_client = cidp_client.clone();
+            async move {
+                let slot_duration =
+                    qfc_spin::standalone::slot_duration_at(&*cidp_client, parent_hash)?;
+                let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-                    let slot =
-						spin_primitives::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-							*timestamp,
-							slot_duration,
-						);
+                let slot =
+                    qfp_spin::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                        *timestamp,
+                        slot_duration,
+                    );
 
-                    Ok((slot, timestamp))
-                }
-            },
-            spawner: &task_manager.spawn_essential_handle(),
-            registry: config.prometheus_registry(),
-            check_for_equivocation: Default::default(),
-            telemetry: telemetry.as_ref().map(|x| x.handle()),
-            compatibility_mode: Default::default(),
-        })?;
+                Ok((slot, timestamp))
+            }
+        },
+        spawner: &task_manager.spawn_essential_handle(),
+        registry: config.prometheus_registry(),
+        check_for_equivocation: Default::default(),
+        telemetry: telemetry.as_ref().map(|x| x.handle()),
+        compatibility_mode: Default::default(),
+    })?;
 
     Ok(sc_service::PartialComponents {
         client,
@@ -254,10 +253,10 @@ pub fn new_full<
             telemetry.as_ref().map(|x| x.handle()),
         );
 
-        let slot_duration = spin_consensus::slot_duration(&*client)?;
+        let slot_duration = qfc_spin::slot_duration(&*client)?;
 
-        let spin = spin_consensus::start_spin::<SpinPair, _, _, _, _, _, _, _, _, _, _>(
-            StartSpinParams {
+        let spin =
+            qfc_spin::start_spin::<SpinPair, _, _, _, _, _, _, _, _, _, _>(StartSpinParams {
                 slot_duration,
                 client,
                 select_chain,
@@ -267,10 +266,10 @@ pub fn new_full<
                     let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
                     let slot =
-						spin_primitives::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-							*timestamp,
-							slot_duration,
-						);
+                        qfp_spin::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                            *timestamp,
+                            slot_duration,
+                        );
 
                     Ok((slot, timestamp))
                 },
@@ -283,8 +282,7 @@ pub fn new_full<
                 max_block_proposal_slot_portion: None,
                 telemetry: telemetry.as_ref().map(|x| x.handle()),
                 compatibility_mode: Default::default(),
-            },
-        )?;
+            })?;
 
         // the SPIN authoring task is considered essential, i.e. if it
         // fails we take down the service with it.

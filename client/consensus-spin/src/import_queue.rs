@@ -43,7 +43,7 @@ use sp_runtime::{
     DigestItem,
     traits::{Block as BlockT, Header, NumberFor},
 };
-use spin_primitives::{SpinApi, inherents::SpinInherentData};
+use qfp_spin::{SpinApi, inherents::SpinInherentData};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 /// check a header has been signed by the right key. If the slot is too far in the future, an error

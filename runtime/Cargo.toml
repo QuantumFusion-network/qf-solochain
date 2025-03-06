@@ -44,7 +44,7 @@ pallet-qf-polkavm-dev = { workspace = true }
 # primitives
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
-spin-primitives = { features = [
+qfp-spin = { features = [
 	"serde",
 ], workspace = true }
 sp-consensus-grandpa = { features = [
@@ -111,7 +111,7 @@ std = [
 
 	"sp-api/std",
 	"sp-block-builder/std",
-	"spin-primitives/std",
+	"qfp-spin/std",
 	"sp-consensus-grandpa/std",
 	"sp-core/std",
 	"sp-genesis-builder/std",

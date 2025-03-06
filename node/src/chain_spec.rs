@@ -1,9 +1,9 @@
 use qf_runtime::{AccountId, Signature, WASM_BINARY};
+use qfp_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{Pair, Public, sr25519};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use spin_primitives::sr25519::AuthorityId as SpinId;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
