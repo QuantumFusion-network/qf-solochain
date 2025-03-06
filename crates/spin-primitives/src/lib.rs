@@ -72,11 +72,11 @@ pub const AURA_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
 /// The index of an authority.
 pub type AuthorityIndex = u32;
 
-/// The index of the session in Aura.
-pub type SessionIndex = u32;
+/// The length of the session.
+pub type SessionLength = u32;
 
 /// Auxilary data for Aura.
-pub type AuraAuxData<A> = (Vec<A>, SessionIndex);
+pub type AuraAuxData<A> = (Vec<A>, SessionLength);
 
 /// An consensus log item for Aura.
 #[derive(Decode, Encode)]

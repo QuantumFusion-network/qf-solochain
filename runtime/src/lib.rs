@@ -4,13 +4,13 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod apis;
-pub mod aura_session;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
 
 extern crate alloc;
 use alloc::vec::Vec;
+use frame_support::parameter_types;
 use sp_runtime::{
     Cow, MultiAddress, MultiSignature, generic, impl_opaque_keys,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -104,6 +104,9 @@ pub const MICRO_UNIT: Balance = 1_000_000;
 /// Existential deposit.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
+/// Session length in blocks
+pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -186,8 +189,6 @@ pub type Executive = frame_executive::Executive<
 // Create the runtime by composing the FRAME pallets that were previously configured.
 #[frame_support::runtime]
 mod runtime {
-    use crate::aura_session;
-
     #[runtime::runtime]
     #[runtime::derive(
         RuntimeCall,
@@ -231,7 +232,4 @@ mod runtime {
 
     #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
-
-    #[runtime::pallet_index(10)]
-    pub type AuraSession = aura_session;
 }

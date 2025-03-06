@@ -45,7 +45,7 @@ use spin_primitives::sr25519::AuthorityId as AuraId;
 use super::{
     AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, MINUTES,
     Nonce, PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, VERSION, aura_session,
+    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -198,9 +198,4 @@ impl pallet_faucet::Config for Runtime {
     type FaucetAmount = FaucetAmount;
     type LockPeriod = LockPeriod;
     type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
-}
-
-impl aura_session::Config for Runtime {
-    type SessionLength = ConstU32<MINUTES>;
-    type RuntimeEvent = RuntimeEvent;
 }

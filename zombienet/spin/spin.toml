@@ -1,5 +1,5 @@
 [relaychain]
-default_command = "./target/debug/qf-node"
+default_command = "~/.cargo/target/release/qf-node"
 chain = "local"
 args = ["--state-pruning archive --blocks-pruning archive"]
 
