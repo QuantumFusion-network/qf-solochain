@@ -12,5 +12,3 @@ Blocks from future steps will be either deferred or rejected depending on how
 far in the future they are.
 
 NOTE: SPIN itself is designed to be generic over the crypto used.
-
-License: GPL-3.0-or-later WITH Classpath-exception-2.0

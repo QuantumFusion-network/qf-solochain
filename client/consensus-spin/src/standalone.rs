@@ -1,20 +1,6 @@
-// This file is part of Substrate.
-
-// Copyright (C) Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) Parity Technologies (UK) Ltd., until 2025.
+// SPDX-License-Identifier: Apache-2.0
 
 //! Standalone functions used within the implementation of SPIN.
 
@@ -361,79 +347,47 @@ mod tests {
 
         let slot = 0.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Alice.public().into())
         );
         let slot = 1.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Alice.public().into())
         );
         let slot = 2.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Alice.public().into())
         );
         let slot = 3.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Bob.public().into())
         );
         let slot = 4.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Bob.public().into())
         );
 
         let slot = 30.into();
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Alice.public().into())
         );
 
         let slot = 311.into();
         // session_idx is 103, which is 3 % 5 = 3
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Dave.public().into())
         );
 
         let slot = u64::MAX.into();
         // session_idx is 6148914691236517203, which is 0 % 5 = 0
         assert_eq!(
-            slot_author::<qfp_spin::sr25519::AuthorityPair>(
-                slot,
-                session_length,
-                &authorities
-            ),
+            slot_author::<qfp_spin::sr25519::AuthorityPair>(slot, session_length, &authorities),
             Some(&Keyring::Alice.public().into())
         );
     }

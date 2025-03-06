@@ -1,20 +1,6 @@
-// This file is part of Substrate.
-
-// Copyright (C) Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) Parity Technologies (UK) Ltd., until 2025.
+// SPDX-License-Identifier: Apache-2.0
 
 //! Module implementing the logic for verifying and importing SPIN blocks.
 
@@ -25,6 +11,7 @@ use crate::{
 use codec::Codec;
 use log::{debug, info, trace};
 use prometheus_endpoint::Registry;
+use qfp_spin::{SpinApi, inherents::SpinInherentData};
 use sc_client_api::{BlockOf, UsageProvider, backend::AuxStore};
 use sc_consensus::{
     block_import::{BlockImport, BlockImportParams, ForkChoiceStrategy},
@@ -43,7 +30,6 @@ use sp_runtime::{
     DigestItem,
     traits::{Block as BlockT, Header, NumberFor},
 };
-use qfp_spin::{SpinApi, inherents::SpinInherentData};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 /// check a header has been signed by the right key. If the slot is too far in the future, an error
