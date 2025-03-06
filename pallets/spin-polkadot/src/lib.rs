@@ -1,4 +1,8 @@
-//! # SPIN Pallet
+//! # SPIN pallet for obtaining secure finality from Polkadot to SPIN
+//!
+//! This pallet defines the structure of alive messages and the state machine for the slow chain.
+//! It automatically triggers state transitions based on received messages and passed blocks.
+//! Extrinsic allow handling of alive messages.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -13,7 +17,7 @@ pub use pallet::*;
 // #[cfg(feature = "runtime-benchmarks")]
 // mod benchmarking;
 
-pub mod weights;
+// pub mod weights;
 
 #[frame::pallet]
 pub mod pallet {
@@ -22,6 +26,10 @@ pub mod pallet {
     use sp_consensus_grandpa::Commit;
     use sp_runtime::Vec;
 
+    /// The validation data provides information about how to create the inputs
+    /// for validation of a candidate.
+    ///
+    /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/polkadot/primitives/src/v8/mod.rs#L663)
     #[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo, RuntimeDebug)]
     pub struct PersistedValidationData<H = H256, N = BlockNumber> {
         /// The parent head-data.
@@ -34,7 +42,9 @@ pub mod pallet {
         pub max_pov_size: u32,
     }
 
-    /// The inherent data that is passed by the collator to the parachain runtime.
+    /// The inherent data that is passed by the fastchain validator to the parachain runtime.
+    ///
+    ///  See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/cumulus/primitives/parachain-inherent/src/lib.rs#L46)
     #[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq, TypeInfo)]
     pub struct FastchainInherentData {
         pub validation_data: PersistedValidationData,
@@ -56,6 +66,13 @@ pub mod pallet {
         // pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
     }
 
+    /// A GRANDPA justification for block finality, it includes a commit message and
+    /// an ancestry proof including all headers routing all precommit target blocks
+    /// to the commit target block. Due to the current voting strategy the precommit
+    /// targets should be the same as the commit target, since honest voters don't
+    /// vote past authority set change blocks.
+    ///
+    /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
     #[derive(Clone, Encode, Decode, RuntimeDebug, PartialEq, Eq, TypeInfo)]
     pub struct GrandpaJustification<H: Header> {
         pub round: u64,
@@ -63,6 +80,9 @@ pub mod pallet {
         pub votes_ancestries: Vec<H>,
     }
 
+    /// Alive message proof combining `FastchainInherentData` and `GrandpaJustification`.
+    ///
+    /// Should be sent from a fastchain node to the parachain SPIN pallet via an extrinsic call.
     #[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq, TypeInfo)]
     pub struct AliveMessageProof<H: Header> {
         pub fastchain_inherent_data: FastchainInherentData,
@@ -72,8 +92,6 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-        type WeightInfo: crate::weights::WeightInfo;
 
         #[pallet::constant]
         type TimeoutBlocks: Get<BlockNumber>;
@@ -100,36 +118,35 @@ pub mod pallet {
         },
     }
 
+    /// State of the slowchain: Operational or CoolDown
     #[pallet::storage]
     pub type State<T: Config> = StorageValue<_, SlowchainState<T>, ValueQuery>;
 
     // TODO: reuse pallet-staking
+    /// Set of fastchain validators used to verify alive messages and elect a leader
     #[pallet::storage]
     pub type ValidatorSet<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, (), ValueQuery>;
 
+    /// Last seen alive message
     #[pallet::storage]
-    pub type AuthorityList<T: Config> =
-        StorageValue<_, sp_consensus_grandpa::AuthorityList, ValueQuery>;
-
-    #[pallet::storage]
-    pub type LastAliveMessage<T: Config> =
-        StorageValue<_, AliveMessageProof<HeaderFor<T>>, OptionQuery>;
+    pub type LastAliveMessage<T: Config> = StorageValue<_, AliveMessageProof<HeaderFor<T>>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A new alive message has been received.
         Heartbeat {
             block_number: BlockNumberFor<T>,
             who: T::AccountId,
         },
+        /// `CoolDown` mode has been triggered.
         StartedCoolDown {
             block_number: BlockNumberFor<T>,
             last_alive_message_block_number: BlockNumberFor<T>,
         },
-        FinishedCoolDown {
-            block_number: BlockNumberFor<T>,
-        },
+        /// `CoolDown` mode has ended.
+        FinishedCoolDown { block_number: BlockNumberFor<T> },
     }
 
     #[pallet::error]
@@ -159,9 +176,6 @@ pub mod pallet {
                     };
 
                     if current_block_number > deadline_block_number {
-                        log::info!(
-                            "on_initialize: alive message deadline exceeded. Starting cool down"
-                        );
                         <State<T>>::put(SlowchainState::CoolDown {
                             start_block_number: current_block_number,
                         });
@@ -199,12 +213,12 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Handle an alive message and postpones the transition to CoolDown mode.
         #[pallet::call_index(0)]
         #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn handle_alive_message(
             origin: OriginFor<T>,
             proof: AliveMessageProof<HeaderFor<T>>,
-            set_id: u64,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
