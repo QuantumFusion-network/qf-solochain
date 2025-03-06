@@ -168,9 +168,7 @@ pub mod pallet {
                 } => {
                     let timeout_blocks: BlockNumberFor<T> = T::TimeoutBlocks::get().into();
 
-                    let deadline_block_number: Option<BlockNumberFor<T>> =
-                        last_alive_message_block_number.checked_add(&timeout_blocks);
-                    let deadline_block_number = match deadline_block_number {
+                    let deadline_block_number = match  last_alive_message_block_number.checked_add(&timeout_blocks) {
                         Some(deadline_block_number) => deadline_block_number,
                         None => return weight,
                     };
@@ -187,11 +185,9 @@ pub mod pallet {
                     }
                 }
                 SlowchainState::CoolDown { start_block_number } => {
-                    let cool_down_period_blocks: BlockNumberFor<T> =
+                    let cool_down_period_blocks =
                         T::CoolDownPeriodBlocks::get().into();
-                    let cool_down_period_deadline: Option<BlockNumberFor<T>> =
-                        start_block_number.checked_add(&cool_down_period_blocks);
-                    let cool_down_period_deadline = match cool_down_period_deadline {
+                    let cool_down_period_deadline = match start_block_number.checked_add(&cool_down_period_blocks) {
                         Some(cool_down_period_deadline) => cool_down_period_deadline,
                         None => return weight,
                     };
@@ -213,10 +209,10 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Handle an alive message and postpones the transition to CoolDown mode.
+        /// Submit an alive message and postpone the transition to `CoolDown` mode.
         #[pallet::call_index(0)]
         #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
-        pub fn handle_alive_message(
+        pub fn submit_alive_message(
             origin: OriginFor<T>,
             proof: AliveMessageProof<HeaderFor<T>>,
         ) -> DispatchResultWithPostInfo {
