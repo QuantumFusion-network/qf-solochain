@@ -93,15 +93,22 @@ pub mod pallet {
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
-    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, Default)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq)]
     pub enum SlowchainState<BlockNumber: Clone + PartialEq + Default> {
-        #[default]
         Operational {
             last_alive_message_block_number: BlockNumber,
         },
         CoolDown {
             start_block_number: BlockNumber,
         },
+    }
+
+    impl<BlockNumber: Clone + PartialEq + Default> Default for SlowchainState<BlockNumber> {
+        fn default() -> Self {
+            Self::Operational {
+                last_alive_message_block_number: Default::default(),
+            }
+        }
     }
 
     /// State of the slowchain: Operational or CoolDown
