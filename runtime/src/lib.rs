@@ -103,6 +103,9 @@ pub const MICRO_UNIT: Balance = 1_000_000;
 /// Existential deposit.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
+/// Session length in blocks
+pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {

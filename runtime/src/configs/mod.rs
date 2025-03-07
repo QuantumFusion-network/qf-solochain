@@ -34,12 +34,12 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{
     Perbill,
     traits::{Get, One},
 };
 use sp_version::RuntimeVersion;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -102,7 +102,7 @@ impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
 }
 
 impl pallet_aura::Config for Runtime {
-    type AuthorityId = AuraId;
+    type AuthorityId = SpinId;
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;

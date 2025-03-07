@@ -44,7 +44,7 @@ pallet-qf-polkavm-dev = { workspace = true }
 # primitives
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
-sp-consensus-aura = { features = [
+qfp-consensus-spin = { features = [
 	"serde",
 ], workspace = true }
 sp-consensus-grandpa = { features = [
@@ -80,6 +80,9 @@ frame-system-benchmarking = { optional = true, workspace = true }
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
 
+[dev-dependencies]
+sp-io = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
@@ -108,7 +111,7 @@ std = [
 
 	"sp-api/std",
 	"sp-block-builder/std",
-	"sp-consensus-aura/std",
+	"qfp-consensus-spin/std",
 	"sp-consensus-grandpa/std",
 	"sp-core/std",
 	"sp-genesis-builder/std",
