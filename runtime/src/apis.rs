@@ -38,8 +38,8 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
-use qfp_spin::SpinAuxData;
-use qfp_spin::sr25519::AuthorityId as SpinId;
+use qfp_consensus_spin::SpinAuxData;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -113,9 +113,9 @@ impl_runtime_apis! {
         }
     }
 
-    impl qfp_spin::SpinApi<Block, SpinId> for Runtime {
-        fn slot_duration() -> qfp_spin::SlotDuration {
-            qfp_spin::SlotDuration::from_millis(Aura::slot_duration())
+    impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
+        fn slot_duration() -> qfp_consensus_spin::SlotDuration {
+            qfp_consensus_spin::SlotDuration::from_millis(Aura::slot_duration())
         }
 
         fn aux_data() -> SpinAuxData<SpinId> {

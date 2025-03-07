@@ -48,7 +48,7 @@ pub use import_queue::{
     BuildVerifierParams, CheckForEquivocation, ImportQueueParams, SpinVerifier, build_verifier,
     import_queue,
 };
-pub use qfp_spin::{
+pub use qfp_consensus_spin::{
     ConsensusLog, SPIN_ENGINE_ID, SessionLength, SlotDuration, SpinApi, SpinAuxData,
     digests::CompatibleDigestItem,
     inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as SpinInherent},
@@ -533,6 +533,7 @@ where
         .ok_or(ConsensusError::InvalidAuthoritiesSet)
 }
 
+// TODO: uncomment and make tests pass: https://github.com/QuantumFusion-network/spec/issues/216
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
@@ -553,7 +554,7 @@ where
 //         traits::{Block as BlockT, Header as _},
 //     };
 //     use sp_timestamp::Timestamp;
-//     use qfp_spin::sr25519::AuthorityPair;
+//     use qfp_consensus_spin::sr25519::AuthorityPair;
 //     use std::{
 //         task::Poll,
 //         time::{Duration, Instant},

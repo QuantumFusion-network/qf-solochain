@@ -11,7 +11,7 @@ use crate::{
 use codec::Codec;
 use log::{debug, info, trace};
 use prometheus_endpoint::Registry;
-use qfp_spin::{SpinApi, inherents::SpinInherentData};
+use qfp_consensus_spin::{SpinApi, inherents::SpinInherentData};
 use sc_client_api::{BlockOf, UsageProvider, backend::AuxStore};
 use sc_consensus::{
     block_import::{BlockImport, BlockImportParams, ForkChoiceStrategy},
