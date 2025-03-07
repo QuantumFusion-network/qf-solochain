@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit = "256"]
 
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -7,9 +9,15 @@ pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
+mod genesis_config_presets;
+mod weights;
 
 extern crate alloc;
 use alloc::vec::Vec;
+use smallvec::smallvec;
+
+use polkadot_sdk::{staging_parachain_info as parachain_info, *};
+
 use sp_runtime::{
     Cow, MultiAddress, MultiSignature, generic, impl_opaque_keys,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -17,6 +25,16 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+
+use frame_support::weights::{
+	constants::WEIGHT_REF_TIME_PER_SECOND, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+	WeightToFeePolynomial,
+};
+pub use genesis_config_presets::PARACHAIN_ID;
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+pub use sp_runtime::{MultiAddress, Perbill, Permill};
+
+use weights::ExtrinsicBaseWeight;
 
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;

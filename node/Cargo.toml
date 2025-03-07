@@ -60,7 +60,7 @@ substrate-frame-rpc-system = { workspace = true, default-features = true }
 frame-benchmarking-cli = { workspace = true, default-features = true }
 
 # Local Dependencies
-qf-solochain-runtime = { path = "../runtime", default-features = true }
+qf-solochain-runtime = { path = "../runtimes/solochain", default-features = true }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true, default-features = true }

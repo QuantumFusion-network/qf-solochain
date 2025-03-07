@@ -23,7 +23,7 @@ color-print = { workspace = true }
 
 polkadot-sdk = { workspace = true, features = ["node"] }
 
-qf-parachain-runtime = { path = "../runtime", default-features = false }
+qf-parachain-runtime = { path = "../../runtimes/parachain", default-features = false }
 
 # Substrate
 sc-tracing = { workspace = true, default-features = true }
