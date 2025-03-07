@@ -6,14 +6,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 pub use pallet::*;
 
 #[frame::pallet]
 pub mod pallet {
+    use alloc::vec::Vec;
     use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
     use polkadot_parachain_primitives::primitives::HeadData;
     use sp_consensus_grandpa::Commit;
-    use sp_runtime::Vec;
 
     /// The validation data provides information about how to create the inputs
     /// for validation of a candidate.
@@ -83,32 +85,25 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         #[pallet::constant]
-        type TimeoutBlocks: Get<BlockNumber>;
+        type TimeoutBlocks: Get<BlockNumberFor<Self>>;
 
         #[pallet::constant]
-        type CoolDownPeriodBlocks: Get<BlockNumber>;
+        type CoolDownPeriodBlocks: Get<BlockNumberFor<Self>>;
     }
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
-    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq)]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, DefaultNoBound)]
     pub enum SlowchainState<BlockNumber: Clone + PartialEq + Default> {
+        #[default]
         Operational {
             last_alive_message_block_number: BlockNumber,
         },
         CoolDown {
             start_block_number: BlockNumber,
         },
-    }
-
-    impl<BlockNumber: Clone + PartialEq + Default> Default for SlowchainState<BlockNumber> {
-        fn default() -> Self {
-            Self::Operational {
-                last_alive_message_block_number: Default::default(),
-            }
-        }
     }
 
     /// State of the slowchain: Operational or CoolDown
@@ -158,7 +153,7 @@ pub mod pallet {
                 SlowchainState::Operational {
                     last_alive_message_block_number,
                 } => {
-                    let timeout_blocks: BlockNumberFor<T> = T::TimeoutBlocks::get().into();
+                    let timeout_blocks = T::TimeoutBlocks::get();
 
                     let deadline_block_number =
                         match last_alive_message_block_number.checked_add(&timeout_blocks) {
@@ -178,7 +173,7 @@ pub mod pallet {
                     }
                 }
                 SlowchainState::CoolDown { start_block_number } => {
-                    let cool_down_period_blocks = T::CoolDownPeriodBlocks::get().into();
+                    let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
                     let cool_down_period_deadline =
                         match start_block_number.checked_add(&cool_down_period_blocks) {
                             Some(cool_down_period_deadline) => cool_down_period_deadline,
@@ -234,8 +229,7 @@ pub mod pallet {
                     });
                 }
                 SlowchainState::CoolDown { start_block_number } => {
-                    let cool_down_period_blocks: BlockNumberFor<T> =
-                        T::CoolDownPeriodBlocks::get().into();
+                    let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
                     let cool_down_period_deadline_block_number: BlockNumberFor<T> =
                         start_block_number
                             .checked_add(&cool_down_period_blocks)
