@@ -235,7 +235,6 @@ pub mod pallet {
 
             // TODO: validate GRANDPA justification proof on client side
             // proof.validate();
-            <LastAliveMessage<T>>::put(proof);
 
             let current_block_number = frame_system::Pallet::<T>::block_number();
 
@@ -284,6 +283,8 @@ pub mod pallet {
                     });
                 }
             }
+
+            <LastAliveMessage<T>>::put(proof);
 
             Ok(().into())
         }
