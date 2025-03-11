@@ -3,6 +3,20 @@
 //! This pallet defines the structure of alive messages and the state machine for the slow chain.
 //! It automatically triggers state transitions based on received messages and passed blocks.
 //! Extrinsic allow handling of alive messages.
+//!
+//! ## State Machine
+//!
+//! The pallet implements a state machine with two states:
+//!
+//! * `Operational`: The normal operating mode. In this state:
+//!   - Fastchain processes blocks and accepts alive messages
+//!   - Each received alive message updates the `last_alive_message_block_number`
+//!   - If no alive message is received for `TimeoutBlocks` blocks, the system transitions to `CoolDown`
+//!
+//! * `CoolDown`: A recovery period after a timeout. In this state:
+//!   - Validators provide last known notarizations
+//!   - Alive messages are not accepted until the cool down period ends
+//!   - After `CoolDownPeriodBlocks` blocks, the system automatically transitions back to `Operational`
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
