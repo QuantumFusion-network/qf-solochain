@@ -34,12 +34,12 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{
     Perbill,
     traits::{Get, One},
 };
 use sp_version::RuntimeVersion;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -102,7 +102,7 @@ impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
 }
 
 impl pallet_aura::Config for Runtime {
-    type AuthorityId = AuraId;
+    type AuthorityId = SpinId;
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;
@@ -170,12 +170,21 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
     pub const PolkaVmMaxCodeLen: u32 = 1024;
+    pub const PolkaVmMaxGas: u32 = 2097152;
+}
+
+impl pallet_qf_polkavm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCodeLen = PolkaVmMaxCodeLen;
+    type MaxGas = PolkaVmMaxGas;
+    type Currency = Balances;
+    type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_qf_polkavm_dev::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
     type MaxCodeLen = PolkaVmMaxCodeLen;
+    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

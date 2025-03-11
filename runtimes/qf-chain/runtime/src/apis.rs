@@ -31,7 +31,6 @@ use frame_support::{
 };
 use pallet_grandpa::AuthorityId as GrandpaId;
 use sp_api::impl_runtime_apis;
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
     ApplyExtrinsicResult,
@@ -39,6 +38,8 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
+use qfp_consensus_spin::SpinAuxData;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -112,13 +113,15 @@ impl_runtime_apis! {
         }
     }
 
-    impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-        fn slot_duration() -> sp_consensus_aura::SlotDuration {
-            sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+    impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
+        fn slot_duration() -> qfp_consensus_spin::SlotDuration {
+            qfp_consensus_spin::SlotDuration::from_millis(Aura::slot_duration())
         }
 
-        fn authorities() -> Vec<AuraId> {
-            pallet_aura::Authorities::<Runtime>::get().into_inner()
+        fn aux_data() -> SpinAuxData<SpinId> {
+            let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
+
+            (authorities, crate::SESSION_LENGTH)
         }
     }
 

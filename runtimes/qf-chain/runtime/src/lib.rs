@@ -121,6 +121,9 @@ pub const MICRO_UNIT: Balance = 1_000_000;
 /// Existential deposit.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
+/// Session length in blocks
+pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -239,8 +242,11 @@ mod runtime {
     pub type Sudo = pallet_sudo;
 
     #[runtime::pallet_index(7)]
-    pub type QFPolkaVM = pallet_qf_polkavm_dev;
+    pub type QFPolkaVM = pallet_qf_polkavm;
 
     #[runtime::pallet_index(8)]
+    pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
+
+    #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
 }
