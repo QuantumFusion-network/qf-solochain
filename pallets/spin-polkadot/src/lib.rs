@@ -6,13 +6,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate alloc;
-
 pub use pallet::*;
 
 #[frame::pallet]
 pub mod pallet {
-    use alloc::vec::Vec;
     use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
     use polkadot_parachain_primitives::primitives::HeadData;
     use sp_consensus_grandpa::Commit;
@@ -21,8 +18,11 @@ pub mod pallet {
     /// for validation of a candidate.
     ///
     /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/polkadot/primitives/src/v8/mod.rs#L663)
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo, RuntimeDebug)]
-    pub struct PersistedValidationData<H = H256, N = BlockNumber> {
+    #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+    pub struct PersistedValidationData<
+        H: Clone + Debug + PartialEq = H256,
+        N: Clone + Debug + PartialEq = BlockNumber,
+    > {
         /// The parent head-data.
         pub parent_head: HeadData,
         /// The relay-chain block number this is in the context of.
@@ -36,7 +36,7 @@ pub mod pallet {
     /// The inherent data that is passed by the fastchain validator to the parachain runtime.
     ///
     ///  See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/cumulus/primitives/parachain-inherent/src/lib.rs#L46)
-    #[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq, TypeInfo)]
+    #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
     pub struct FastchainInherentData {
         pub validation_data: PersistedValidationData,
         /// A storage proof of a predefined set of keys from the relay-chain.
@@ -64,20 +64,23 @@ pub mod pallet {
     /// vote past authority set change blocks.
     ///
     /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
-    #[derive(Clone, Encode, Decode, RuntimeDebug, PartialEq, Eq, TypeInfo)]
-    pub struct GrandpaJustification<H: Header> {
+    #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+    #[scale_info(skip_type_params(MaxVotesAncestries))]
+    pub struct GrandpaJustification<MaxVotesAncestries: Get<u32>, H: Header> {
         pub round: u64,
+        // TODO: replace with bounded size data structure
         pub commit: Commit<H>,
-        pub votes_ancestries: Vec<H>,
+        pub votes_ancestries: BoundedVec<H, MaxVotesAncestries>,
     }
 
     /// Alive message proof combining `FastchainInherentData` and `GrandpaJustification`.
     ///
     /// Should be sent from a fastchain node to the parachain SPIN pallet via an extrinsic call.
-    #[derive(Encode, Decode, RuntimeDebug, Clone, PartialEq, TypeInfo)]
-    pub struct AliveMessageProof<H: Header> {
+    #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+    #[scale_info(skip_type_params(MaxVotesAncestries))]
+    pub struct AliveMessageProof<MaxVotesAncestries: Get<u32>, H: Header> {
         pub fastchain_inherent_data: FastchainInherentData,
-        pub grandpa_justification: GrandpaJustification<H>,
+        pub grandpa_justification: GrandpaJustification<MaxVotesAncestries, H>,
     }
 
     #[pallet::config]
@@ -89,15 +92,17 @@ pub mod pallet {
 
         #[pallet::constant]
         type CoolDownPeriodBlocks: Get<BlockNumberFor<Self>>;
+
+        #[pallet::constant]
+        type MaxVotesAncestries: Get<u32>;
     }
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
-    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, DefaultNoBound)]
-    pub enum SlowchainState<BlockNumber: Clone + PartialEq + Default> {
-        #[default]
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq)]
+    pub enum SlowchainState<BlockNumber: Clone + PartialEq> {
         Operational {
             last_alive_message_block_number: BlockNumber,
         },
@@ -106,9 +111,9 @@ pub mod pallet {
         },
     }
 
-    /// State of the slowchain: Operational or CoolDown
+    /// State of the slowchain: Operational, CoolDown or None
     #[pallet::storage]
-    pub type State<T: Config> = StorageValue<_, SlowchainState<BlockNumberFor<T>>, ValueQuery>;
+    pub type State<T: Config> = StorageValue<_, SlowchainState<BlockNumberFor<T>>>;
 
     /// Set of fastchain validators used to verify alive messages and elect a leader
     #[pallet::storage]
@@ -117,7 +122,8 @@ pub mod pallet {
 
     /// Last seen alive message
     #[pallet::storage]
-    pub type LastAliveMessage<T: Config> = StorageValue<_, AliveMessageProof<HeaderFor<T>>>;
+    pub type LastAliveMessage<T: Config> =
+        StorageValue<_, AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -150,9 +156,9 @@ pub mod pallet {
             weight += T::DbWeight::get().reads(1);
 
             match <State<T>>::get() {
-                SlowchainState::Operational {
+                Some(SlowchainState::Operational {
                     last_alive_message_block_number,
-                } => {
+                }) => {
                     let timeout_blocks = T::TimeoutBlocks::get();
 
                     let deadline_block_number =
@@ -172,7 +178,7 @@ pub mod pallet {
                         });
                     }
                 }
-                SlowchainState::CoolDown { start_block_number } => {
+                Some(SlowchainState::CoolDown { start_block_number }) => {
                     let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
                     let cool_down_period_deadline =
                         match start_block_number.checked_add(&cool_down_period_blocks) {
@@ -189,6 +195,13 @@ pub mod pallet {
                         });
                     }
                 }
+                None => {
+                    // Start as `Operational` for first block
+                    <State<T>>::put(SlowchainState::Operational {
+                        last_alive_message_block_number: current_block_number,
+                    });
+                    weight += T::DbWeight::get().writes(1);
+                }
             }
 
             weight
@@ -202,7 +215,7 @@ pub mod pallet {
         #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn submit_alive_message(
             origin: OriginFor<T>,
-            proof: AliveMessageProof<HeaderFor<T>>,
+            proof: AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -213,9 +226,9 @@ pub mod pallet {
             let current_block_number = frame_system::Pallet::<T>::block_number();
 
             match <State<T>>::get() {
-                SlowchainState::Operational {
+                Some(SlowchainState::Operational {
                     last_alive_message_block_number,
-                } => {
+                }) => {
                     ensure!(
                         current_block_number > last_alive_message_block_number,
                         Error::<T>::BlockNumberDecreased
@@ -228,7 +241,7 @@ pub mod pallet {
                         who,
                     });
                 }
-                SlowchainState::CoolDown { start_block_number } => {
+                Some(SlowchainState::CoolDown { start_block_number }) => {
                     let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
                     let cool_down_period_deadline_block_number: BlockNumberFor<T> =
                         start_block_number
@@ -245,6 +258,16 @@ pub mod pallet {
                     } else {
                         return Err(Error::<T>::CoolDownPeriod.into());
                     }
+                }
+                None => {
+                    // Start as `Operational` for first heartbeat
+                    <State<T>>::put(SlowchainState::Operational {
+                        last_alive_message_block_number: current_block_number,
+                    });
+                    Self::deposit_event(Event::HeartbeatReceived {
+                        block_number: current_block_number,
+                        who,
+                    });
                 }
             }
 
