@@ -34,12 +34,14 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
     Perbill,
     traits::{Get, One},
 };
 use sp_version::RuntimeVersion;
-use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
+
+use crate::SESSION_LENGTH;
 
 // Local module imports
 use super::{
@@ -51,12 +53,12 @@ use super::{
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
-    pub const BlockHashCount: BlockNumber = 2400;
+    pub const BlockHashCount: BlockNumber = 2400 * SESSION_LENGTH / 10;
     pub const Version: RuntimeVersion = VERSION;
 
-    /// We allow for 2 seconds of compute with a 4 second average block time.
+    /// We allow for 50 ms of compute with a 100 ms average block time.
     pub RuntimeBlockWeights: BlockWeights = BlockWeights::with_sensible_defaults(
-        Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
+        Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND / 20, u64::MAX),
         NORMAL_DISPATCH_RATIO,
     );
     pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
