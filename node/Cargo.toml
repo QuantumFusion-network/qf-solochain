@@ -1,5 +1,5 @@
 [package]
-name = "qf-solochain-node"
+name = "qf-node"
 description = "Quantum Fusion solochain node"
 version = "0.1.8"
 license.workspace = true
@@ -60,7 +60,7 @@ substrate-frame-rpc-system = { workspace = true, default-features = true }
 frame-benchmarking-cli = { workspace = true, default-features = true }
 
 # Local Dependencies
-qf-solochain-runtime = { path = "../runtimes/solochain", default-features = true }
+qf-runtime = { workspace = true }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true, default-features = true }
@@ -68,14 +68,14 @@ substrate-build-script-utils = { workspace = true, default-features = true }
 [features]
 default = ["std"]
 std = [
-	"qf-solochain-runtime/std",
+	"qf-runtime/std",
 ]
 # Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
-	"qf-solochain-runtime/runtime-benchmarks",
+	"qf-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 # Enable features that allow the runtime to be tried and debugged. Name might be subject to change
@@ -83,6 +83,6 @@ runtime-benchmarks = [
 try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-transaction-payment/try-runtime",
-	"qf-solochain-runtime/try-runtime",
+	"qf-runtime/try-runtime",
 	"sp-runtime/try-runtime",
 ]

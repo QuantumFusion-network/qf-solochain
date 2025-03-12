@@ -1,7 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 use futures::FutureExt;
-use qf_solochain_runtime::{self, apis::RuntimeApi, opaque::Block};
+use qf_runtime::{self, apis::RuntimeApi, opaque::Block};
 use qfc_consensus_spin::{ImportQueueParams, SlotProportion, StartSpinParams};
 use qfp_consensus_spin::sr25519::AuthorityPair as SpinPair;
 use sc_client_api::{Backend, BlockBackend};

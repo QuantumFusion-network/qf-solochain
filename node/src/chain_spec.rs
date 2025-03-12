@@ -1,4 +1,4 @@
-use qf_solochain_runtime::{AccountId, Signature, WASM_BINARY};
+use qf_runtime::{AccountId, Signature, WASM_BINARY};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;

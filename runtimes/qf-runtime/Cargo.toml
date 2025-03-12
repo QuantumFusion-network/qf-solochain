@@ -1,7 +1,7 @@
 [package]
 name = "qf-runtime"
-description = "Quantum Fusion runtime"
-version = "0.4.1"
+description = "Quantum Fusion solochain runtime"
+version = "0.4.0"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -12,59 +12,14 @@ publish = false
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-[build-dependencies]
-substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
-
 [dependencies]
-codec = { features = ["derive"], workspace = true }
-hex-literal = { optional = true, workspace = true, default-features = true }
-log = { workspace = true }
-smallvec = { workspace = true, default-features = true }
-serde_json = { workspace = true, default-features = false, features = ["alloc"] }
-
-# Local
-pallet-parachain-template = { path = "../../../pallets/template", default-features = false }
-
+codec = { features = [
+	"derive",
+], workspace = true }
 scale-info = { features = [
 	"derive",
 	"serde",
 ], workspace = true }
-
-polkadot-sdk = { workspace = true, default-features = false, features = [
-	"pallet-aura",
-	"pallet-authorship",
-	"pallet-balances",
-	"pallet-message-queue",
-	"pallet-session",
-	"pallet-sudo",
-	"pallet-timestamp",
-	"pallet-transaction-payment",
-	"pallet-transaction-payment-rpc-runtime-api",
-
-	"pallet-xcm",
-	"polkadot-parachain-primitives",
-	"polkadot-runtime-common",
-	"staging-xcm",
-	"staging-xcm-builder",
-	"staging-xcm-executor",
-
-	"cumulus-pallet-aura-ext",
-	"cumulus-pallet-session-benchmarking",
-	"cumulus-pallet-xcm",
-	"cumulus-pallet-xcmp-queue",
-	"cumulus-primitives-aura",
-	"cumulus-primitives-core",
-	"cumulus-primitives-storage-weight-reclaim",
-	"cumulus-primitives-utility",
-	"pallet-collator-selection",
-	"parachains-common",
-	"staging-parachain-info",
-
-	"runtime",
-] }
-
-# Cumulus
-cumulus-pallet-parachain-system = { workspace = true }
 
 # frame
 frame-support = { features = ["experimental"], workspace = true }
@@ -83,12 +38,13 @@ pallet-transaction-payment = { workspace = true }
 
 # QF pallets
 pallet-faucet = {workspace = true}
+pallet-qf-polkavm = { workspace = true }
 pallet-qf-polkavm-dev = { workspace = true }
 
 # primitives
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
-sp-consensus-aura = { features = [
+qfp-consensus-spin = { features = [
 	"serde",
 ], workspace = true }
 sp-consensus-grandpa = { features = [
@@ -121,16 +77,17 @@ frame-system-benchmarking = { optional = true, workspace = true }
 # The pallet in this template.
 # pallet-template = { workspace = true }
 
+[build-dependencies]
+substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
+
+[dev-dependencies]
+sp-io = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
 	"codec/std",
-	"cumulus-pallet-parachain-system/std",
-	"log/std",
-	"pallet-parachain-template/std",
-	"polkadot-sdk/std",
 	"scale-info/std",
-	"serde_json/std",
 
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
@@ -146,7 +103,7 @@ std = [
 	"pallet-balances/std",
 	"pallet-grandpa/std",
 	"pallet-sudo/std",
-	# "pallet-template/std",
+	"pallet-qf-polkavm/std",
 	"pallet-qf-polkavm-dev/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -154,7 +111,7 @@ std = [
 
 	"sp-api/std",
 	"sp-block-builder/std",
-	"sp-consensus-aura/std",
+	"qfp-consensus-spin/std",
 	"sp-consensus-grandpa/std",
 	"sp-core/std",
 	"sp-genesis-builder/std",
@@ -170,10 +127,6 @@ std = [
 ]
 
 runtime-benchmarks = [
-	"cumulus-pallet-parachain-system/runtime-benchmarks",
-	"hex-literal",
-	"pallet-parachain-template/runtime-benchmarks",
-	"polkadot-sdk/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
@@ -181,16 +134,13 @@ runtime-benchmarks = [
 	"pallet-balances/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
-	# "pallet-template/runtime-benchmarks",
+	"pallet-qf-polkavm/runtime-benchmarks",
 	"pallet-qf-polkavm-dev/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 
 try-runtime = [
-	"cumulus-pallet-parachain-system/try-runtime",
-	"pallet-parachain-template/try-runtime",
-	"polkadot-sdk/try-runtime",
 	"frame-executive/try-runtime",
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
@@ -199,7 +149,7 @@ try-runtime = [
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-sudo/try-runtime",
-	# "pallet-template/try-runtime",
+	"pallet-qf-polkavm/try-runtime",
 	"pallet-qf-polkavm-dev/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",

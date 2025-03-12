@@ -9,14 +9,13 @@ repository = "https://github.com/QuantumFusion-network"
 resolver = "2"
 
 members = [
-    "runtimes/solochain",
-    "runtimes/parachain",
+    "runtimes/qf-runtime",
     "node",
+    "parachain/node",
     "pallets/qf-polkavm",
     "pallets/qf-polkavm-dev",
-    "pallets/template",
+    "pallets/parachain-template",
     "qf-test-runner",
-    "parachain/node",
     "pvm-test-runner",
     "client/*",
     "primitives/*",
@@ -35,26 +34,25 @@ log = { version = "0.4.22", default-features = false }
 # Debug
 tracing = { version = "0.1.40", default-features = false }
 # std
-env_logger = { version = "0.11.6" }
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+env_logger = { version = "0.11.3" }
+serde = { version = "1.0.214", default-features = false }
 docify = { version = "0.2.9" }
 hex-literal = { version = "0.4.1", default-features = false }
 smallvec = { version = "1.11.0", default-features = false }
 color-print = { version = "0.3.4" }
-serde = { version = "1.0.214", default-features = false }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 thiserror = { version = "1.0.64" }
 parking_lot = { version = "0.12.1", default-features = false }
 tempfile = { version = "3.8.1" }
 tokio = { version = "1.40.0", default-features = false }
 
 # Node
+polkadot-sdk = { path = "./vendor/polkadot-sdk/umbrella", default-features = false }
 sc-tracing = { path = "./vendor/polkadot-sdk/substrate/client/tracing", default-features = false }
-prometheus-endpoint = { path = "./vendor/polkadot-sdk/substrate/utils/prometheus", default-features = false, package = "substrate-prometheus-endpoint" }
 clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "./vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }
 jsonrpsee = { version = "0.24.7" }
-polkadot-sdk = { path = "./vendor/polkadot-sdk/umbrella", default-features = false }
 polkavm = { path = "./vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 pallet-transaction-payment-rpc = { path = "./vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
 sc-basic-authorship = { path = "./vendor/polkadot-sdk/substrate/client/basic-authorship", default-features = false }
@@ -77,8 +75,9 @@ sp-tracing = { path = "./vendor/polkadot-sdk/substrate/primitives/tracing", defa
 sc-transaction-pool = { path = "./vendor/polkadot-sdk/substrate/client/transaction-pool", default-features = false }
 sc-transaction-pool-api = { path = "./vendor/polkadot-sdk/substrate/client/transaction-pool/api", default-features = false }
 sc-serde-json = { path = "./vendor/polkadot-sdk/substrate/client/serde_json", default-features = false }
-serde_json = { version = "1.0.132", default-features = false }
-qf-solochain-runtime = { path = "./runtimes/solochain", default-features = false }
+serde_json = { version = "1.0.124", default-features = false }
+qf-runtime = { path = "./runtimes/qf-runtime", default-features = false }
+qf-parachain-runtime = { path = "./runtimes/parachain", default-features = false }
 sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain", default-features = false }
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "./vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
@@ -99,6 +98,7 @@ frame-system-rpc-runtime-api = { path = "./vendor/polkadot-sdk/substrate/frame/s
 
 cumulus-pallet-parachain-system = { path = "./vendor/polkadot-sdk/cumulus/pallets/parachain-system", default-features = false }
 cumulus-primitives-aura = { path = "./vendor/polkadot-sdk/cumulus/primitives/aura", default-features = false}
+
 pallet-aura = { path = "./vendor/polkadot-sdk/substrate/frame/aura", default-features = false }
 pallet-grandpa = { path = "./vendor/polkadot-sdk/substrate/frame/grandpa", default-features = false }
 pallet-template = { path = "./vendor/polkadot-sdk/substrate/frame/template", default-features = false }
@@ -111,7 +111,6 @@ sp-application-crypto = { path = "./vendor/polkadot-sdk/substrate/primitives/app
 sp-block-builder = { path = "./vendor/polkadot-sdk/substrate/primitives/block-builder", default-features = false }
 qfp-consensus-spin = { path = "./primitives/consensus-spin", default-features = false }
 sp-consensus-grandpa = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/grandpa", default-features = false }
-sp-consensus-aura = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/aura", default-features = false }
 sp-consensus = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/common", default-features = false }
 sp-consensus-slots = { path = "./vendor/polkadot-sdk/substrate/primitives/consensus/slots", default-features = false }
 sp-core = { path = "./vendor/polkadot-sdk/substrate/primitives/core", default-features = false }
@@ -121,6 +120,7 @@ sp-session = { path = "./vendor/polkadot-sdk/substrate/primitives/session", defa
 sp-storage = { path = "./vendor/polkadot-sdk/substrate/primitives/storage", default-features = false }
 sp-transaction-pool = { path = "./vendor/polkadot-sdk/substrate/primitives/transaction-pool", default-features = false }
 substrate-wasm-builder = { path = "./vendor/polkadot-sdk/substrate/utils/wasm-builder", default-features = false }
+prometheus-endpoint = { package = "substrate-prometheus-endpoint", path = "./vendor/polkadot-sdk/substrate/utils/prometheus", default-features = false }
 
 # pallets that we want to use
 pallet-balances = { path = "./vendor/polkadot-sdk/substrate/frame/balances", default-features = false }
@@ -139,6 +139,7 @@ substrate-test-runtime-client = { path = "./vendor/polkadot-sdk/substrate/test-u
 
 # local pallet templates
 pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
+pallet-parachain-template = { path = "./pallets/parachain-template", default-features = false }
 
 # polkavm
 image = { version = "0.24.7", default-features = false }
