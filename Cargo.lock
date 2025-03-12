@@ -6293,6 +6293,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-spin-polkadot"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "polkadot-sdk-frame",
+ "scale-info",
+ "sp-consensus-grandpa",
+ "sp-trie",
+]
+
+[[package]]
 name = "pallet-sudo"
 version = "28.0.0"
 dependencies = [
@@ -6852,6 +6865,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb819108697967452fa6d8d96ab4c0d48cbaa423b3156499dcb24f1cf95d6775"
 dependencies = [
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "polkadot-sdk-frame"
+version = "0.1.0"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-consensus-grandpa",
+ "sp-core",
+ "sp-genesis-builder",
+ "sp-inherents",
+ "sp-io",
+ "sp-keyring",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-storage 19.0.0",
+ "sp-transaction-pool",
+ "sp-version",
 ]
 
 [[package]]
