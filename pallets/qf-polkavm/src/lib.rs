@@ -65,6 +65,7 @@ pub mod pallet {
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
+        GasMeteringKind, ModuleConfig as PolkaVMModuleConfig,
         ProgramBlob, State,
     };
 
@@ -362,7 +363,10 @@ pub mod pallet {
                 PolkaVMConfig::from_env().map_err(|_| Error::<T>::PolkaVMConfigurationFailed)?;
             let engine =
                 Engine::new(&config).map_err(|_| Error::<T>::PolkaVMEngineCreationFailed)?;
-            let module = PolkaVMModule::from_blob(&engine, &Default::default(), blob)
+
+            let mut module_config = PolkaVMModuleConfig::new();
+            module_config.set_gas_metering(Some(GasMeteringKind::Sync));
+            let module = PolkaVMModule::from_blob(&engine, &module_config, blob)
                 .map_err(|_| Error::<T>::PolkaVMModuleCreationFailed)?;
 
             Ok(module)
