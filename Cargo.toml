@@ -48,6 +48,8 @@ tokio = { version = "1.40.0", default-features = false }
 
 # Node
 polkadot-sdk = { path = "vendor/polkadot-sdk/umbrella", default-features = false }
+polkadot-parachain-primitives = { path = "vendor/polkadot-sdk/polkadot/parachain", default-features = false }
+sp-trie = { path = "vendor/polkadot-sdk/substrate/primitives/trie", default-features = false }
 sc-tracing = { path = "vendor/polkadot-sdk/substrate/client/tracing", default-features = false }
 clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
