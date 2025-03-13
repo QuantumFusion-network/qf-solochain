@@ -146,6 +146,8 @@ pub mod pallet {
             contract_address: T::AccountId,
             /// The new value set.
             result: u64,
+            gas_before: u32,
+            gas_after: i64,
         },
         ProgramBlobUploaded {
             /// The account who uploaded ProgramBlob.
@@ -283,6 +285,7 @@ pub mod pallet {
                 .into_inner();
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
+            instance.set_gas(gas.into());
 
             let mut state = State::new(
                 who.clone(),
@@ -338,6 +341,8 @@ pub mod pallet {
                 who,
                 contract_address,
                 result,
+                gas_before: gas,
+                gas_after: instance.gas(),
             });
 
             // Return a successful `DispatchResult`
