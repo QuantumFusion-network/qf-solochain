@@ -167,8 +167,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("parachain-template-runtime"),
-	impl_name: alloc::borrow::Cow::Borrowed("parachain-template-runtime"),
+	spec_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
+	impl_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
@@ -309,10 +309,6 @@ mod runtime {
 	pub type CumulusXcm = cumulus_pallet_xcm;
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
-
-	// Template
-	#[runtime::pallet_index(50)]
-	pub type TemplatePallet = pallet_parachain_template;
 }
 
 #[docify::export(register_validate_block)]

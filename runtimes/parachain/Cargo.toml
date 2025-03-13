@@ -25,9 +25,6 @@ scale-info = { features = ["derive"], workspace = true }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 smallvec = { workspace = true, default-features = true }
 
-# Local
-pallet-parachain-template = { workspace = true }
-
 polkadot-sdk = { workspace = true, default-features = false, features = [
 	"pallet-aura",
 	"pallet-authorship",
@@ -70,7 +67,6 @@ std = [
 	"codec/std",
 	"cumulus-pallet-parachain-system/std",
 	"log/std",
-	"pallet-parachain-template/std",
 	"polkadot-sdk/std",
 	"scale-info/std",
 	"serde_json/std",
@@ -80,13 +76,11 @@ std = [
 runtime-benchmarks = [
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"hex-literal",
-	"pallet-parachain-template/runtime-benchmarks",
 	"polkadot-sdk/runtime-benchmarks",
 ]
 
 try-runtime = [
 	"cumulus-pallet-parachain-system/try-runtime",
-	"pallet-parachain-template/try-runtime",
 	"polkadot-sdk/try-runtime",
 ]
 
