@@ -65,6 +65,7 @@ pub mod pallet {
 
     use polkavm::{
         Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
+        GasMeteringKind, ModuleConfig as PolkaVMModuleConfig,
         ProgramBlob, State,
     };
 
@@ -145,6 +146,8 @@ pub mod pallet {
             contract_address: T::AccountId,
             /// The new value set.
             result: u64,
+            gas_before: u32,
+            gas_after: i64,
         },
         ProgramBlobUploaded {
             /// The account who uploaded ProgramBlob.
@@ -282,6 +285,7 @@ pub mod pallet {
                 .into_inner();
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
+            instance.set_gas(gas.into());
 
             let mut state = State::new(
                 who.clone(),
@@ -337,6 +341,8 @@ pub mod pallet {
                 who,
                 contract_address,
                 result,
+                gas_before: gas,
+                gas_after: instance.gas(),
             });
 
             // Return a successful `DispatchResult`
@@ -362,7 +368,10 @@ pub mod pallet {
                 PolkaVMConfig::from_env().map_err(|_| Error::<T>::PolkaVMConfigurationFailed)?;
             let engine =
                 Engine::new(&config).map_err(|_| Error::<T>::PolkaVMEngineCreationFailed)?;
-            let module = PolkaVMModule::from_blob(&engine, &Default::default(), blob)
+
+            let mut module_config = PolkaVMModuleConfig::new();
+            module_config.set_gas_metering(Some(GasMeteringKind::Sync));
+            let module = PolkaVMModule::from_blob(&engine, &module_config, blob)
                 .map_err(|_| Error::<T>::PolkaVMModuleCreationFailed)?;
 
             Ok(module)

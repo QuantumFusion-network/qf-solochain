@@ -134,7 +134,7 @@ pub mod program {
 pub type Gas = i64;
 
 pub use crate::polkavm::api::{Engine, MemoryAccessError, Module, RawInstance, RegValue};
-pub use crate::polkavm::config::{Config, GasMeteringKind};
+pub use crate::polkavm::config::{Config, GasMeteringKind, ModuleConfig};
 pub use crate::polkavm::error::Error;
 pub use crate::polkavm::linker::{Caller, Instance, Linker, State};
 pub use crate::polkavm::utils::{InterruptKind, Segfault};
