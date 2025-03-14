@@ -20,26 +20,26 @@ chain-spec-builder:
 polkatool:
 	cargo install --path vendor/polkavm/tools/polkatool
 
-qf-run: qf-solochain-release
-	output/qf-solochain --dev --tmp --rpc-cors all
+qf-run: qf-release
+	output/qf-node --dev --tmp --rpc-cors all
 
-qf-run-wasm: qf-solochain-release
-	output/qf-solochain --dev --tmp --rpc-cors all --wasm-runtime-overrides output
+qf-run-wasm: qf-release
+	output/qf-node --dev --tmp --rpc-cors all --wasm-runtime-overrides output
 
-qf-solochain-release: qf-runtime
-	cargo build -p qf-solochain-node --release
+qf-release: qf-runtime
+	cargo build -p qf-node --release
 	mkdir -p output
-	cp target/release/qf-solochain-node output/qf-solochain
+	cp target/release/qf-node output/qf-node
 
-qf-solochain: qf-solochain-runtime
-	cargo build -p qf-solochain-node
+qf-node: qf-runtime
+	cargo build -p qf-node
 	mkdir -p output
-	cp target/debug/qf-solochain-node output/qf-solochain
+	cp target/debug/qf-node output/qf-node
 
-qf-solochain-runtime:
-	cargo build -p qf-solochain-runtime
+qf-runtime:
+	cargo build -p qf-runtime
 	mkdir -p output
-	cp target/debug/wbuild/qf-solochain-runtime/qf_solochain_runtime.wasm output
+	cp target/debug/wbuild/qf-runtime/qf_runtime.wasm output
 
 polkavm-pallet:
 	cargo build -p pallet-qf-polkavm-dev
@@ -48,7 +48,7 @@ fmt:
 	cargo fmt --all
 
 check-wasm:
-	SKIP_WASM_BUILD= cargo check --no-default-features --target=wasm32-unknown-unknown -p qf-solochain-runtime
+	SKIP_WASM_BUILD= cargo check --no-default-features --target=wasm32-unknown-unknown -p qf-runtime
 
 check: check-wasm
 	SKIP_WASM_BUILD= cargo check
@@ -59,7 +59,7 @@ clippy:
 qf-test:
 	SKIP_WASM_BUILD= cargo test
 
-solochain-chainspec: qf-solochain-runtime
-	chain-spec-builder -c output/solochain-chainspec.json create -n qf-solochain-runtime -i qf-solochain-runtime -r ./output/qf_solochain_runtime.wasm -s default
-	cat output/solochain-chainspec.json | jq '.properties = {}' > output/solochain-chainspec.json.tmp
-	mv output/solochain-chainspec.json.tmp output/solochain-chainspec.json
+qf-chainspec: qf-solochain-runtime
+	chain-spec-builder -c output/solochain-chainspec.json create -n qf-runtime -i qf-runtime -r ./output/qf_runtime.wasm -s default
+	cat output/qf-chainspec.json | jq '.properties = {}' > output/qf-chainspec.json.tmp
+	mv output/qf-chainspec.json.tmp output/qf-chainspec.json
