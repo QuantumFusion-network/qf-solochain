@@ -11,11 +11,6 @@ publish = false
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
-[build-dependencies]
-docify = { workspace = true }
-substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
-
 [dependencies]
 codec = { features = ["derive"], workspace = true }
 docify = { workspace = true }
@@ -60,6 +55,12 @@ polkadot-sdk = { workspace = true, default-features = false, features = [
 
 # Cumulus
 cumulus-pallet-parachain-system = { workspace = true }
+
+[build-dependencies]
+docify = { workspace = true }
+substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
+
+
 
 [features]
 default = ["std"]

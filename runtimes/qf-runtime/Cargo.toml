@@ -13,13 +13,52 @@ publish = false
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { features = [
-	"derive",
-], workspace = true }
+codec = { features = ["derive"], workspace = true }
+hex-literal = { optional = true, workspace = true, default-features = true }
+log = { workspace = true }
 scale-info = { features = [
 	"derive",
 	"serde",
 ], workspace = true }
+serde_json = { workspace = true, default-features = false, features = ["alloc"] }
+smallvec = { workspace = true, default-features = true }
+
+polkadot-sdk = { workspace = true, default-features = false, features = [
+	"pallet-aura",
+	"pallet-authorship",
+	"pallet-balances",
+	"pallet-message-queue",
+	"pallet-session",
+	"pallet-sudo",
+	"pallet-timestamp",
+	"pallet-transaction-payment",
+	"pallet-transaction-payment-rpc-runtime-api",
+
+	"pallet-xcm",
+	"polkadot-parachain-primitives",
+	"polkadot-runtime-common",
+	"staging-xcm",
+	"staging-xcm-builder",
+	"staging-xcm-executor",
+
+	"cumulus-pallet-aura-ext",
+	"cumulus-pallet-session-benchmarking",
+	"cumulus-pallet-weight-reclaim",
+	"cumulus-pallet-xcm",
+	"cumulus-pallet-xcmp-queue",
+	"cumulus-primitives-aura",
+	"cumulus-primitives-core",
+	"cumulus-primitives-utility",
+	"pallet-collator-selection",
+	"parachains-common",
+	"staging-parachain-info",
+
+	"runtime",
+] }
+
+# Cumulus
+cumulus-pallet-parachain-system = { workspace = true }
+
 
 # frame
 frame-support = { features = ["experimental"], workspace = true }
@@ -87,7 +126,11 @@ sp-io = { workspace = true }
 default = ["std"]
 std = [
 	"codec/std",
+	"cumulus-pallet-parachain-system/std",
+	"log/std",
+	"polkadot-sdk/std",
 	"scale-info/std",
+	"serde_json/std",
 
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
@@ -127,6 +170,9 @@ std = [
 ]
 
 runtime-benchmarks = [
+	"cumulus-pallet-parachain-system/runtime-benchmarks",
+	"hex-literal",
+	"polkadot-sdk/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
@@ -141,6 +187,8 @@ runtime-benchmarks = [
 ]
 
 try-runtime = [
+	"cumulus-pallet-parachain-system/try-runtime",
+	"polkadot-sdk/try-runtime",
 	"frame-executive/try-runtime",
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
