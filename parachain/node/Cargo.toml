@@ -1,6 +1,6 @@
 [package]
 name = "qf-parachain-node"
-description = "A parachain node built with Substrate and Cumulus."
+description = "A parachain node built with Substrate and Cumulus. From commit 3793fc3444e28d309e67513fda5afe153a2aa928 at https://github.com/QuantumFusion-network/polkadot-sdk"
 version = "0.1.0"
 license.workspace = true
 authors.workspace = true
