@@ -288,9 +288,7 @@ pub mod pallet {
             instance.set_gas(gas.into());
 
             let mut state = State::new(
-                who.clone(),
-                contract_address.clone(),
-                [to].to_vec(),
+                [contract_address.clone(), who.clone(), to].to_vec(),
                 [value].to_vec(),
                 [
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
@@ -312,6 +310,8 @@ pub mod pallet {
                 },
                 |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
+                || -> u64 { 0 },
+                || -> u64 { 1 },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -386,7 +386,7 @@ pub mod pallet {
                     "transfer",
                     |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
                         (caller.user_data.transfer)(
-                            caller.user_data.contract_address.clone(),
+                            caller.user_data.addresses[0].clone(),
                             caller.user_data.addresses[address_idx as usize].clone(),
                             caller.user_data.balances[balance_idx as usize].clone(),
                         )
@@ -396,7 +396,7 @@ pub mod pallet {
 
             linker
                 .define_typed("balance", |caller: Caller<T>| -> u64 {
-                    (caller.user_data.balance)(caller.user_data.contract_address.clone())
+                    (caller.user_data.balance)(caller.user_data.addresses[0].clone())
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -409,6 +409,18 @@ pub mod pallet {
             linker
                 .define_typed("block_number", |caller: Caller<T>| -> u64 {
                     (caller.user_data.block_number)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("account_id", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.account_id)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("caller", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.caller)()
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
