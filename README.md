@@ -2,6 +2,18 @@
 
 Reimagining blockchain architecture.
 
+<div align="center">
+
+[![License](https://img.shields.io/github/license/QuantumFusion-network/qf-solochain?color=green)](https://github.com/QuantumFusion-network/qf-solochain/blob/main/LICENSE)
+<br>
+![GitHub contributors](https://img.shields.io/github/contributors/QuantumFusion-network/qf-solochain)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/QuantumFusion-network/qf-solochain)
+![GitHub last commit](https://img.shields.io/github/last-commit/QuantumFusion-network/qf-solochain)
+<br>
+[![Twitter URL](https://img.shields.io/twitter/follow/QuantumFusion_?style=social)](https://x.com/QuantumFusion_)
+
+</div>
+
 For contributing to this project, please read [Contributing](#contributing) section.
 
 ## Getting Started
