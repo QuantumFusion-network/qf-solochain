@@ -1,4 +1,8 @@
-# Quantum Fusion Solochain
+# Quantum Fusion
+
+Reimagining blockchain architecture.
+
+For contributing to this project, please read [Contributing](#contributing) section.
 
 ## Getting Started
 
