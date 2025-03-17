@@ -26,7 +26,7 @@ qf-run: qf-release
 qf-run-wasm: qf-release
 	output/qf-node --dev --tmp --rpc-cors all --wasm-runtime-overrides output
 
-qf-release: qf-runtime
+qf-node-release: qf-runtime
 	cargo build -p qf-node --release
 	mkdir -p output
 	cp target/release/qf-node output/qf-node

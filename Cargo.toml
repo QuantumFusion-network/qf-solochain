@@ -140,10 +140,6 @@ sp-version-proc-macro = { path = "vendor/polkadot-sdk/substrate/primitives/versi
 
 substrate-test-runtime-client = { path = "vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
 
-# local pallet templates
-pallet-minimal-template = { path = "vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
-pallet-parachain-template = { path = "pallets/parachain-template", default-features = false }
-
 # polkavm
 image = { version = "0.24.7", default-features = false }
 libc = "0.2.149"
