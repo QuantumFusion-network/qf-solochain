@@ -64,9 +64,8 @@ pub mod pallet {
     use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
     use polkavm::{
-        Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
-        GasMeteringKind, ModuleConfig as PolkaVMModuleConfig,
-        ProgramBlob, State,
+        Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
+        Module as PolkaVMModule, ModuleConfig as PolkaVMModuleConfig, ProgramBlob, State,
     };
 
     pub type BalanceOf<T> =
