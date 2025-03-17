@@ -46,7 +46,6 @@ clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "./vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }
 jsonrpsee = { version = "0.24.7" }
-polkadot-parachain-primitives = { path = "./vendor/polkadot-sdk/polkadot/parachain", default-features = false }
 polkavm = { path = "./vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 pallet-transaction-payment-rpc = { path = "./vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
 sc-basic-authorship = { path = "./vendor/polkadot-sdk/substrate/client/basic-authorship", default-features = false }
@@ -75,7 +74,6 @@ sp-blockchain = { path = "./vendor/polkadot-sdk/substrate/primitives/blockchain"
 sp-io = { path = "./vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "./vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
 sp-timestamp = { path = "./vendor/polkadot-sdk/substrate/primitives/timestamp", default-features = false }
-sp-trie = { path = "./vendor/polkadot-sdk/substrate/primitives/trie", default-features = false }
 substrate-frame-rpc-system = { path = "./vendor/polkadot-sdk/substrate/utils/frame/rpc/system", default-features = false }
 substrate-build-script-utils = { path = "./vendor/polkadot-sdk/substrate/utils/build-script-utils", default-features = false }
 
@@ -147,6 +145,13 @@ polkavm-derive-impl       = { path = "./vendor/polkavm/crates/polkavm-derive-imp
 polkavm-derive-impl-macro = { path = "./vendor/polkavm/crates/polkavm-derive-impl-macro", default-features = false }
 polkavm-linker            = { path = "./vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw         = { path = "./vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
+
+# spin
+bp-header-chain = { path = "./vendor/polkadot-sdk/bridges/primitives/header-chain", default-features = false }
+bp-runtime = { path = "./vendor/polkadot-sdk/bridges/primitives/runtime", default-features = false }
+polkadot-parachain-primitives = { path = "./vendor/polkadot-sdk/polkadot/parachain", default-features = false }
+sp-std = { path = "./vendor/polkadot-sdk/substrate/primitives/std", default-features = false }
+sp-trie = { path = "./vendor/polkadot-sdk/substrate/primitives/trie", default-features = false }
 
 # hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
 [patch.'https://github.com/w3f/fflonk']
