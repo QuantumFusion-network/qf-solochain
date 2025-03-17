@@ -67,3 +67,19 @@ See [zombienet/README.md](zombienet/README.md).
 
 [^1]: <https://forum.polkadot.network/t/announcing-polkavm-a-new-risc-v-based-vm-for-smart-contracts-and-possibly-more/3811#the-compilation-pipeline-7> "The compilation pipeline".
 [^2]: <https://github.com/paritytech/polkadot-sdk/tree/master/substrate/bin/utils/chain-spec-builder> "chain-spec-builder".
+
+## Contributing
+
+We welcome contributions of all kinds! Whether you're reporting or fixing a bug, adding a feature, or improving
+documentation, your help is greatly appreciated. For a bug or vulnerability report please [open a new issue](https://github.com/QuantumFusion-network/qf-solochain/issues/new).
+
+For code contributions please follow these steps:
+
+1. Fork the repository and create a new branch following the format `your-github-name/descriptive-branch-name` (e.g., `alice/fix-123`).
+2. Make smaller commits with clear messages to simplify reviewer's work.
+3. Submit a pull request targeting `main` branch and provide a concise description of your changes.
+
+By contributing, you agree to adhere to our [Contributor Covenant Code of Conduct](./CODE_OF_CONDUCT.md), which fosters
+a respectful and inclusive environment.
+
+We appreciate your support and look forward to your contributions! 🚀
