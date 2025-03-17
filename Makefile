@@ -59,7 +59,7 @@ clippy:
 qf-test:
 	SKIP_WASM_BUILD= cargo test
 
-qf-chainspec: qf-solochain-runtime
-	chain-spec-builder -c output/solochain-chainspec.json create -n qf-runtime -i qf-runtime -r ./output/qf_runtime.wasm -s default
+qf-chainspec: qf-runtime
+	chain-spec-builder -c output/qf-chainspec.json create -n qf-runtime -i qf-runtime -r ./output/qf_runtime.wasm -s default
 	cat output/qf-chainspec.json | jq '.properties = {}' > output/qf-chainspec.json.tmp
 	mv output/qf-chainspec.json.tmp output/qf-chainspec.json
