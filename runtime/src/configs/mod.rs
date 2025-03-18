@@ -95,20 +95,12 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-pub struct MinimumPeriodTimes<T>(core::marker::PhantomData<T>);
-
-impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
-    fn get() -> T::Moment {
-        <T as pallet_timestamp::Config>::MinimumPeriod::get()
-    }
-}
-
 impl pallet_aura::Config for Runtime {
     type AuthorityId = SpinId;
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;
-    type SlotDuration = MinimumPeriodTimes<Runtime>;
+    type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
 }
 
 impl pallet_grandpa::Config for Runtime {
