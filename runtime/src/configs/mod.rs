@@ -37,7 +37,7 @@ use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
     Perbill,
-    traits::{Get, One},
+    traits::One,
 };
 use sp_version::RuntimeVersion;
 
