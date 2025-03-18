@@ -74,7 +74,6 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// The extension to the basic transaction logic.
-#[docify::export(template_signed_extra)]
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(

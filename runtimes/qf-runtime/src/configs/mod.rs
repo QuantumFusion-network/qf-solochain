@@ -23,16 +23,32 @@
 //
 // For more information, please refer to <http://unlicense.org>
 
+mod xcm_config;
+
+use polkadot_sdk::{staging_parachain_info as parachain_info, staging_xcm as xcm, *};
+#[cfg(not(feature = "runtime-benchmarks"))]
+use polkadot_sdk::{staging_xcm_builder as xcm_builder, staging_xcm_executor as xcm_executor};
+
 // Substrate and Polkadot dependencies
+use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
-    derive_impl, parameter_types,
-    traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, VariantCountOf},
+    derive_impl,
+	dispatch::DispatchClass,
+    parameter_types,
+    traits::{
+        ConstBool, ConstU32, ConstU64, ConstU8, ConstU128, EitherOfDiverse, TransformOrigin, VariantCountOf},
     weights::{
+        ConstantMultiplier,
         IdentityFee, Weight,
         constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
     },
+    PalletId,
 };
-use frame_system::limits::{BlockLength, BlockWeights};
+use frame_system::{
+    limits::{BlockLength, BlockWeights},
+    EnsureRoot,
+};
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
