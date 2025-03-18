@@ -20,10 +20,10 @@ chain-spec-builder:
 polkatool:
 	cargo install --path vendor/polkavm/tools/polkatool
 
-qf-run: qf-release
+qf-run: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all
 
-qf-run-wasm: qf-release
+qf-run-wasm: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all --wasm-runtime-overrides output
 
 qf-node-release: qf-runtime
