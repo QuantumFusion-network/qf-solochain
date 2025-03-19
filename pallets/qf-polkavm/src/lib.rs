@@ -324,9 +324,12 @@ pub mod pallet {
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 2 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance_of", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 3 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                4 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_block_number", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
