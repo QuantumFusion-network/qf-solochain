@@ -308,6 +308,7 @@ pub mod pallet {
                     return 0;
                 },
                 |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
+                |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
@@ -396,6 +397,12 @@ pub mod pallet {
             linker
                 .define_typed("balance", |caller: Caller<T>| -> u64 {
                     (caller.user_data.balance)(caller.user_data.addresses[0].clone())
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("balance_of", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.balance)(caller.user_data.addresses[2].clone())
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
