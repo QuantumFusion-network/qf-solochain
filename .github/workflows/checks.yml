@@ -1,0 +1,38 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  cargo-check:
+    name: Cargo Check
+    runs-on: [self-hosted]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        # This is supposed to download submodules, but it doesn't actually work, so we're using
+        # `make vendor-clone` with `git clone ...` instead.
+        # with:
+        #   submodules: recursive
+
+      - run: |
+          make vendor-clone
+
+      - name: Setup build environment
+        run: |
+          sudo apt update
+          sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          . "$HOME/.cargo/env"
+          rustup install
+
+      - name: Check code
+        run: |
+          cargo check --locked --all
