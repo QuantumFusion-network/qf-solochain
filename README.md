@@ -34,7 +34,7 @@ make qf-run
 - Formatting: `make fmt`
 - Run tests: `make qf-test`
 - Check all: `make check`
-- Make chain spec: `make chainspec`
+- Make chain spec: `make qf-chainspec`
 - Make PolkaVM blob: `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example `make pvm-prog-calc`
 - Test the compiled `.polkavm` blob: `make test-pvm-prog-<progname>` where `<progname>` is the name of the compiled program. For example `make test-pvm-prog-calc`
 

@@ -3,7 +3,7 @@ name: Build, Release, and Publish Docker
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build_binary:
@@ -40,7 +40,7 @@ jobs:
       - name: Build Project
         run: |
           make vendor-clone
-          make qf-node
+          make qf-node-release
 
       - name: Prepare artifacts
         run: |
