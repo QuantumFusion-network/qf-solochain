@@ -1,8 +1,8 @@
-# Quantum Fusion
-
-Reimagining blockchain architecture.
-
 <div align="center">
+
+![Logo](Logo.jpg)
+
+# Quantum Fusion
 
 [![License](https://img.shields.io/github/license/QuantumFusion-network/qf-solochain?color=green)](https://github.com/QuantumFusion-network/qf-solochain/blob/main/LICENSE)
 <br>
