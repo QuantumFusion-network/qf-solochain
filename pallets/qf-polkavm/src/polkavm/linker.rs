@@ -597,39 +597,42 @@ where
 }
 
 pub struct State<T: PalletConfig> {
-    pub caller_address: T::AccountId,
-    pub contract_address: T::AccountId,
     pub addresses: Vec<T::AccountId>,
     pub balances: Vec<BalanceOf<T>>,
     pub log_message: Vec<u8>,
     pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
     pub print: fn(Vec<u8>) -> u64,
     pub balance: fn(T::AccountId) -> u64,
+    pub balance_of: fn(T::AccountId) -> u64,
     pub block_number: fn() -> u64,
+    pub account_id: fn() -> u64,
+    pub caller: fn() -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
     pub fn new(
-        caller_address: T::AccountId,
-        contract_address: T::AccountId,
         addresses: Vec<T::AccountId>,
         balances: Vec<BalanceOf<T>>,
         log_message: Vec<u8>,
         transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
         print: fn(Vec<u8>) -> u64,
         balance: fn(T::AccountId) -> u64,
+        balance_of: fn(T::AccountId) -> u64,
         block_number: fn() -> u64,
+        account_id: fn() -> u64,
+        caller: fn() -> u64,
     ) -> Self {
         Self {
-            caller_address,
-            contract_address,
             addresses,
             balances,
             log_message,
             transfer,
             print,
             balance,
+            balance_of,
             block_number,
+            account_id,
+            caller,
         }
     }
 }

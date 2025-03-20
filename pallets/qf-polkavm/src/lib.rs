@@ -64,9 +64,8 @@ pub mod pallet {
     use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
     use polkavm::{
-        Caller, Config as PolkaVMConfig, Engine, Instance, Linker, Module as PolkaVMModule,
-        GasMeteringKind, ModuleConfig as PolkaVMModuleConfig,
-        ProgramBlob, State,
+        Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
+        Module as PolkaVMModule, ModuleConfig as PolkaVMModuleConfig, ProgramBlob, State,
     };
 
     pub type BalanceOf<T> =
@@ -288,9 +287,7 @@ pub mod pallet {
             instance.set_gas(gas.into());
 
             let mut state = State::new(
-                who.clone(),
-                contract_address.clone(),
-                [to].to_vec(),
+                [contract_address.clone(), who.clone(), to].to_vec(),
                 [value].to_vec(),
                 [
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
@@ -311,7 +308,10 @@ pub mod pallet {
                     return 0;
                 },
                 |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
+                |address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
+                || -> u64 { 0 },
+                || -> u64 { 1 },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -324,9 +324,12 @@ pub mod pallet {
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 2 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance_of", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 3 => instance
+                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ())
+                    .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
+                4 => instance
                     .call_typed_and_get_result::<u64, ()>(&mut state, "call_block_number", ())
                     .map_err(|_| Error::<T>::PolkaVMModuleExecutionFailed)?,
                 _ => Err(Error::<T>::InvalidOperation)?,
@@ -386,7 +389,7 @@ pub mod pallet {
                     "transfer",
                     |caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
                         (caller.user_data.transfer)(
-                            caller.user_data.contract_address.clone(),
+                            caller.user_data.addresses[0].clone(),
                             caller.user_data.addresses[address_idx as usize].clone(),
                             caller.user_data.balances[balance_idx as usize].clone(),
                         )
@@ -396,7 +399,13 @@ pub mod pallet {
 
             linker
                 .define_typed("balance", |caller: Caller<T>| -> u64 {
-                    (caller.user_data.balance)(caller.user_data.contract_address.clone())
+                    (caller.user_data.balance)(caller.user_data.addresses[0].clone())
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("balance_of", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.balance)(caller.user_data.addresses[2].clone())
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -409,6 +418,18 @@ pub mod pallet {
             linker
                 .define_typed("block_number", |caller: Caller<T>| -> u64 {
                     (caller.user_data.block_number)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("account_id", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.account_id)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("caller", |caller: Caller<T>| -> u64 {
+                    (caller.user_data.caller)()
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
