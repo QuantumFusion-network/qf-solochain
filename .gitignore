@@ -7,5 +7,4 @@ target/
 **/*.rs.bk
 *.polkavm
 
-vendor/
 output/
