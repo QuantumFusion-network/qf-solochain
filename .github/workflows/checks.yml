@@ -1,0 +1,35 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  cargo-check:
+    name: Cargo Check
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # These should work, but it actually doesn't =\
+        # with:
+        #   submodules: recursive
+        #   fetch-depth: 0
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+          components: rust-src
+
+      - name: Check code
+        run: |
+          ls -lah /home/github-runner/actions-runner/_work/qf-solochain/qf-solochain/vendor
