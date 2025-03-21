@@ -64,7 +64,7 @@ pub mod pallet {
     use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
     use polkavm::{
-        Caller, CallError, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
+        CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
         Module as PolkaVMModule, ModuleConfig as PolkaVMModuleConfig, ProgramBlob, State,
     };
 
@@ -319,16 +319,17 @@ pub mod pallet {
             sp_runtime::print("====== BEFORE CALL ======");
 
             let result = match op {
-                0 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ()),
-                1 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ()),
-                2 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_balance_of", ()),
-                3 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ()),
-                4 => instance
-                    .call_typed_and_get_result::<u64, ()>(&mut state, "call_block_number", ()),
+                0 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ()),
+                1 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ()),
+                2 => {
+                    instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_balance_of", ())
+                }
+                3 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ()),
+                4 => instance.call_typed_and_get_result::<u64, ()>(
+                    &mut state,
+                    "call_block_number",
+                    (),
+                ),
                 _ => Err(Error::<T>::InvalidOperation)?,
             };
 
