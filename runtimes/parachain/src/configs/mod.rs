@@ -37,9 +37,13 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
+		ConstBool, ConstU32, ConstU64, ConstU8, ConstU128, EitherOfDiverse, TransformOrigin, VariantCountOf,
 	},
-	weights::{ConstantMultiplier, Weight},
+	weights::{
+        ConstantMultiplier,
+        IdentityFee, Weight,
+        constants::WEIGHT_REF_TIME_PER_SECOND,
+    },
 	PalletId,
 };
 use frame_system::{
@@ -52,9 +56,16 @@ use polkadot_runtime_common::{
 	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::Perbill;
+use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
+use sp_runtime::{
+    Perbill,
+    traits::{Get, One},
+};
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
+
+use crate::SESSION_LENGTH;
 
 // Local module imports
 use super::{
@@ -63,17 +74,17 @@ use super::{
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
 	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, HOURS,
-	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
+	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, SLOT_DURATION, VERSION,
 };
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
-parameter_types! {
-	pub const Version: RuntimeVersion = VERSION;
+const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-	// This part is copied from Substrate's `bin/node/runtime/src/lib.rs`.
-	//  The `RuntimeBlockLength` and `RuntimeBlockWeights` exist here because the
-	// `DeletionWeightLimit` and `DeletionQueueDepth` depend on those to parameterize
-	// the lazy contract deletion.
+parameter_types! {
+    // pub const BlockHashCount: BlockNumber = 2400 * SESSION_LENGTH / 10;
+    pub const Version: RuntimeVersion = VERSION;
+
+    /// We allow for 50 ms of compute with a 100 ms average block time.
 	pub RuntimeBlockLength: BlockLength =
 		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
@@ -100,16 +111,21 @@ parameter_types! {
 /// The default types are being injected by [`derive_impl`](`frame_support::derive_impl`) from
 /// [`ParaChainDefaultConfig`](`struct@frame_system::config_preludes::ParaChainDefaultConfig`),
 /// but overridden as needed.
+#[derive_impl(frame_system::config_preludes::SolochainDefaultConfig)]
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
 impl frame_system::Config for Runtime {
+	/// The block type.
+	type Block = Block;
+	/// Block & extrinsics weights: base values and limits.
+	type BlockWeights = RuntimeBlockWeights;
+	/// The maximum length of a block (in bytes).
+	type BlockLength = RuntimeBlockLength;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The index type for storing how many extrinsics an account has signed.
 	type Nonce = Nonce;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
-	/// The block type.
-	type Block = Block;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	/// Runtime version.
@@ -118,10 +134,6 @@ impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The weight of database operations that the runtime can invoke.
 	type DbWeight = RocksDbWeight;
-	/// Block & extrinsics weights: base values and limits.
-	type BlockWeights = RuntimeBlockWeights;
-	/// The maximum length of a block (in bytes).
-	type BlockLength = RuntimeBlockLength;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
@@ -129,16 +141,43 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-/// Configure the palelt weight reclaim tx.
+pub struct MinimumPeriodTimes<T>(core::marker::PhantomData<T>);
+
+impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
+    fn get() -> T::Moment {
+        <T as pallet_timestamp::Config>::MinimumPeriod::get()
+    }
+}
+
+impl pallet_aura::Config for Runtime {
+	type AuthorityId = AuraId;
+	type DisabledValidators = ();
+	type MaxAuthorities = ConstU32<32>;
+	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	type SlotDuration = MinimumPeriodTimes<Runtime>;
+}
+
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
 	type WeightInfo = ();
+}
+
+impl pallet_grandpa::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+
+    type WeightInfo = ();
+    type MaxAuthorities = ConstU32<32>;
+    type MaxNominators = ConstU32<0>;
+    type MaxSetIdSessionEntries = ConstU64<0>;
+
+    type KeyOwnerProof = sp_core::Void;
+    type EquivocationReportSystem = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
 	type OnTimestampSet = Aura;
-	type MinimumPeriod = ConstU64<0>;
+	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	type WeightInfo = ();
 }
 
@@ -173,6 +212,7 @@ impl pallet_balances::Config for Runtime {
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
 	pub const TransactionByteFee: Balance = 10 * MICRO_UNIT;
+    pub FeeMultiplier: Multiplier = Multiplier::one();
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -182,19 +222,21 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = ConstU8<5>;
-	type WeightInfo = ();
+	type WeightInfo = pallet_transaction_payment::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = ();
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
+    pub const PolkaVmMaxCodeLen: u32 = 1024;
+    pub const PolkaVmMaxGas: u32 = 2097152;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -278,15 +320,6 @@ impl pallet_session::Config for Runtime {
 	type WeightInfo = ();
 }
 
-#[docify::export(aura_config)]
-impl pallet_aura::Config for Runtime {
-	type AuthorityId = AuraId;
-	type DisabledValidators = ();
-	type MaxAuthorities = ConstU32<100_000>;
-	type AllowMultipleBlocksPerSlot = ConstBool<true>;
-	type SlotDuration = ConstU64<SLOT_DURATION>;
-}
-
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const SessionLength: BlockNumber = 6 * HOURS;
@@ -314,4 +347,31 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
+}
+
+impl pallet_qf_polkavm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCodeLen = PolkaVmMaxCodeLen;
+    type MaxGas = PolkaVmMaxGas;
+    type Currency = Balances;
+    type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_qf_polkavm_dev::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCodeLen = PolkaVmMaxCodeLen;
+    type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+    pub const FaucetAmount: u64 = 2;
+    pub const LockPeriod: u32 = 3600; // ~3h
+}
+
+impl pallet_faucet::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type FaucetAmount = FaucetAmount;
+    type LockPeriod = LockPeriod;
+    type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
 }

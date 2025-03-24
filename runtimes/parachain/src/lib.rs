@@ -20,9 +20,8 @@ use smallvec::smallvec;
 use polkadot_sdk::{staging_parachain_info as parachain_info, *};
 
 use sp_runtime::{
-	generic, impl_opaque_keys,
+	Cow, MultiAddress, MultiSignature, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature,
 };
 
 #[cfg(feature = "std")]
@@ -35,9 +34,15 @@ use frame_support::weights::{
 };
 pub use genesis_config_presets::PARACHAIN_ID;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-pub use sp_runtime::{MultiAddress, Perbill, Permill};
+pub use sp_runtime::{Perbill, Permill};
 
 use weights::ExtrinsicBaseWeight;
+
+pub use frame_system::Call as SystemCall;
+pub use pallet_balances::Call as BalancesCall;
+pub use pallet_timestamp::Call as TimestampCall;
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -92,6 +97,9 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
+
+	/// The payload being signed in transactions.
+	pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 
 /// All migrations of the runtime, aside from the ones declared in the pallets.
 ///
@@ -166,11 +174,11 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
-	impl_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
+    spec_name: Cow::Borrowed("QF-runtime"),
+    impl_name: Cow::Borrowed("QF-runtime"),
 	authoring_version: 1,
-	spec_version: 1,
-	impl_version: 0,
+	spec_version: 100,
+	impl_version: 1,
 	apis: apis::RUNTIME_API_VERSIONS,
 	transaction_version: 1,
 	system_version: 1,
@@ -184,7 +192,7 @@ mod block_times {
 	/// slot_duration()`.
 	///
 	/// Change this to adjust the block time.
-	pub const MILLI_SECS_PER_BLOCK: u64 = 6000;
+	pub const MILLI_SECS_PER_BLOCK: u64 = 100;
 
 	// NOTE: Currently it is not possible to change the slot duration after the chain has started.
 	// Attempting to do so will brick block production.
@@ -242,6 +250,9 @@ type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
 	UNINCLUDED_SEGMENT_CAPACITY,
 >;
 
+/// Session length in blocks
+pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -276,6 +287,8 @@ mod runtime {
 	pub type ParachainInfo = parachain_info;
 	#[runtime::pallet_index(4)]
 	pub type WeightReclaim = cumulus_pallet_weight_reclaim;
+    #[runtime::pallet_index(5)]
+    pub type Grandpa = pallet_grandpa;
 
 	// Monetary stuff.
 	#[runtime::pallet_index(10)]
@@ -308,6 +321,15 @@ mod runtime {
 	pub type CumulusXcm = cumulus_pallet_xcm;
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
+
+    #[runtime::pallet_index(40)]
+    pub type QFPolkaVM = pallet_qf_polkavm;
+
+    #[runtime::pallet_index(41)]
+    pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
+
+    #[runtime::pallet_index(42)]
+    pub type Faucet = pallet_faucet;
 }
 
 #[docify::export(register_validate_block)]
