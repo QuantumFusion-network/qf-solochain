@@ -5,6 +5,9 @@ use std::path::PathBuf;
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
+    /// Key management cli utilities
+    #[command(subcommand)]
+    Key(sc_cli::KeySubcommand),
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
 
@@ -39,6 +42,9 @@ pub enum Subcommand {
 	/// The pallet benchmarking moved to the `pallet` sub-command.
 	#[command(subcommand)]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+    /// Db meta columns information.
+    ChainInfo(sc_cli::ChainInfoCmd),
 }
 
 const AFTER_HELP_EXAMPLE: &str = color_print::cstr!(

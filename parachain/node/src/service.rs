@@ -58,7 +58,11 @@ pub type Service = PartialComponents<
 	(),
 	sc_consensus::DefaultImportQueue<Block>,
 	sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>,
-	(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+	(
+		ParachainBlockImport,
+		Option<Telemetry>,
+		Option<TelemetryWorkerHandle>
+	),
 >;
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -302,7 +306,7 @@ pub async fn start_parachain_node(
 			})?;
 		task_manager.spawn_handle().spawn(
 			"offchain-workers-runner",
-			"offchain-work",
+			"offchain-worker",
 			offchain_workers.run(client.clone(), task_manager.spawn_handle()).boxed(),
 		);
 	}
