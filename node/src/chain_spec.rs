@@ -126,4 +126,3 @@ pub fn qf_devnet_config() -> Result<ChainSpec, String> {
 pub fn qf_testnet_config() -> Result<ChainSpec, String> {
     ChainSpec::from_json_bytes(&include_bytes!("./res/qf-testnet.raw.json")[..])
 }
-
