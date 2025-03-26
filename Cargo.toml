@@ -1,5 +1,8 @@
 [workspace.package]
-authors = ["Max Pestov <ealataur@gmail.com>", "Andrei Orlov <aaorlov1@gmail.com>"]
+authors = [
+    "Max Pestov <ealataur@gmail.com>",
+    "Andrei Orlov <aaorlov1@gmail.com>",
+]
 edition = "2024"
 homepage = "https://quantumfusion.pro/"
 license = ""
@@ -19,11 +22,7 @@ members = [
     "client/*",
     "primitives/*",
 ]
-exclude = [
-    "old",
-    "vendor",
-    "pvm_prog"
-]
+exclude = ["old", "vendor", "pvm_prog"]
 
 [workspace.dependencies]
 async-trait = { version = "0.1.79" }
@@ -55,6 +54,7 @@ sc-client-api = { path = "./vendor/polkadot-sdk/substrate/client/api", default-f
 sc-consensus = { path = "./vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }
 sc-consensus-slots = { path = "./vendor/polkadot-sdk/substrate/client/consensus/slots", default-features = false }
 qfc-consensus-spin = { path = "./client/consensus-spin", default-features = false }
+qfc-relay-spin = { path = "./client/relay-spin", default-features = false }
 sc-consensus-grandpa = { path = "./vendor/polkadot-sdk/substrate/client/consensus/grandpa", default-features = false }
 sc-executor = { path = "./vendor/polkadot-sdk/substrate/client/executor", default-features = false }
 sc-keystore = { path = "./vendor/polkadot-sdk/substrate/client/keystore", default-features = false }
@@ -121,7 +121,9 @@ pallet-transaction-payment-rpc-runtime-api = { path = "./vendor/polkadot-sdk/sub
 
 # genesis builder that allows us to interact with runtime genesis config
 sp-genesis-builder = { path = "./vendor/polkadot-sdk/substrate/primitives/genesis-builder", default-features = false }
-sp-runtime = { features = ["serde"], path = "./vendor/polkadot-sdk/substrate/primitives/runtime", default-features = false }
+sp-runtime = { features = [
+    "serde",
+], path = "./vendor/polkadot-sdk/substrate/primitives/runtime", default-features = false }
 sp-version = { path = "./vendor/polkadot-sdk/substrate/primitives/version", default-features = false }
 sp-version-proc-macro = { path = "./vendor/polkadot-sdk/substrate/primitives/version/proc-macro", default-features = false }
 
@@ -137,14 +139,14 @@ paste = "1.0.15"
 ruzstd = { version = "0.5.0", default-features = false }
 schnellru = { version = "0.2.3" }
 
-polkavm-assembler         = { path = "./vendor/polkavm/crates/polkavm-assembler", default-features = false }
-polkavm-disassembler      = { path = "./vendor/polkavm/crates/polkavm-disassembler", default-features = false }
-polkavm-common            = { path = "./vendor/polkavm/crates/polkavm-common", default-features = false }
-polkavm-derive            = { path = "./vendor/polkavm/crates/polkavm-derive", default-features = false }
-polkavm-derive-impl       = { path = "./vendor/polkavm/crates/polkavm-derive-impl", default-features = false }
+polkavm-assembler = { path = "./vendor/polkavm/crates/polkavm-assembler", default-features = false }
+polkavm-disassembler = { path = "./vendor/polkavm/crates/polkavm-disassembler", default-features = false }
+polkavm-common = { path = "./vendor/polkavm/crates/polkavm-common", default-features = false }
+polkavm-derive = { path = "./vendor/polkavm/crates/polkavm-derive", default-features = false }
+polkavm-derive-impl = { path = "./vendor/polkavm/crates/polkavm-derive-impl", default-features = false }
 polkavm-derive-impl-macro = { path = "./vendor/polkavm/crates/polkavm-derive-impl-macro", default-features = false }
-polkavm-linker            = { path = "./vendor/polkavm/crates/polkavm-linker", default-features = false }
-polkavm-linux-raw         = { path = "./vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
+polkavm-linker = { path = "./vendor/polkavm/crates/polkavm-linker", default-features = false }
+polkavm-linux-raw = { path = "./vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
 
 # spin
 bp-header-chain = { path = "./vendor/polkadot-sdk/bridges/primitives/header-chain", default-features = false }
@@ -152,13 +154,21 @@ bp-runtime = { path = "./vendor/polkadot-sdk/bridges/primitives/runtime", defaul
 polkadot-parachain-primitives = { path = "./vendor/polkadot-sdk/polkadot/parachain", default-features = false }
 sp-std = { path = "./vendor/polkadot-sdk/substrate/primitives/std", default-features = false }
 sp-trie = { path = "./vendor/polkadot-sdk/substrate/primitives/trie", default-features = false }
+substrate-relay-helper = { path = "./vendor/polkadot-sdk/bridges/relays/lib-substrate-relay", default-features = false }
+relay-utils = { path = "./vendor/polkadot-sdk/bridges/relays/utils", default-features = false }
+relay-substrate-client = { path = "./vendor/polkadot-sdk/bridges/relays/client-substrate", default-features = false }
+bp-bridge-hub-cumulus = { path = "./vendor/polkadot-sdk/bridges/chains/chain-bridge-hub-cumulus", default-features = false }
+bp-polkadot-core = { path = "./vendor/polkadot-sdk/bridges/primitives/polkadot-core", default-features = false }
 
 # hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
 [patch.'https://github.com/w3f/fflonk']
 fflonk = { git = "https://www.github.com/w3f/fflonk", rev = "be95d4c971b1d15b5badfc06ff13f5c07987d484" }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(kani)',
+    'cfg(polkavm_dev_debug_zygote)',
+] }
 
 [workspace.lints.clippy]
 # This also triggers on cases like `.or_insert_with(Vec::new)`.
