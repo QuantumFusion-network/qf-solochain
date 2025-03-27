@@ -268,7 +268,22 @@ pub async fn start_parachain_node(
 	.await
 	.map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
 
+	// from full node
+	let transaction_pool = Arc::from(
+        sc_transaction_pool::Builder::new(
+            task_manager.spawn_essential_handle(),
+            client.clone(),
+            parachain_config.role.is_authority().into(),
+        )
+        .with_options(parachain_config.transaction_pool.clone())
+        .with_prometheus(parachain_config.prometheus_registry())
+        .build(),
+    );
+
 	let validator = parachain_config.role.is_authority();
+    let role = parachain_config.role;
+    let name = parachain_config.network.node_name.clone();
+    let enable_grandpa = !parachain_config.disable_grandpa;
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
 
