@@ -124,6 +124,9 @@ pub mod pallet {
     pub(super) type CodeMetadata<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BlobMetadata<T>>;
 
+    #[pallet::storage]
+    pub(super) type CodeAddress<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
+
     /// Events that functions in this pallet can emit.
     ///
     /// Events are a simple means of indicating to the outside world (such as dApps, chain explorers
@@ -247,6 +250,7 @@ pub mod pallet {
                 Code::<T>::remove(old_contract_address)
             }
             Code::<T>::insert(&contract_address, &raw_blob);
+            CodeAddress::<T>::insert(&who, &contract_address);
             CodeMetadata::<T>::insert(&who, blob_metadata);
 
             Self::deposit_event(Event::ProgramBlobUploaded {
