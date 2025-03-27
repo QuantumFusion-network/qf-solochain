@@ -80,6 +80,13 @@ pub mod pallet {
         version: u64,
     }
 
+    #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+    pub(super) struct ExecResult {
+        result: u64,
+        gas_before: u32,
+        gas_after: i64,
+    }
+
     // The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
     // (`Call`s) in this pallet.
     #[pallet::pallet]
@@ -118,11 +125,15 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type ExecutionResult<T: Config> =
-        StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u64>;
+        StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), ExecResult>;
 
     #[pallet::storage]
     pub(super) type CodeMetadata<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BlobMetadata<T>>;
+
+    #[pallet::storage]
+    pub(super) type CodeAddress<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
     /// Events that functions in this pallet can emit.
     ///
@@ -247,6 +258,7 @@ pub mod pallet {
                 Code::<T>::remove(old_contract_address)
             }
             Code::<T>::insert(&contract_address, &raw_blob);
+            CodeAddress::<T>::insert(&who, &contract_address);
             CodeMetadata::<T>::insert(&who, blob_metadata);
 
             Self::deposit_event(Event::ProgramBlobUploaded {
@@ -342,7 +354,14 @@ pub mod pallet {
 
             sp_runtime::print("====== AFTER CALL ======");
 
-            ExecutionResult::<T>::insert((&contract_address, &who), result);
+            ExecutionResult::<T>::insert(
+                (&contract_address, &who),
+                ExecResult {
+                    result,
+                    gas_before: gas,
+                    gas_after: instance.gas(),
+                },
+            );
 
             // Emit an event.
             Self::deposit_event(Event::ExecutionResult {
