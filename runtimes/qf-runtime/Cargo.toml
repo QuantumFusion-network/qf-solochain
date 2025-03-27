@@ -74,8 +74,8 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 frame-benchmarking = { optional = true, workspace = true }
 frame-system-benchmarking = { optional = true, workspace = true }
 
-# The pallet in this template.
-# pallet-template = { workspace = true }
+# Spin
+pallet-spin = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
@@ -122,7 +122,7 @@ std = [
 	"sp-storage/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
-
+	"pallet-spin/std",
 	"substrate-wasm-builder",
 ]
 

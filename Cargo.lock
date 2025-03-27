@@ -9545,6 +9545,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-spin"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "qfp-consensus-spin",
+ "scale-info",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-spin-polkadot"
 version = "0.1.0"
 dependencies = [
@@ -12659,6 +12676,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-qf-polkavm",
  "pallet-qf-polkavm-dev",
+ "pallet-spin",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
