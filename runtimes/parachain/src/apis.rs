@@ -43,8 +43,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
-// use qfp_consensus_spin::SpinAuxData;
-// use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
+use qfp_consensus_spin::SpinAuxData;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
@@ -70,15 +70,6 @@ impl Runtime {
 }
 
 impl_runtime_apis! {
-	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> sp_consensus_aura::SlotDuration {
-			Runtime::impl_slot_duration()
-		}
-
-		fn authorities() -> Vec<AuraId> {
-			Authorities::<Runtime>::get().into_inner()
-		}
-	}
 
 	impl cumulus_primitives_aura::AuraUnincludedSegmentApi<Block> for Runtime {
 		fn can_build_upon(
@@ -160,18 +151,17 @@ impl_runtime_apis! {
 		}
 	}
 
-	// TODO: needed to fix - not compile with
-    // impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
-    //     fn slot_duration() -> qfp_consensus_spin::SlotDuration {
-    //         qfp_consensus_spin::SlotDuration::from_millis(Aura::slot_duration())
-    //     }
+    impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
+        fn slot_duration() -> qfp_consensus_spin::SlotDuration {
+            qfp_consensus_spin::SlotDuration::from_millis(Aura::slot_duration())
+        }
 
-    //     fn aux_data() -> SpinAuxData<SpinId> {
-    //         let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
+        fn aux_data() -> SpinAuxData<SpinId> {
+            let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
 
-    //         (authorities, crate::SESSION_LENGTH)
-    //     }
-    // }
+            (authorities, crate::SESSION_LENGTH)
+        }
+    }
 
 	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
@@ -351,17 +341,18 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
-			build_state::<RuntimeGenesisConfig>(config)
-		}
+	/// TODO: not compiled with it now
+	// impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+	// 	fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+	// 		build_state::<RuntimeGenesisConfig>(config)
+	// 	}
 
-		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
-			get_preset::<RuntimeGenesisConfig>(id, crate::genesis_config_presets::get_preset)
-		}
+	// 	fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+	// 		get_preset::<RuntimeGenesisConfig>(id, crate::genesis_config_presets::get_preset)
+	// 	}
 
-		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
-			crate::genesis_config_presets::preset_names()
-		}
-	}
+	// 	fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+	// 		crate::genesis_config_presets::preset_names()
+	// 	}
+	// }
 }

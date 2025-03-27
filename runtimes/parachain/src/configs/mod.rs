@@ -55,7 +55,6 @@ use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_runtime_common::{
 	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
 };
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
@@ -150,7 +149,7 @@ impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimes<T> {
 }
 
 impl pallet_aura::Config for Runtime {
-	type AuthorityId = AuraId;
+	type AuthorityId = SpinId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<32>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;

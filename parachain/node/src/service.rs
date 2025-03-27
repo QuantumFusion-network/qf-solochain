@@ -9,6 +9,9 @@ use qf_parachain_runtime::{
 	opaque::{Block, Hash},
 };
 
+use qfc_consensus_spin::{ImportQueueParams, SlotProportion, StartSpinParams};
+use qfp_consensus_spin::sr25519::AuthorityPair as SpinPair;
+
 use polkadot_sdk::*;
 
 // Cumulus Imports
@@ -41,6 +44,10 @@ use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, Ta
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
+
+/// The minimum period of blocks on which justifications will be
+/// imported and generated.
+const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 
 #[docify::export(wasm_executor)]
 type ParachainExecutor = WasmExecutor<ParachainHostFunctions>;
@@ -124,13 +131,55 @@ pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error>
 
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
-	let import_queue = build_import_queue(
-		client.clone(),
-		block_import.clone(),
-		config,
-		telemetry.as_ref().map(|telemetry| telemetry.handle()),
-		&task_manager,
-	);
+    let select_chain = sc_consensus::LongestChain::new(backend.clone());
+
+    let (grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
+        client.clone(),
+        GRANDPA_JUSTIFICATION_PERIOD,
+        &client,
+        select_chain.clone(),
+        telemetry.as_ref().map(|x| x.handle()),
+    )?;
+
+    let cidp_client = client.clone();
+
+	// let import_queue = build_import_queue(
+	// 	client.clone(),
+	// 	block_import.clone(),
+	// 	config,
+	// 	telemetry.as_ref().map(|telemetry| telemetry.handle()),
+	// 	&task_manager,
+	// );
+    let import_queue = qfc_consensus_spin::import_queue::<SpinPair, _, _, _, _, _>(
+        ImportQueueParams {
+            block_import: grandpa_block_import.clone(),
+            justification_import: Some(Box::new(grandpa_block_import.clone())),
+            client: client.clone(),
+            create_inherent_data_providers: move |parent_hash, _| {
+                let cidp_client = cidp_client.clone();
+                async move {
+                    let slot_duration = qfc_consensus_spin::standalone::slot_duration_at(
+                        &*cidp_client,
+                        parent_hash,
+                    )?;
+                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+                    let slot =
+                        qfp_consensus_spin::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                            *timestamp,
+                            slot_duration,
+                        );
+
+                    Ok((slot, timestamp))
+                }
+            },
+            spawner: &task_manager.spawn_essential_handle(),
+            registry: config.prometheus_registry(),
+            check_for_equivocation: Default::default(),
+            telemetry: telemetry.as_ref().map(|x| x.handle()),
+            compatibility_mode: Default::default(),
+        },
+    )?;
 
 	Ok(PartialComponents {
 		backend,
@@ -145,31 +194,31 @@ pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error>
 }
 
 /// Build the import queue for the parachain runtime.
-fn build_import_queue(
-	client: Arc<ParachainClient>,
-	block_import: ParachainBlockImport,
-	config: &Configuration,
-	telemetry: Option<TelemetryHandle>,
-	task_manager: &TaskManager,
-) -> sc_consensus::DefaultImportQueue<Block> {
-	cumulus_client_consensus_aura::equivocation_import_queue::fully_verifying_import_queue::<
-		sp_consensus_aura::sr25519::AuthorityPair,
-		_,
-		_,
-		_,
-		_,
-	>(
-		client,
-		block_import,
-		move |_, _| async move {
-			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-			Ok(timestamp)
-		},
-		&task_manager.spawn_essential_handle(),
-		config.prometheus_registry(),
-		telemetry,
-	)
-}
+// fn build_import_queue(
+// 	client: Arc<ParachainClient>,
+// 	block_import: ParachainBlockImport,
+// 	config: &Configuration,
+// 	telemetry: Option<TelemetryHandle>,
+// 	task_manager: &TaskManager,
+// ) -> sc_consensus::DefaultImportQueue<Block> {
+// 	cumulus_client_consensus_aura::equivocation_import_queue::fully_verifying_import_queue::<
+// 		sp_consensus_aura::sr25519::AuthorityPair,
+// 		_,
+// 		_,
+// 		_,
+// 		_,
+// 	>(
+// 		client,
+// 		block_import,
+// 		move |_, _| async move {
+// 			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+// 			Ok(timestamp)
+// 		},
+// 		&task_manager.spawn_essential_handle(),
+// 		config.prometheus_registry(),
+// 		telemetry,
+// 	)
+// }
 
 #[allow(clippy::too_many_arguments)]
 fn start_consensus(
@@ -196,38 +245,12 @@ fn start_consensus(
 		telemetry.clone(),
 	);
 
-	let proposer = Proposer::new(proposer_factory);
-
 	let collator_service = CollatorService::new(
 		client.clone(),
 		Arc::new(task_manager.spawn_handle()),
 		announce_block,
 		client.clone(),
 	);
-
-	let params = AuraParams {
-		create_inherent_data_providers: move |_, ()| async move { Ok(()) },
-		block_import,
-		para_client: client.clone(),
-		para_backend: backend,
-		relay_client: relay_chain_interface,
-		code_hash_provider: move |block_hash| {
-			client.code_at(block_hash).ok().map(|c| ValidationCode::from(c).hash())
-		},
-		keystore,
-		collator_key,
-		para_id,
-		overseer_handle,
-		relay_chain_slot_duration,
-		proposer,
-		collator_service,
-		authoring_duration: Duration::from_millis(2000),
-		reinitialize: false,
-	};
-	let fut = aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _>(
-		params,
-	);
-	task_manager.spawn_essential_handle().spawn("aura", None, fut);
 
 	Ok(())
 }
@@ -280,6 +303,10 @@ pub async fn start_parachain_node(
         .build(),
     );
 
+    let select_chain = sc_consensus::LongestChain::new(backend.clone());
+
+    let force_authoring = parachain_config.force_authoring;
+    let backoff_authoring_blocks: Option<()> = None;
 	let validator = parachain_config.role.is_authority();
     let role = parachain_config.role;
     let name = parachain_config.network.node_name.clone();
@@ -406,24 +433,54 @@ pub async fn start_parachain_node(
 		sync_service: sync_service.clone(),
 	})?;
 
-	if validator {
-		start_consensus(
-			client.clone(),
-			backend,
-			block_import,
-			prometheus_registry.as_ref(),
-			telemetry.as_ref().map(|t| t.handle()),
-			&task_manager,
-			relay_chain_interface,
-			transaction_pool,
-			params.keystore_container.keystore(),
-			relay_chain_slot_duration,
-			para_id,
-			collator_key.expect("Command line arguments do not allow this. qed"),
-			overseer_handle,
-			announce_block,
-		)?;
-	}
+    if validator {
+        let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+            task_manager.spawn_handle(),
+            client.clone(),
+            transaction_pool.clone(),
+            prometheus_registry.as_ref(),
+            telemetry.as_ref().map(|x| x.handle()),
+        );
+
+        let slot_duration = qfc_consensus_spin::slot_duration(&*client)?;
+		let spin_client = client.clone();
+
+        let spin = qfc_consensus_spin::start_spin::<SpinPair, _, _, _, _, _, _, _, _, _, _>(
+            StartSpinParams {
+                slot_duration,
+                client: spin_client,
+                select_chain,
+                block_import,
+                proposer_factory,
+                create_inherent_data_providers: move |_, ()| async move {
+                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+                    let slot =
+                        qfp_consensus_spin::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                            *timestamp,
+                            slot_duration,
+                        );
+
+                    Ok((slot, timestamp))
+                },
+                force_authoring,
+                backoff_authoring_blocks,
+                keystore: params.keystore_container.keystore(),
+                sync_oracle: sync_service.clone(),
+                justification_sync_link: sync_service.clone(),
+                block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
+                max_block_proposal_slot_portion: None,
+                telemetry: telemetry.as_ref().map(|x| x.handle()),
+                compatibility_mode: Default::default(),
+            },
+        )?;
+
+        // the SPIN authoring task is considered essential, i.e. if it
+        // fails we take down the service with it.
+        task_manager
+            .spawn_essential_handle()
+            .spawn_blocking("spin", Some("block-authoring"), spin);
+    }
 
 	Ok((task_manager, client))
 }
