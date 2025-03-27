@@ -125,7 +125,8 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AccountId, BlobMetadata<T>>;
 
     #[pallet::storage]
-    pub(super) type CodeAddress<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
+    pub(super) type CodeAddress<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
     /// Events that functions in this pallet can emit.
     ///
