@@ -20,11 +20,14 @@
 #![cfg(test)]
 
 use super::pallet;
-use crate::mock::{build_ext_and_execute_test, Aura, MockDisabledValidators, System, Test};
+use crate::mock::{
+    DEFAULT_SESSION_LENGTH, MockDisabledValidators, RuntimeOrigin, Spin, System, Test,
+    build_ext_and_execute_test,
+};
 use codec::Encode;
-use frame_support::traits::OnInitialize;
-use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
-use sp_runtime::{Digest, DigestItem};
+use frame_support::{assert_err, assert_ok, traits::OnInitialize};
+use qfp_consensus_spin::{SPIN_ENGINE_ID, Slot};
+use sp_runtime::{Digest, DigestItem, traits::BadOrigin};
 
 #[test]
 fn initial_values() {
@@ -32,9 +35,28 @@ fn initial_values() {
         assert_eq!(pallet::CurrentSlot::<Test>::get(), 0u64);
         assert_eq!(
             pallet::Authorities::<Test>::get().len(),
-            Aura::authorities_len()
+            Spin::authorities_len()
         );
-        assert_eq!(Aura::authorities_len(), 4);
+        assert_eq!(Spin::authorities_len(), 4);
+    });
+}
+
+#[test]
+fn session_length_works() {
+    build_ext_and_execute_test(vec![0, 1, 2, 3], || {
+        assert_eq!(pallet::SessionLength::<Test>::get(), DEFAULT_SESSION_LENGTH);
+
+        assert_err!(
+            Spin::set_session_length(RuntimeOrigin::signed(1), 10000),
+            BadOrigin,
+        );
+
+        let new_session_length = 1000;
+        assert_ok!(Spin::set_session_length(
+            RuntimeOrigin::root(),
+            new_session_length
+        ));
+        assert_eq!(pallet::SessionLength::<Test>::get(), new_session_length);
     });
 }
 
@@ -47,7 +69,7 @@ fn disabled_validators_cannot_author_blocks() {
         // slot 1 should be authored by validator at index 1
         let slot = Slot::from(1);
         let pre_digest = Digest {
-            logs: vec![DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())],
+            logs: vec![DigestItem::PreRuntime(SPIN_ENGINE_ID, slot.encode())],
         };
 
         System::reset_events();
@@ -57,7 +79,7 @@ fn disabled_validators_cannot_author_blocks() {
         MockDisabledValidators::disable_validator(1);
 
         // and we should not be able to initialize the block
-        Aura::on_initialize(42);
+        Spin::on_initialize(42);
     });
 }
 
@@ -69,15 +91,15 @@ fn pallet_requires_slot_to_increase_unless_allowed() {
 
         let slot = Slot::from(1);
         let pre_digest = Digest {
-            logs: vec![DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())],
+            logs: vec![DigestItem::PreRuntime(SPIN_ENGINE_ID, slot.encode())],
         };
 
         System::reset_events();
         System::initialize(&42, &System::parent_hash(), &pre_digest);
 
         // and we should not be able to initialize the block with the same slot a second time.
-        Aura::on_initialize(42);
-        Aura::on_initialize(42);
+        Spin::on_initialize(42);
+        Spin::on_initialize(42);
     });
 }
 
@@ -86,7 +108,7 @@ fn pallet_can_allow_unchanged_slot() {
     build_ext_and_execute_test(vec![0, 1, 2, 3], || {
         let slot = Slot::from(1);
         let pre_digest = Digest {
-            logs: vec![DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())],
+            logs: vec![DigestItem::PreRuntime(SPIN_ENGINE_ID, slot.encode())],
         };
 
         System::reset_events();
@@ -95,8 +117,8 @@ fn pallet_can_allow_unchanged_slot() {
         crate::mock::AllowMultipleBlocksPerSlot::set(true);
 
         // and we should be able to initialize the block with the same slot a second time.
-        Aura::on_initialize(42);
-        Aura::on_initialize(42);
+        Spin::on_initialize(42);
+        Spin::on_initialize(42);
     });
 }
 
@@ -106,7 +128,7 @@ fn pallet_always_rejects_decreasing_slot() {
     build_ext_and_execute_test(vec![0, 1, 2, 3], || {
         let slot = Slot::from(2);
         let pre_digest = Digest {
-            logs: vec![DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())],
+            logs: vec![DigestItem::PreRuntime(SPIN_ENGINE_ID, slot.encode())],
         };
 
         System::reset_events();
@@ -114,17 +136,17 @@ fn pallet_always_rejects_decreasing_slot() {
 
         crate::mock::AllowMultipleBlocksPerSlot::set(true);
 
-        Aura::on_initialize(42);
+        Spin::on_initialize(42);
         System::finalize();
 
         let earlier_slot = Slot::from(1);
         let pre_digest = Digest {
             logs: vec![DigestItem::PreRuntime(
-                AURA_ENGINE_ID,
+                SPIN_ENGINE_ID,
                 earlier_slot.encode(),
             )],
         };
         System::initialize(&43, &System::parent_hash(), &pre_digest);
-        Aura::on_initialize(43);
+        Spin::on_initialize(43);
     });
 }

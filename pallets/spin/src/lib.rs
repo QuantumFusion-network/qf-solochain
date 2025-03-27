@@ -15,27 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Aura Module
-//!
-//! - [`Config`]
-//! - [`Pallet`]
-//!
-//! ## Overview
-//!
-//! The Aura module extends Aura consensus by managing offline reporting.
-//!
-//! ## Interface
-//!
-//! ### Public Functions
-//!
-//! - `slot_duration` - Determine the Aura slot-duration based on the Timestamp module
-//!   configuration.
-//!
-//! ## Related Modules
-//!
-//! - [Timestamp](../pallet_timestamp/index.html): The Timestamp module is used in Aura to track
-//! consensus rounds (via `slots`).
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -47,7 +26,10 @@ use frame_support::{
     traits::{DisabledValidators, FindAuthor, Get, OnTimestampSet, OneSessionHandler},
 };
 use log;
-use sp_consensus_aura::{AURA_ENGINE_ID, AuthorityIndex, ConsensusLog, Slot};
+use qfp_consensus_spin::{
+    AuthorityIndex, ConsensusLog, SPIN_ENGINE_ID, SessionLength as SessionLengthT, Slot,
+    SpinAuxData,
+};
 use sp_runtime::{
     RuntimeAppPublic,
     generic::DigestItem,
@@ -59,13 +41,13 @@ mod tests;
 
 pub use pallet::*;
 
-const LOG_TARGET: &str = "runtime::aura";
+const LOG_TARGET: &str = "runtime::spin";
 
 /// A slot duration provider which infers the slot duration from the
 /// [`pallet_timestamp::Config::MinimumPeriod`] by multiplying it by two, to ensure
 /// that authors have the majority of their slot to author within.
 ///
-/// This was the default behavior of the Aura pallet and may be used for
+/// This was the default behavior of the SPIN pallet and may be used for
 /// backwards compatibility.
 pub struct MinimumPeriodTimesTwo<T>(core::marker::PhantomData<T>);
 
@@ -83,6 +65,9 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: pallet_timestamp::Config + frame_system::Config {
+        /// The overarching event type.
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
         /// The identifier type for an authority.
         type AuthorityId: Member
             + Parameter
@@ -111,12 +96,16 @@ pub mod pallet {
         /// using the same slot.
         type AllowMultipleBlocksPerSlot: Get<bool>;
 
-        /// The slot duration Aura should run with, expressed in milliseconds.
+        /// The slot duration SPIN should run with, expressed in milliseconds.
         /// The effective value of this type should not change while the chain is running.
         ///
         /// For backwards compatibility either use [`MinimumPeriodTimesTwo`] or a const.
         #[pallet::constant]
         type SlotDuration: Get<<Self as pallet_timestamp::Config>::Moment>;
+
+        /// Default session length in blocks.
+        #[pallet::constant]
+        type DefaultSessionLength: Get<SessionLengthT>;
     }
 
     #[pallet::pallet]
@@ -172,6 +161,13 @@ pub mod pallet {
     #[pallet::storage]
     pub type CurrentSlot<T: Config> = StorageValue<_, Slot, ValueQuery>;
 
+    /// Session length in blocks
+    ///
+    /// Selected leader produces blocks for `SessionLength` blocks.
+    #[pallet::storage]
+    pub type SessionLength<T: Config> =
+        StorageValue<_, SessionLengthT, ValueQuery, T::DefaultSessionLength>;
+
     #[pallet::genesis_config]
     #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
@@ -184,13 +180,53 @@ pub mod pallet {
             Pallet::<T>::initialize_authorities(&self.authorities);
         }
     }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Zero session length.
+        SessionLengthZero,
+    }
+
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// New session length set.
+        NewSessionLength(SessionLengthT),
+    }
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// Set new session length.
+        ///
+        /// Origin must be root.
+        #[pallet::call_index(0)]
+        #[pallet::weight(T::DbWeight::get().reads_writes(0, 1))]
+        pub fn set_session_length(
+            origin: OriginFor<T>,
+            session_len: SessionLengthT,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            // Ensure the session length is not zero.
+            ensure!(
+                !session_len.is_zero(),
+                "Session length must be greater than zero."
+            );
+
+            SessionLength::<T>::put(session_len);
+
+            Self::deposit_event(Event::NewSessionLength(session_len));
+
+            Ok(())
+        }
+    }
 }
 
 impl<T: Config> Pallet<T> {
     /// Change authorities.
     ///
     /// The storage will be applied immediately.
-    /// And aura consensus log will be appended to block's log.
+    /// And SPIN consensus log will be appended to block's log.
     ///
     /// This is a no-op if `new` is empty.
     pub fn change_authorities(new: BoundedVec<T::AuthorityId, T::MaxAuthorities>) {
@@ -203,7 +239,7 @@ impl<T: Config> Pallet<T> {
         <Authorities<T>>::put(&new);
 
         let log = DigestItem::Consensus(
-            AURA_ENGINE_ID,
+            SPIN_ENGINE_ID,
             ConsensusLog::AuthoritiesChange(new.into_inner()).encode(),
         );
         <frame_system::Pallet<T>>::deposit_log(log);
@@ -236,7 +272,7 @@ impl<T: Config> Pallet<T> {
         let digest = frame_system::Pallet::<T>::digest();
         let pre_runtime_digests = digest.logs.iter().filter_map(|d| d.as_pre_runtime());
         for (id, mut data) in pre_runtime_digests {
-            if id == AURA_ENGINE_ID {
+            if id == SPIN_ENGINE_ID {
                 return Slot::decode(&mut data).ok();
             }
         }
@@ -244,9 +280,16 @@ impl<T: Config> Pallet<T> {
         None
     }
 
-    /// Determine the Aura slot-duration based on the Timestamp module configuration.
+    /// Determine the SPIN slot-duration based on the Timestamp module configuration.
     pub fn slot_duration() -> T::Moment {
         T::SlotDuration::get()
+    }
+
+    /// Auxiliary data for SPIN.
+    pub fn aux_data() -> SpinAuxData<T::AuthorityId> {
+        let authorities = Authorities::<T>::get();
+        let session_length = SessionLength::<T>::get();
+        (authorities.into_inner(), session_length)
     }
 
     /// Ensure the correctness of the state of this pallet.
@@ -338,7 +381,7 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 
     fn on_disabled(i: u32) {
         let log = DigestItem::Consensus(
-            AURA_ENGINE_ID,
+            SPIN_ENGINE_ID,
             ConsensusLog::<T::AuthorityId>::OnDisabled(i as AuthorityIndex).encode(),
         );
 
@@ -352,7 +395,7 @@ impl<T: Config> FindAuthor<u32> for Pallet<T> {
         I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
     {
         for (id, mut data) in digests.into_iter() {
-            if id == AURA_ENGINE_ID {
+            if id == SPIN_ENGINE_ID {
                 let slot = Slot::decode(&mut data).ok()?;
                 let author_index = *slot % Self::authorities_len() as u64;
                 return Some(author_index as u32);
@@ -382,8 +425,8 @@ impl<T: Config, Inner: FindAuthor<u32>> FindAuthor<T::AuthorityId>
     }
 }
 
-/// Find the authority ID of the Aura authority who authored the current block.
-pub type AuraAuthorId<T> = FindAccountFromAuthorIndex<T, Pallet<T>>;
+/// Find the authority ID of the SPIN authority who authored the current block.
+pub type SpinAuthorId<T> = FindAccountFromAuthorIndex<T, Pallet<T>>;
 
 impl<T: Config> IsMember<T::AuthorityId> for Pallet<T> {
     fn is_member(authority_id: &T::AuthorityId) -> bool {
@@ -396,7 +439,7 @@ impl<T: Config> OnTimestampSet<T::Moment> for Pallet<T> {
         let slot_duration = Self::slot_duration();
         assert!(
             !slot_duration.is_zero(),
-            "Aura slot duration cannot be zero."
+            "SPIN slot duration cannot be zero."
         );
 
         let timestamp_slot = moment / slot_duration;
@@ -406,7 +449,7 @@ impl<T: Config> OnTimestampSet<T::Moment> for Pallet<T> {
             CurrentSlot::<T>::get(),
             timestamp_slot,
             "Timestamp slot must match `CurrentSlot`. This likely means that the configured block \
-			time in the node and/or rest of the runtime is not compatible with Aura's \
+			time in the node and/or rest of the runtime is not compatible with SPIN's \
 			`SlotDuration`",
         );
     }

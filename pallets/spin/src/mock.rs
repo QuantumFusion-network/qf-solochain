@@ -19,13 +19,13 @@
 
 #![cfg(test)]
 
-use crate as pallet_aura;
+use crate as pallet_spin;
 use frame_support::{
     derive_impl, parameter_types,
     traits::{ConstU32, ConstU64, DisabledValidators},
 };
-use sp_consensus_aura::{ed25519::AuthorityId, AuthorityIndex};
-use sp_runtime::{testing::UintAuthorityId, BuildStorage};
+use qfp_consensus_spin::{AuthorityIndex, ed25519::AuthorityId};
+use sp_runtime::{BuildStorage, testing::UintAuthorityId};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -36,7 +36,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system,
         Timestamp: pallet_timestamp,
-        Aura: pallet_aura,
+        Spin: pallet_spin,
     }
 );
 
@@ -47,7 +47,7 @@ impl frame_system::Config for Test {
 
 impl pallet_timestamp::Config for Test {
     type Moment = u64;
-    type OnTimestampSet = Aura;
+    type OnTimestampSet = Spin;
     type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
     type WeightInfo = ();
 }
@@ -81,19 +81,22 @@ impl DisabledValidators for MockDisabledValidators {
     }
 }
 
-impl pallet_aura::Config for Test {
+pub(super) const DEFAULT_SESSION_LENGTH: u32 = 4;
+impl pallet_spin::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type AuthorityId = AuthorityId;
     type DisabledValidators = MockDisabledValidators;
     type MaxAuthorities = ConstU32<10>;
     type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
     type SlotDuration = ConstU64<SLOT_DURATION>;
+    type DefaultSessionLength = ConstU32<DEFAULT_SESSION_LENGTH>;
 }
 
 fn build_ext(authorities: Vec<u64>) -> sp_io::TestExternalities {
     let mut storage = frame_system::GenesisConfig::<Test>::default()
         .build_storage()
         .unwrap();
-    pallet_aura::GenesisConfig::<Test> {
+    pallet_spin::GenesisConfig::<Test> {
         authorities: authorities
             .into_iter()
             .map(|a| UintAuthorityId(a).to_public_key())
@@ -108,6 +111,6 @@ pub fn build_ext_and_execute_test(authorities: Vec<u64>, test: impl FnOnce() -> 
     let mut ext = build_ext(authorities);
     ext.execute_with(|| {
         test();
-        Aura::do_try_state().expect("Storage invariants should hold")
+        Spin::do_try_state().expect("Storage invariants should hold")
     });
 }

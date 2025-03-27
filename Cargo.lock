@@ -12670,7 +12670,6 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "pallet-aura",
  "pallet-balances",
  "pallet-faucet",
  "pallet-grandpa",

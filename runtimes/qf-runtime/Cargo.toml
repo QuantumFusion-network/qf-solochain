@@ -29,7 +29,6 @@ frame-executive = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
 
 # frame pallets
-pallet-aura = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-sudo = { workspace = true }
@@ -88,18 +87,14 @@ default = ["std"]
 std = [
 	"codec/std",
 	"scale-info/std",
-
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
-
 	"frame-benchmarking?/std",
 	"frame-try-runtime?/std",
-
-	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
 	"pallet-sudo/std",
@@ -145,7 +140,6 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
-	"pallet-aura/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-sudo/try-runtime",
