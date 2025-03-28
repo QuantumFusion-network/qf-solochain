@@ -1,6 +1,6 @@
 [package]
 name = "qf-node"
-description = "Quantum Fusion solochain node"
+description = "A parachain node built with Substrate and Cumulus. From commit 3793fc3444e28d309e67513fda5afe153a2aa928 at https://github.com/QuantumFusion-network/polkadot-sdk"
 version = "0.1.10"
 license.workspace = true
 authors.workspace = true
@@ -8,11 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 edition.workspace = true
 publish = false
-
 build = "build.rs"
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 clap = { features = ["derive"], workspace = true }
@@ -24,9 +20,10 @@ jsonrpsee = { features = ["server"], workspace = true }
 log = { workspace = true, default-features = true }
 serde = { features = ["derive"], workspace = true, default-features = true }
 serde_json = { workspace = true, default-features = true }
+
 polkadot-sdk = { workspace = true, features = ["node"] }
 
-# Parachain
+# Substrate
 prometheus-endpoint = { workspace = true, default-features = true }
 sc-tracing = { workspace = true, default-features = true }
 
@@ -69,11 +66,10 @@ substrate-frame-rpc-system = { workspace = true, default-features = true }
 # These dependencies are used for runtime benchmarking
 frame-benchmarking-cli = { workspace = true, default-features = true }
 
-# Local Dependencies
 qf-runtime = { workspace = true }
 
 [build-dependencies]
-substrate-build-script-utils = { workspace = true, default-features = true }
+polkadot-sdk = { workspace = true, features = ["substrate-build-script-utils"] }
 
 [features]
 default = ["std"]
@@ -82,7 +78,6 @@ std = [
 	"qf-runtime/std",
 	"polkadot-sdk/std",
 ]
-# Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
@@ -91,8 +86,6 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"polkadot-sdk/runtime-benchmarks",
 ]
-# Enable features that allow the runtime to be tried and debugged. Name might be subject to change
-# in the near future.
 try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-transaction-payment/try-runtime",

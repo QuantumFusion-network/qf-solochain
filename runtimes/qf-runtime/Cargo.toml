@@ -1,7 +1,7 @@
 [package]
 name = "qf-runtime"
-description = "Quantum Fusion solochain runtime"
-version = "0.4.0"
+description = "A parachain runtime built with Substrate and Cumulus."
+version = "0.1.0"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -11,15 +11,12 @@ publish = false
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
 [dependencies]
 codec = { features = ["derive"], workspace = true }
+docify = { workspace = true }
 hex-literal = { optional = true, workspace = true, default-features = true }
 log = { workspace = true }
-scale-info = { features = [
-	"derive",
-	"serde",
-], workspace = true }
+scale-info = { features = ["derive", "serde"], workspace = true }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 smallvec = { workspace = true, default-features = true }
 
@@ -117,10 +114,10 @@ frame-system-benchmarking = { optional = true, workspace = true }
 # pallet-template = { workspace = true }
 
 [build-dependencies]
+docify = { workspace = true }
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
 
-[dev-dependencies]
-sp-io = { workspace = true }
+
 
 [features]
 default = ["std"]
