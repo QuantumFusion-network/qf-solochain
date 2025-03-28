@@ -9546,7 +9546,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-spin"
-version = "1.0.0"
+version = "0.0.1"
 dependencies = [
  "frame-support",
  "frame-system",

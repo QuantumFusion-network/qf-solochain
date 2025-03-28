@@ -5,4 +5,3 @@
 [submodule "vendor/polkadot-sdk"]
 	path = vendor/polkadot-sdk
 	url = https://github.com/QuantumFusion-network/polkadot-sdk
-	rev = "3793fc3444e28d309e67513fda5afe153a2aa928"
