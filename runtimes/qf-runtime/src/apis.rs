@@ -44,7 +44,7 @@ use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 // Local module imports
 use super::{
     AccountId, Aura, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
-    RuntimeCall, RuntimeGenesisConfig, SessionKeys, System, TransactionPayment, VERSION,
+    RuntimeCall, RuntimeGenesisConfig, SessionKeys, Staking, System, TransactionPayment, VERSION,
 };
 
 impl_runtime_apis! {
@@ -122,6 +122,20 @@ impl_runtime_apis! {
             let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
 
             (authorities, crate::SESSION_LENGTH)
+        }
+    }
+
+    impl pallet_staking_runtime_api::StakingApi<Block, Balance, AccountId> for Runtime {
+        fn nominations_quota(balance: Balance) -> u32 {
+            Staking::api_nominations_quota(balance)
+        }
+
+        fn eras_stakers_page_count(era: sp_staking::EraIndex, account: AccountId) -> sp_staking::Page {
+            Staking::api_eras_stakers_page_count(era, account)
+        }
+
+        fn pending_rewards(era: sp_staking::EraIndex, account: AccountId) -> bool {
+            Staking::api_pending_rewards(era, account)
         }
     }
 

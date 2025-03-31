@@ -26,13 +26,16 @@
 // Substrate and Polkadot dependencies
 use frame_support::{
     derive_impl, parameter_types,
-    traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, VariantCountOf},
+    traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, Nothing, VariantCountOf},
     weights::{
         IdentityFee, Weight,
         constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
     },
 };
-use frame_system::limits::{BlockLength, BlockWeights};
+use frame_system::{
+    EnsureRoot,
+    limits::{BlockLength, BlockWeights},
+};
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
@@ -47,7 +50,7 @@ use crate::SESSION_LENGTH;
 use super::{
     AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
     PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, VERSION,
+    RuntimeOrigin, RuntimeTask, SLOT_DURATION, System, Timestamp, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -101,6 +104,65 @@ impl pallet_aura::Config for Runtime {
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;
     type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
+}
+
+// TODO: add phragmen
+// pub struct OnChainSeqPhragmen;
+// impl onchain::Config for OnChainSeqPhragmen {
+// 	type Sort = ConstBool<true>;
+// 	type System = Runtime;
+// 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
+// 	type DataProvider = Staking;
+// 	type WeightInfo = weights::frame_election_provider_support::WeightInfo<Runtime>;
+// 	type Bounds = ElectionBounds;
+// 	type MaxBackersPerWinner = MaxBackersPerWinner;
+// 	type MaxWinnersPerPage = MaxWinnersPerPage;
+// }
+
+parameter_types! {
+    pub const SessionsPerEra: sp_staking::SessionIndex = 6;
+    pub const BondingDuration: sp_staking::EraIndex = 28;
+    pub const SlashDeferDuration: sp_staking::EraIndex = 1;
+}
+
+/// Upper limit on the number of NPOS nominations.
+const MAX_QUOTA_NOMINATIONS: u32 = 16;
+
+impl pallet_staking::Config for Runtime {
+    type OldCurrency = Balances;
+    type Currency = Balances;
+    type CurrencyBalance = Balance;
+    type UnixTime = Timestamp;
+    type CurrencyToVote = sp_staking::currency_to_vote::U128CurrencyToVote;
+    type RewardRemainder = ();
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type Slash = ();
+    type Reward = (); // rewards are minted from the void
+    type SessionsPerEra = SessionsPerEra;
+    type BondingDuration = BondingDuration;
+    type SlashDeferDuration = SlashDeferDuration;
+    type AdminOrigin = EnsureRoot<AccountId>; // TODO: add staking admin?
+    type SessionInterface = Self;
+    // type EraPayout = pallet_staking::ConvertCurve<RewardCurve>; // TODO: define RewardCurve
+    // type NextNewSession = Session; // TODO: ass Session pallet
+    // type MaxExposurePageSize = multi_block_impls::MaxExposurePageSize;
+    // type MaxValidatorSet = multi_block_impls::MaxWinnersPerPage;
+    // type ElectionProvider = MultiElectionProvider;
+    // type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
+    type VoterList = pallet_staking::UseNominatorsAndValidatorsMap<Self>;
+    type NominationsQuota = pallet_staking::FixedNominationsQuota<MAX_QUOTA_NOMINATIONS>;
+    // This a placeholder, to be introduced in the next PR as an instance of bags-list
+    type TargetList = pallet_staking::UseValidatorsMap<Self>;
+    type MaxUnlockingChunks = ConstU32<32>;
+    type MaxControllersInDeprecationBatch = ConstU32<5900>;
+    type HistoryDepth = ConstU32<32>;
+    // type EventListeners = (NominationPools, DelegatedStaking);
+    type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
+    type BenchmarkingConfig = StakingBenchmarkingConfig;
+    type MaxInvulnerables = ConstU32<20>;
+    type MaxDisabledValidators = ConstU32<100>;
+    type Filter = Nothing;
 }
 
 impl pallet_grandpa::Config for Runtime {

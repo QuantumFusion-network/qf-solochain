@@ -32,6 +32,7 @@ frame-metadata-hash-extension = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
+pallet-staking = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -65,9 +66,11 @@ sp-version = { features = [
 	"serde",
 ], workspace = true }
 sp-genesis-builder = { workspace = true }
+sp-staking = { workspace = true }
 
 # RPC related
 frame-system-rpc-runtime-api = { workspace = true }
+pallet-staking-runtime-api = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 
 # Used for runtime benchmarking
