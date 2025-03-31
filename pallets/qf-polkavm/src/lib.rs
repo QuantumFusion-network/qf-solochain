@@ -332,7 +332,8 @@ pub mod pallet {
 
             sp_runtime::print("====== BEFORE CALL ======");
 
-            let result = instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
+            let result =
+                instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
 
             let result = match result {
                 Err(CallError::NotEnoughGas) => Err(Error::<T>::PolkaVMNotEnoughGas)?,
