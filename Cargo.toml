@@ -90,6 +90,7 @@ substrate-build-script-utils = { path = "vendor/polkadot-sdk/substrate/utils/bui
 # this is a frame-based runtime, thus importing `frame` with runtime feature enabled.
 frame = { path = "vendor/polkadot-sdk/substrate/frame", default-features = false, package = "polkadot-sdk-frame" }
 frame-system = { path = "vendor/polkadot-sdk/substrate/frame/system", default-features = false }
+frame-election-provider-support = { path = "vendor/polkadot-sdk/substrate/frame/election-provider-support", default-features = false }
 frame-executive = { path = "vendor/polkadot-sdk/substrate/frame/executive", default-features = false }
 frame-try-runtime = { path = "vendor/polkadot-sdk/substrate/frame/try-runtime", default-features = false }
 frame-support = { path = "vendor/polkadot-sdk/substrate/frame/support", default-features = false }
@@ -103,7 +104,6 @@ cumulus-primitives-aura = { path = "vendor/polkadot-sdk/cumulus/primitives/aura"
 
 pallet-aura = { path = "vendor/polkadot-sdk/substrate/frame/aura", default-features = false }
 pallet-grandpa = { path = "vendor/polkadot-sdk/substrate/frame/grandpa", default-features = false }
-pallet-staking = { path = "vendor/polkadot-sdk/substrate/frame/staking", default-features = false }
 pallet-template = { path = "vendor/polkadot-sdk/substrate/frame/template", default-features = false }
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
@@ -129,6 +129,9 @@ prometheus-endpoint = { package = "substrate-prometheus-endpoint", path = "vendo
 
 # pallets that we want to use
 pallet-balances = { path = "vendor/polkadot-sdk/substrate/frame/balances", default-features = false }
+pallet-session = { path = "vendor/polkadot-sdk/substrate/frame/session", default-features = false }
+pallet-staking = { path = "vendor/polkadot-sdk/substrate/frame/staking", default-features = false }
+pallet-staking-reward-curve = { path = "vendor/polkadot-sdk/substrate/frame/staking/reward-curve", default-features = false }
 pallet-staking-runtime-api = { path = "vendor/polkadot-sdk/substrate/frame/staking/runtime-api", default-features = false }
 pallet-sudo = { path = "vendor/polkadot-sdk/substrate/frame/sudo", default-features = false }
 pallet-timestamp = { path = "vendor/polkadot-sdk/substrate/frame/timestamp", default-features = false }

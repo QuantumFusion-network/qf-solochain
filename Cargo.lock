@@ -9617,6 +9617,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-staking-reward-curve"
+version = "11.0.0"
+dependencies = [
+ "proc-macro-crate 3.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.99",
+]
+
+[[package]]
 name = "pallet-staking-reward-fn"
 version = "19.0.0"
 dependencies = [
@@ -12646,6 +12656,7 @@ name = "qf-runtime"
 version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
+ "frame-election-provider-support",
  "frame-executive",
  "frame-metadata-hash-extension",
  "frame-support",
@@ -12659,7 +12670,9 @@ dependencies = [
  "pallet-grandpa",
  "pallet-qf-polkavm",
  "pallet-qf-polkavm-dev",
+ "pallet-session",
  "pallet-staking",
+ "pallet-staking-reward-curve",
  "pallet-staking-runtime-api",
  "pallet-sudo",
  "pallet-timestamp",

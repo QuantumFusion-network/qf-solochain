@@ -213,23 +213,26 @@ mod runtime {
     pub type Staking = pallet_staking;
 
     #[runtime::pallet_index(4)]
-    pub type Grandpa = pallet_grandpa;
+	pub type Session = pallet_session;
 
     #[runtime::pallet_index(5)]
-    pub type Balances = pallet_balances;
+    pub type Grandpa = pallet_grandpa;
 
     #[runtime::pallet_index(6)]
-    pub type TransactionPayment = pallet_transaction_payment;
+    pub type Balances = pallet_balances;
 
     #[runtime::pallet_index(7)]
-    pub type Sudo = pallet_sudo;
+    pub type TransactionPayment = pallet_transaction_payment;
 
     #[runtime::pallet_index(8)]
-    pub type QFPolkaVM = pallet_qf_polkavm;
+    pub type Sudo = pallet_sudo;
 
     #[runtime::pallet_index(9)]
-    pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
+    pub type QFPolkaVM = pallet_qf_polkavm;
 
     #[runtime::pallet_index(10)]
+    pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
+
+    #[runtime::pallet_index(11)]
     pub type Faucet = pallet_faucet;
 }
