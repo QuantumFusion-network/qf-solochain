@@ -282,11 +282,13 @@ pub mod pallet {
             contract_address: T::AccountId,
             to: T::AccountId,
             value: BalanceOf<T>,
-            op: u8,
+            op: u32,
             gas: u32,
         ) -> DispatchResult {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
+
+            ensure!(op >= 0 && op <= 5, Error::<T>::InvalidOperation);
 
             let max_gas = <T as Config>::MaxGas::get()
                 .try_into()
@@ -330,20 +332,8 @@ pub mod pallet {
 
             sp_runtime::print("====== BEFORE CALL ======");
 
-            let result = match op {
-                0 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_transfer", ()),
-                1 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_balance", ()),
-                2 => {
-                    instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_balance_of", ())
-                }
-                3 => instance.call_typed_and_get_result::<u64, ()>(&mut state, "call_print", ()),
-                4 => instance.call_typed_and_get_result::<u64, ()>(
-                    &mut state,
-                    "call_block_number",
-                    (),
-                ),
-                _ => Err(Error::<T>::InvalidOperation)?,
-            };
+            let result =
+                instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
 
             let result = match result {
                 Err(CallError::NotEnoughGas) => Err(Error::<T>::PolkaVMNotEnoughGas)?,
