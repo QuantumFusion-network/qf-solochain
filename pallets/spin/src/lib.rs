@@ -195,10 +195,7 @@ pub mod pallet {
             ensure_root(origin)?;
 
             // Ensure the session length is not zero.
-            ensure!(
-                !session_len.is_zero(),
-                "Session length must be greater than zero."
-            );
+            ensure!(!session_len.is_zero(), Error::<T>::SessionLengthZero);
 
             SessionLength::<T>::put(session_len);
 

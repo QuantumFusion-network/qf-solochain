@@ -103,7 +103,6 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-
 	"sp-api/std",
 	"sp-block-builder/std",
 	"qfp-consensus-spin/std",
@@ -148,6 +147,8 @@ try-runtime = [
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
+	# TODO: enable try-runtime for pallet-spin
+	"pallet-spin/try-runtime",
 ]
 
 # Enable the metadata hash generation.
