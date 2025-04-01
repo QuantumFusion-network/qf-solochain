@@ -54,8 +54,7 @@ pub mod ed25519 {
 pub use sp_consensus_slots::{Slot, SlotDuration};
 
 /// The `ConsensusEngineId` of SPIN.
-/// TODO: this should be changed as well, once we have a fork of `pallet-aura`
-pub const SPIN_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
+pub const SPIN_ENGINE_ID: ConsensusEngineId = *b"spin";
 
 /// The index of an authority.
 pub type AuthorityIndex = u32;

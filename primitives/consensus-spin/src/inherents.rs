@@ -6,7 +6,7 @@
 use sp_inherents::{Error, InherentData, InherentIdentifier};
 
 /// The SPIN inherent identifier.
-pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"auraslot";
+pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"spinslot";
 
 /// The type of the SPIN inherent.
 pub type InherentType = sp_consensus_slots::Slot;
