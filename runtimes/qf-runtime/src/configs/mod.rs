@@ -128,11 +128,6 @@ impl pallet_session::Config for Runtime {
     type SessionManager = Staking;
 }
 
-impl pallet_session::historical::Config for Runtime {
-    type FullIdentification = ();
-    type FullIdentificationOf = pallet_staking::NullIdentity;
-}
-
 pallet_staking_reward_curve::build! {
     const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
         min_inflation: 0_025_000,
@@ -174,8 +169,8 @@ impl onchain::Config for OnChainSeqPhragmen {
 }
 
 parameter_types! {
-    pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-    pub const BondingDuration: sp_staking::EraIndex = 24 * 28;
+    pub const SessionsPerEra: sp_staking::SessionIndex = 3;
+    pub const BondingDuration: sp_staking::EraIndex = 3;
     pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
     pub const MaxNominators: u32 = 64;
@@ -208,7 +203,7 @@ impl pallet_staking::Config for Runtime {
     type BondingDuration = BondingDuration;
     type SlashDeferDuration = SlashDeferDuration;
     type AdminOrigin = EnsureRoot<AccountId>;
-    type SessionInterface = Self;
+    type SessionInterface = ();
     type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
     type NextNewSession = Session;
     type MaxExposurePageSize = ConstU32<64>;

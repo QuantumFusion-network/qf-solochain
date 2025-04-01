@@ -210,29 +210,29 @@ mod runtime {
     pub type Aura = pallet_aura;
 
     #[runtime::pallet_index(3)]
-    pub type Staking = pallet_staking;
-
-    #[runtime::pallet_index(4)]
-    pub type Session = pallet_session;
-
-    #[runtime::pallet_index(5)]
     pub type Grandpa = pallet_grandpa;
 
-    #[runtime::pallet_index(6)]
+    #[runtime::pallet_index(4)]
     pub type Balances = pallet_balances;
 
-    #[runtime::pallet_index(7)]
+    #[runtime::pallet_index(5)]
     pub type TransactionPayment = pallet_transaction_payment;
 
-    #[runtime::pallet_index(8)]
+    #[runtime::pallet_index(6)]
     pub type Sudo = pallet_sudo;
 
-    #[runtime::pallet_index(9)]
+    #[runtime::pallet_index(7)]
     pub type QFPolkaVM = pallet_qf_polkavm;
 
-    #[runtime::pallet_index(10)]
+    #[runtime::pallet_index(8)]
     pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
 
-    #[runtime::pallet_index(11)]
+    #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
+
+    #[runtime::pallet_index(10)]
+    pub type Staking = pallet_staking;
+
+    #[runtime::pallet_index(11)]
+    pub type Session = pallet_session;
 }

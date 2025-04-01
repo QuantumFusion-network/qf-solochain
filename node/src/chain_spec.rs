@@ -28,9 +28,14 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Generate an SPIN authority key.
-pub fn authority_keys_from_seed(s: &str) -> (SpinId, GrandpaId) {
-    (get_from_seed::<SpinId>(s), get_from_seed::<GrandpaId>(s))
+/// Generate an authority keys (stash, account, spin, grandpa).
+pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, SpinId, GrandpaId) {
+    (
+        get_account_id_from_seed::<sr25519::Public>(&format!("{s}//stash")),
+        get_account_id_from_seed::<sr25519::Public>(s),
+        get_from_seed::<SpinId>(s),
+        get_from_seed::<GrandpaId>(s),
+    )
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
@@ -96,22 +101,45 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-    initial_authorities: Vec<(SpinId, GrandpaId)>,
+    initial_authorities: Vec<(AccountId, AccountId, SpinId, GrandpaId)>,
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> serde_json::Value {
+    // Configure endowed accounts with initial balance of 1 << 63.
+    const ENDOWMENT: u64 = 1u64 << 63;
+    const STASH: u64 = 1u64 << 31;
+
     serde_json::json!({
         "balances": {
-            // Configure endowed accounts with initial balance of 1 << 63.
-            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 63)).collect::<Vec<_>>(),
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
         },
-        "aura": {
-            "authorities": initial_authorities.iter().map(|x| (x.0.clone())).collect::<Vec<_>>(),
-        },
-        "grandpa": {
-            "authorities": initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
-        },
+        "session": {
+			"keys": initial_authorities
+				.iter()
+				.map(|x| {
+					(
+						x.0.clone(),
+						x.0.clone(),
+						qf_runtime::SessionKeys {
+							aura: x.2.clone(),
+							grandpa: x.3.clone(),
+						},
+					)
+				})
+				.collect::<Vec<_>>(),
+		},
+		"staking": {
+			"minimumValidatorCount": 1,
+			"validatorCount": 2,
+			"stakers": initial_authorities
+				.iter()
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
+				.collect::<Vec<_>>(),
+			"invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			"forceEra": pallet_staking::Forcing::NotForcing,
+			"slashRewardFraction": sp_runtime::Perbill::from_percent(10),
+		},
         "sudo": {
             // Assign network admin rights.
             "key": Some(root_key),
