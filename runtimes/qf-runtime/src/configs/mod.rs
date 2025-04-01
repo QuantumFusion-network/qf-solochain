@@ -208,7 +208,7 @@ impl pallet_staking::Config for Runtime {
     type BondingDuration = BondingDuration;
     type SlashDeferDuration = SlashDeferDuration;
     type AdminOrigin = EnsureRoot<AccountId>;
-    type SessionInterface = Self; // pallet_session for Runtime
+    type SessionInterface = Self;
     type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
     type NextNewSession = Session;
     type MaxExposurePageSize = ConstU32<64>;
@@ -217,7 +217,6 @@ impl pallet_staking::Config for Runtime {
     type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
     type VoterList = pallet_staking::UseNominatorsAndValidatorsMap<Self>;
     type NominationsQuota = pallet_staking::FixedNominationsQuota<MAX_QUOTA_NOMINATIONS>;
-    // This a placeholder, to be introduced in the next PR as an instance of bags-list
     type TargetList = pallet_staking::UseValidatorsMap<Self>;
     type MaxUnlockingChunks = ConstU32<32>;
     type MaxControllersInDeprecationBatch = ConstU32<5900>;
