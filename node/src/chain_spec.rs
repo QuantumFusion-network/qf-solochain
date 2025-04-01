@@ -115,31 +115,31 @@ fn testnet_genesis(
             "balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
         },
         "session": {
-			"keys": initial_authorities
-				.iter()
-				.map(|x| {
-					(
-						x.0.clone(),
-						x.0.clone(),
-						qf_runtime::SessionKeys {
-							aura: x.2.clone(),
-							grandpa: x.3.clone(),
-						},
-					)
-				})
-				.collect::<Vec<_>>(),
-		},
-		"staking": {
-			"minimumValidatorCount": 1,
-			"validatorCount": 2,
-			"stakers": initial_authorities
-				.iter()
-				.map(|x| (x.0.clone(), x.0.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
-				.collect::<Vec<_>>(),
-			"invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			"forceEra": pallet_staking::Forcing::NotForcing,
-			"slashRewardFraction": sp_runtime::Perbill::from_percent(10),
-		},
+            "keys": initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        x.0.clone(),
+                        x.0.clone(),
+                        qf_runtime::SessionKeys {
+                            aura: x.2.clone(),
+                            grandpa: x.3.clone(),
+                        },
+                    )
+                })
+                .collect::<Vec<_>>(),
+        },
+        "staking": {
+            "minimumValidatorCount": 1,
+            "validatorCount": 2,
+            "stakers": initial_authorities
+                .iter()
+                .map(|x| (x.0.clone(), x.0.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
+                .collect::<Vec<_>>(),
+            "invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+            "forceEra": pallet_staking::Forcing::NotForcing,
+            "slashRewardFraction": sp_runtime::Perbill::from_percent(10),
+        },
         "sudo": {
             // Assign network admin rights.
             "key": Some(root_key),
