@@ -12583,6 +12583,7 @@ dependencies = [
  "frame-system",
  "futures",
  "jsonrpsee",
+ "pallet-staking",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "qf-runtime",
