@@ -127,7 +127,7 @@ impl pallet_session::Config for Runtime {
 	type DisablingStrategy = pallet_session::disabling::UpToLimitWithReEnablingDisablingStrategy;
 
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
-	type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
+	type SessionManager = Staking;
 }
 
 impl pallet_session::historical::Config for Runtime {
