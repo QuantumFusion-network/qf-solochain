@@ -213,7 +213,7 @@ mod runtime {
     pub type Staking = pallet_staking;
 
     #[runtime::pallet_index(4)]
-	pub type Session = pallet_session;
+    pub type Session = pallet_session;
 
     #[runtime::pallet_index(5)]
     pub type Grandpa = pallet_grandpa;
