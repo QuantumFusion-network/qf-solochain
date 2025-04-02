@@ -49,7 +49,7 @@ pub mod opaque {
 
 impl_opaque_keys! {
     pub struct SessionKeys {
-        pub aura: Aura,
+        pub spin: Spin,
         pub grandpa: Grandpa,
     }
 }
@@ -76,7 +76,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 mod block_times {
     /// This determines the average expected block time that we are targeting. Blocks will be
     /// produced at a minimum duration defined by `SLOT_DURATION`. `SLOT_DURATION` is picked up by
-    /// `pallet_timestamp` which is in turn picked up by `pallet_aura` to implement `fn
+    /// `pallet_timestamp` which is in turn picked up by `pallet_spin` to implement `fn
     /// slot_duration()`.
     ///
     /// Change this to adjust the block time.
@@ -206,8 +206,9 @@ mod runtime {
     #[runtime::pallet_index(1)]
     pub type Timestamp = pallet_timestamp;
 
-    #[runtime::pallet_index(2)]
-    pub type Aura = pallet_aura;
+    /// Aura was used at index 2
+    #[runtime::pallet_index(12)]
+    pub type Spin = pallet_spin;
 
     #[runtime::pallet_index(3)]
     pub type Grandpa = pallet_grandpa;

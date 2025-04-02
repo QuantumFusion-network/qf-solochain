@@ -30,6 +30,8 @@ use frame_support::{
     weights::Weight,
 };
 use pallet_grandpa::AuthorityId as GrandpaId;
+use qfp_consensus_spin::SpinAuxData;
+use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_api::impl_runtime_apis;
 use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
@@ -38,13 +40,11 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
 };
 use sp_version::RuntimeVersion;
-use qfp_consensus_spin::SpinAuxData;
-use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 
 // Local module imports
 use super::{
-    AccountId, Aura, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
-    RuntimeCall, RuntimeGenesisConfig, SessionKeys, Staking, System, TransactionPayment, VERSION,
+    AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime, RuntimeCall,
+    RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment, VERSION,
 };
 
 impl_runtime_apis! {
@@ -115,13 +115,11 @@ impl_runtime_apis! {
 
     impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
         fn slot_duration() -> qfp_consensus_spin::SlotDuration {
-            qfp_consensus_spin::SlotDuration::from_millis(Aura::slot_duration())
+            qfp_consensus_spin::SlotDuration::from_millis(Spin::slot_duration())
         }
 
         fn aux_data() -> SpinAuxData<SpinId> {
-            let authorities = pallet_aura::Authorities::<Runtime>::get().into_inner();
-
-            (authorities, crate::SESSION_LENGTH)
+            Spin::aux_data()
         }
     }
 

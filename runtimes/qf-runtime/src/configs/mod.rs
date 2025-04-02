@@ -50,9 +50,9 @@ use crate::SESSION_LENGTH;
 
 // Local module imports
 use super::{
-    AccountId, Aura, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
+    AccountId, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
     PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, SLOT_DURATION, Session, SessionKeys, Staking, System, Timestamp,
+    RuntimeOrigin, RuntimeTask, SLOT_DURATION, Session, SessionKeys, Spin, Staking, System, Timestamp,
     VERSION,
 };
 
@@ -101,12 +101,14 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_aura::Config for Runtime {
+impl pallet_spin::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
     type AuthorityId = SpinId;
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<32>;
     type AllowMultipleBlocksPerSlot = ConstBool<false>;
-    type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
+    type SlotDuration = pallet_spin::MinimumPeriodTimesTwo<Runtime>;
+    type DefaultSessionLength = ConstU32<SESSION_LENGTH>;
 }
 
 parameter_types! {
@@ -239,7 +241,7 @@ impl pallet_grandpa::Config for Runtime {
 impl pallet_timestamp::Config for Runtime {
     /// A timestamp: milliseconds since the unix epoch.
     type Moment = u64;
-    type OnTimestampSet = Aura;
+    type OnTimestampSet = Spin;
     type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
     type WeightInfo = ();
 }

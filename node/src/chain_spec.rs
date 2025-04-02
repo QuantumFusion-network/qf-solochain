@@ -122,7 +122,7 @@ fn testnet_genesis(
                         x.0.clone(),
                         x.0.clone(),
                         qf_runtime::SessionKeys {
-                            aura: x.2.clone(),
+                            spin: x.2.clone(),
                             grandpa: x.3.clone(),
                         },
                     )
