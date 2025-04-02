@@ -112,7 +112,7 @@ impl pallet_spin::Config for Runtime {
 }
 
 parameter_types! {
-    pub const Period: BlockNumber = 1;
+    pub const Period: BlockNumber = SESSION_LENGTH;
     pub const Offset: BlockNumber = 0;
 }
 
