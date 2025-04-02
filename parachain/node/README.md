@@ -16,3 +16,6 @@
 initial (genesis) state.
 - [`service.rs`](./src/service.rs): This file defines the node implementation.
 It's a place to configure consensus-related topics.
+
+Copy from [Polkadot SDK](https://github.com/QuantumFusion-network/polkadot-sdk) at commit
+`3793fc3444e28d309e67513fda5afe153a2aa928`.
