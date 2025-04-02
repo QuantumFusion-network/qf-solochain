@@ -50,10 +50,9 @@ use crate::SESSION_LENGTH;
 
 // Local module imports
 use super::{
-    AccountId, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce,
-    PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
-    RuntimeOrigin, RuntimeTask, SLOT_DURATION, Session, SessionKeys, Spin, Staking, System, Timestamp,
-    VERSION,
+    AccountId, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce, PalletInfo,
+    Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
+    RuntimeTask, SLOT_DURATION, Session, SessionKeys, Spin, Staking, System, Timestamp, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -125,7 +124,6 @@ impl pallet_session::Config for Runtime {
     type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
     type Keys = SessionKeys;
     type DisablingStrategy = pallet_session::disabling::UpToLimitWithReEnablingDisablingStrategy;
-
     type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
     type SessionManager = Staking;
 }

@@ -33,7 +33,7 @@ use pallet_grandpa::AuthorityId as GrandpaId;
 use qfp_consensus_spin::SpinAuxData;
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_api::impl_runtime_apis;
-use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
+use sp_core::{ByteArray, OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
     ApplyExtrinsicResult,
     traits::{Block as BlockT, NumberFor},
@@ -44,7 +44,7 @@ use sp_version::RuntimeVersion;
 // Local module imports
 use super::{
     AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime, RuntimeCall,
-    RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment, VERSION,
+    RuntimeGenesisConfig, Session, SessionKeys, Spin, Staking, System, TransactionPayment, VERSION,
 };
 
 impl_runtime_apis! {
@@ -119,7 +119,14 @@ impl_runtime_apis! {
         }
 
         fn aux_data() -> SpinAuxData<SpinId> {
-            Spin::aux_data()
+            let aux_data = Spin::aux_data();
+            let validators = Session::validators();
+
+            let authorities = validators.iter()
+                .map(|v| SpinId::from_slice(v.as_ref()).expect("SpinId::from_slice failed, should never fail, unless we changed AccountId type; qed"))
+                .collect::<Vec<_>>();
+
+            (authorities, aux_data.1)
         }
     }
 
