@@ -119,8 +119,8 @@ fn testnet_genesis(
                 .iter()
                 .map(|x| {
                     (
-                        x.0.clone(),
-                        x.0.clone(),
+                        x.1.clone(),
+                        x.1.clone(),
                         qf_runtime::SessionKeys {
                             spin: x.2.clone(),
                             grandpa: x.3.clone(),
@@ -134,16 +134,16 @@ fn testnet_genesis(
             "validatorCount": 2,
             "stakers": initial_authorities
                 .iter()
-                .map(|x| (x.0.clone(), x.0.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
+                .map(|x| (x.1.clone(), x.1.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
                 .collect::<Vec<_>>(),
-            "invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+            "invulnerables": initial_authorities.iter().map(|x| x.1.clone()).collect::<Vec<_>>(),
             "forceEra": pallet_staking::Forcing::NotForcing,
             "slashRewardFraction": sp_runtime::Perbill::from_percent(10),
         },
         "sudo": {
             // Assign network admin rights.
             "key": Some(root_key),
-        },
+        }
     })
 }
 
