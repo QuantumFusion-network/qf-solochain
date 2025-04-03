@@ -5,17 +5,22 @@ args = ["--state-pruning archive --blocks-pruning archive"]
 
 [[relaychain.nodes]]
 name = "alice"
+balance = 1000000000000000000000000
 
 [[relaychain.nodes]]
 name = "bob"
+balance = 1000000000000000000000000
 
 [[relaychain.nodes]]
 name = "charlie"
+balance = 1000000000000000000000000
 
 [[relaychain.nodes]]
 name = "dave"
 validator = false
+balance = 1000000000000000000000000
 
 [[relaychain.nodes]]
 name = "eve"
 validator = false
+balance = 1000000000000000000000000
