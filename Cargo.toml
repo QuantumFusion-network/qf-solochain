@@ -61,6 +61,7 @@ sc-basic-authorship = { path = "vendor/polkadot-sdk/substrate/client/basic-autho
 sc-block-builder = { path = "vendor/polkadot-sdk/substrate/client/block-builder", default-features = false }
 sc-cli = { path = "vendor/polkadot-sdk/substrate/client/cli", default-features = false }
 sc-client-api = { path = "vendor/polkadot-sdk/substrate/client/api", default-features = false }
+sc-chain-spec = { path = "vendor/polkadot-sdk/substrate/client/chain-spec", default-features = false }
 sc-consensus = { path = "vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }
 sc-consensus-slots = { path = "vendor/polkadot-sdk/substrate/client/consensus/slots", default-features = false }
 qfc-consensus-spin = { path = "client/consensus-spin", default-features = false }
