@@ -131,7 +131,7 @@ fn testnet_genesis(
         },
         "staking": {
             "minimumValidatorCount": 1,
-            "validatorCount": 2,
+            "validatorCount": initial_authorities.len(),
             "stakers": initial_authorities
                 .iter()
                 .map(|x| (x.0.clone(), x.0.clone(), STASH, pallet_staking::StakerStatus::<AccountId>::Validator))
