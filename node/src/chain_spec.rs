@@ -115,8 +115,7 @@ fn testnet_genesis(
 ) -> serde_json::Value {
     serde_json::json!({
         "balances": {
-            // Configure endowed accounts with initial balance of 1 << 63.
-            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 63)).collect::<Vec<_>>(),
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, 10u128.pow(6) * qf_runtime::UNIT)).collect::<Vec<_>>(),
         },
         "spin": {
             "authorities": initial_authorities.iter().map(|x| (x.0.clone())).collect::<Vec<_>>(),
