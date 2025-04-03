@@ -112,7 +112,7 @@ impl pallet_spin::Config for Runtime {
 }
 
 parameter_types! {
-    pub const Period: BlockNumber = SESSION_LENGTH;
+    pub const Period: BlockNumber = 30 * SESSION_LENGTH;
     pub const Offset: BlockNumber = 0;
 }
 
@@ -205,7 +205,7 @@ impl pallet_staking::Config for Runtime {
     type BondingDuration = BondingDuration;
     type SlashDeferDuration = SlashDeferDuration;
     type AdminOrigin = EnsureRoot<AccountId>;
-    type SessionInterface = ();
+    type SessionInterface = Self;
     type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
     type NextNewSession = Session;
     type MaxExposurePageSize = ConstU32<64>;
