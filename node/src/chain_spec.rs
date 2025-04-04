@@ -118,9 +118,10 @@ fn testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> serde_json::Value {
-    // Configure endowed accounts with initial balance of 1 << 63.
+    // Configure endowed accounts with initial balance of 10^6 UNIT.
     const ENDOWMENT: u128 = 10u128.pow(6) * qf_runtime::UNIT;
-    const STASH: u64 = 1u64 << 31;
+    // Configure stash accounts with initial balance of 10^5 UNIT.
+    const STASH: u128 = 10u128.pow(5) * qf_runtime::UNIT;
 
     serde_json::json!({
         "balances": {
