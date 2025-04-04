@@ -34,6 +34,11 @@ pub fn authority_keys_from_seed(s: &str) -> (SpinId, GrandpaId) {
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
+    let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "QF".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+	properties.insert("ss58Format".into(), 42.into());
+
     Ok(ChainSpec::builder(
         WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?,
         None,
@@ -55,10 +60,16 @@ pub fn development_config() -> Result<ChainSpec, String> {
         ],
         true,
     ))
+	.with_properties(properties)
     .build())
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
+    let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "QF".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+	properties.insert("ss58Format".into(), 42.into());
+
     Ok(ChainSpec::builder(
         WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?,
         None,
@@ -91,6 +102,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
         ],
         true,
     ))
+	.with_properties(properties)
     .build())
 }
 
@@ -103,8 +115,7 @@ fn testnet_genesis(
 ) -> serde_json::Value {
     serde_json::json!({
         "balances": {
-            // Configure endowed accounts with initial balance of 1 << 63.
-            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 63)).collect::<Vec<_>>(),
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, 10u128.pow(6) * qf_runtime::UNIT)).collect::<Vec<_>>(),
         },
         "spin": {
             "authorities": initial_authorities.iter().map(|x| (x.0.clone())).collect::<Vec<_>>(),

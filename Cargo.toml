@@ -59,6 +59,7 @@ polkavm = { path = "vendor/polkavm/crates/polkavm", default-features = false, pa
 pallet-transaction-payment-rpc = { path = "vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
 sc-basic-authorship = { path = "vendor/polkadot-sdk/substrate/client/basic-authorship", default-features = false }
 sc-block-builder = { path = "vendor/polkadot-sdk/substrate/client/block-builder", default-features = false }
+sc-chain-spec = { path = "vendor/polkadot-sdk/substrate/client/chain-spec", default-features = false }
 sc-cli = { path = "vendor/polkadot-sdk/substrate/client/cli", default-features = false }
 sc-client-api = { path = "vendor/polkadot-sdk/substrate/client/api", default-features = false }
 sc-consensus = { path = "vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }

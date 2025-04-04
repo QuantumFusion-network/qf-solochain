@@ -18,7 +18,7 @@ use sp_keyring::Sr25519Keyring;
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 /// Parachain id used for genesis config presets of parachain template.
 #[docify::export_content]
-pub const PARACHAIN_ID: u32 = 1000;
+pub const PARACHAIN_ID: u32 = 4775;
 
 /// Generate the session keys from individual elements.
 ///
