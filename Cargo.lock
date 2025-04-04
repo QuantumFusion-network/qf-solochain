@@ -12607,6 +12607,7 @@ dependencies = [
  "qfc-consensus-spin",
  "qfp-consensus-spin",
  "sc-basic-authorship",
+ "sc-chain-spec",
  "sc-cli",
  "sc-client-api",
  "sc-consensus",

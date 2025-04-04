@@ -39,6 +39,11 @@ pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, SpinId, Grand
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
+    let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "QF".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+	properties.insert("ss58Format".into(), 42.into());
+
     Ok(ChainSpec::builder(
         WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?,
         None,
@@ -60,10 +65,16 @@ pub fn development_config() -> Result<ChainSpec, String> {
         ],
         true,
     ))
+	.with_properties(properties)
     .build())
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
+    let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "QF".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+	properties.insert("ss58Format".into(), 42.into());
+
     Ok(ChainSpec::builder(
         WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?,
         None,
@@ -96,6 +107,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
         ],
         true,
     ))
+	.with_properties(properties)
     .build())
 }
 
@@ -107,7 +119,7 @@ fn testnet_genesis(
     _enable_println: bool,
 ) -> serde_json::Value {
     // Configure endowed accounts with initial balance of 1 << 63.
-    const ENDOWMENT: u64 = 1u64 << 63;
+    const ENDOWMENT: u128 = 10u128.pow(6) * qf_runtime::UNIT;
     const STASH: u64 = 1u64 << 31;
 
     serde_json::json!({
