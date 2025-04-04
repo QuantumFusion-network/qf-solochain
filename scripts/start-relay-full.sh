@@ -2,7 +2,7 @@
 
 SPEC_PATH="../chain-specs"
 DATA_PATH="../data-relay"
-NODE="/Users/max/workspace/Rust/QF/polkadot-1.0.0/target/release/polkadot"
+NODE="polkadot"
 
 mkdir -p $DATA_PATH
 
