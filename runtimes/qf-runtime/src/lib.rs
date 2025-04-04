@@ -230,4 +230,10 @@ mod runtime {
 
     #[runtime::pallet_index(9)]
     pub type Faucet = pallet_faucet;
+
+    #[runtime::pallet_index(10)]
+    pub type Staking = pallet_staking;
+
+    #[runtime::pallet_index(11)]
+    pub type Session = pallet_session;
 }

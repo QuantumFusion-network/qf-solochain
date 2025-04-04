@@ -25,12 +25,16 @@ scale-info = { features = [
 frame-support = { features = ["experimental"], workspace = true }
 frame-system = { workspace = true }
 frame-try-runtime = { optional = true, workspace = true }
+frame-election-provider-support = { workspace = true }
 frame-executive = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
 
 # frame pallets
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
+pallet-session = { workspace = true }
+pallet-staking = { workspace = true }
+pallet-staking-reward-curve = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -58,6 +62,7 @@ sp-runtime = { features = [
 	"serde",
 ], workspace = true }
 sp-session = { workspace = true }
+sp-staking = { workspace = true }
 sp-storage = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { features = [
@@ -67,6 +72,7 @@ sp-genesis-builder = { workspace = true }
 
 # RPC related
 frame-system-rpc-runtime-api = { workspace = true }
+pallet-staking-runtime-api = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 
 # Used for runtime benchmarking
@@ -95,12 +101,16 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking?/std",
 	"frame-try-runtime?/std",
+	"frame-election-provider-support/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
+	"pallet-session/std",
+	"pallet-staking/std",
 	"pallet-sudo/std",
 	"pallet-qf-polkavm/std",
 	"pallet-qf-polkavm-dev/std",
 	"pallet-timestamp/std",
+	"pallet-staking-runtime-api/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"sp-api/std",
@@ -113,6 +123,7 @@ std = [
 	"sp-offchain/std",
 	"sp-runtime/std",
 	"sp-session/std",
+	"sp-staking/std",
 	"sp-storage/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
@@ -122,11 +133,13 @@ std = [
 
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
+	"frame-election-provider-support/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-qf-polkavm/runtime-benchmarks",
 	"pallet-qf-polkavm-dev/runtime-benchmarks",
@@ -135,12 +148,15 @@ runtime-benchmarks = [
 ]
 
 try-runtime = [
+	"frame-election-provider-support/try-runtime",
 	"frame-executive/try-runtime",
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
+	"pallet-session/try-runtime",
+	"pallet-staking/try-runtime",
 	"pallet-sudo/try-runtime",
 	"pallet-qf-polkavm/try-runtime",
 	"pallet-qf-polkavm-dev/try-runtime",

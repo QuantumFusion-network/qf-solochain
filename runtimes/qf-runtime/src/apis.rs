@@ -44,7 +44,7 @@ use sp_version::RuntimeVersion;
 // Local module imports
 use super::{
     AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime, RuntimeCall,
-    RuntimeGenesisConfig, SessionKeys, Spin, System, TransactionPayment, VERSION,
+    RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment, VERSION,
 };
 
 impl_runtime_apis! {
@@ -120,6 +120,20 @@ impl_runtime_apis! {
 
         fn aux_data() -> SpinAuxData<SpinId> {
             Spin::aux_data()
+        }
+    }
+
+    impl pallet_staking_runtime_api::StakingApi<Block, Balance, AccountId> for Runtime {
+        fn nominations_quota(balance: Balance) -> u32 {
+            Staking::api_nominations_quota(balance)
+        }
+
+        fn eras_stakers_page_count(era: sp_staking::EraIndex, account: AccountId) -> sp_staking::Page {
+            Staking::api_eras_stakers_page_count(era, account)
+        }
+
+        fn pending_rewards(era: sp_staking::EraIndex, account: AccountId) -> bool {
+            Staking::api_pending_rewards(era, account)
         }
     }
 

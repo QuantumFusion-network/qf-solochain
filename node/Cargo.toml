@@ -53,6 +53,7 @@ sp-block-builder = { workspace = true, default-features = true }
 # frame and pallets
 frame-system = { workspace = true, default-features = true }
 frame-metadata-hash-extension = { workspace = true, default-features = true }
+pallet-staking = { workspace = true, default-features = true }
 pallet-transaction-payment = { workspace = true, default-features = true }
 pallet-transaction-payment-rpc = { workspace = true, default-features = true }
 substrate-frame-rpc-system = { workspace = true, default-features = true }
@@ -69,12 +70,14 @@ substrate-build-script-utils = { workspace = true, default-features = true }
 [features]
 default = ["std"]
 std = [
+	"pallet-staking/std",
 	"qf-runtime/std",
 ]
 # Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
 	"qf-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -83,6 +86,7 @@ runtime-benchmarks = [
 # in the near future.
 try-runtime = [
 	"frame-system/try-runtime",
+	"pallet-staking/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"qf-runtime/try-runtime",
 	"sp-runtime/try-runtime",

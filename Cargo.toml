@@ -91,6 +91,7 @@ substrate-build-script-utils = { path = "vendor/polkadot-sdk/substrate/utils/bui
 # this is a frame-based runtime, thus importing `frame` with runtime feature enabled.
 frame = { path = "vendor/polkadot-sdk/substrate/frame", default-features = false, package = "polkadot-sdk-frame" }
 frame-system = { path = "vendor/polkadot-sdk/substrate/frame/system", default-features = false }
+frame-election-provider-support = { path = "vendor/polkadot-sdk/substrate/frame/election-provider-support", default-features = false }
 frame-executive = { path = "vendor/polkadot-sdk/substrate/frame/executive", default-features = false }
 frame-try-runtime = { path = "vendor/polkadot-sdk/substrate/frame/try-runtime", default-features = false }
 frame-support = { path = "vendor/polkadot-sdk/substrate/frame/support", default-features = false }
@@ -122,6 +123,7 @@ sp-core = { path = "vendor/polkadot-sdk/substrate/primitives/core", default-feat
 sp-inherents = { path = "vendor/polkadot-sdk/substrate/primitives/inherents", default-features = false }
 sp-offchain = { path = "vendor/polkadot-sdk/substrate/primitives/offchain", default-features = false }
 sp-session = { path = "vendor/polkadot-sdk/substrate/primitives/session", default-features = false }
+sp-staking = { path = "vendor/polkadot-sdk/substrate/primitives/staking", default-features = false }
 sp-storage = { path = "vendor/polkadot-sdk/substrate/primitives/storage", default-features = false }
 sp-transaction-pool = { path = "vendor/polkadot-sdk/substrate/primitives/transaction-pool", default-features = false }
 substrate-wasm-builder = { path = "vendor/polkadot-sdk/substrate/utils/wasm-builder", default-features = false }
@@ -129,6 +131,10 @@ prometheus-endpoint = { package = "substrate-prometheus-endpoint", path = "vendo
 
 # pallets that we want to use
 pallet-balances = { path = "vendor/polkadot-sdk/substrate/frame/balances", default-features = false }
+pallet-session = { path = "vendor/polkadot-sdk/substrate/frame/session", default-features = false }
+pallet-staking = { path = "vendor/polkadot-sdk/substrate/frame/staking", default-features = false }
+pallet-staking-reward-curve = { path = "vendor/polkadot-sdk/substrate/frame/staking/reward-curve", default-features = false }
+pallet-staking-runtime-api = { path = "vendor/polkadot-sdk/substrate/frame/staking/runtime-api", default-features = false }
 pallet-sudo = { path = "vendor/polkadot-sdk/substrate/frame/sudo", default-features = false }
 pallet-timestamp = { path = "vendor/polkadot-sdk/substrate/frame/timestamp", default-features = false }
 pallet-transaction-payment = { path = "vendor/polkadot-sdk/substrate/frame/transaction-payment", default-features = false }
