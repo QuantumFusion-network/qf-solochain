@@ -32,6 +32,8 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           . "$HOME/.cargo/env"
           rustup install
+          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-full-linux-x86_64.gz \
+            | gzip -d - | sudo install -m 755 /dev/stdin /usr/local/bin/taplo
 
       - name: Check TOML format
         run: |
