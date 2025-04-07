@@ -33,6 +33,10 @@ jobs:
           . "$HOME/.cargo/env"
           rustup install
 
+      - name: Cargo fmt
+        run: |
+          cargo fmt --all -- --check
+
       - name: Check code
         run: |
           cargo check --locked --all
