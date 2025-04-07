@@ -294,7 +294,7 @@ pub mod pallet {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
 
-            ensure!(op >= 0 && op <= 5, Error::<T>::InvalidOperation);
+            ensure!(op <= 5, Error::<T>::InvalidOperation);
 
             let max_gas = <T as Config>::MaxGas::get()
                 .try_into()
