@@ -7,9 +7,8 @@ Polkadot SDK, following industry standards and best practices, it would be overl
 secure system at this stage. Our goal is to communicate transparently about any issues and address them swiftly and
 carefully.
 
-If you discover a vulnerability or have a security concern, please report it by opening [open a new issue](https://github.com/QuantumFusion-network/qf-solochain/issues/new)
-in the GitHub repository. A detailed explanation, including reproduction steps or a reference to the vulnerability source
-code, would be greatly appreciated!
+If you discover a vulnerability or have a security concern, please report it to <security@qfnetwork.xyz>. A detailed
+explanation, including reproduction steps or a reference to the vulnerability source code, would be greatly appreciated!
 
 ## Supported Versions
 
