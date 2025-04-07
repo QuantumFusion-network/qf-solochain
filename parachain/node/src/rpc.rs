@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use qf_parachain_runtime::{opaque::Block, AccountId, Balance, Nonce};
+use qf_parachain_runtime::{AccountId, Balance, Nonce, opaque::Block};
 
 use polkadot_sdk::*;
 
