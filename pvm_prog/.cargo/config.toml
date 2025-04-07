@@ -2,4 +2,4 @@
 target = "../vendor/polkavm/crates/polkavm-linker/riscv32emac-unknown-none-polkavm.json"
 
 [unstable]
-build-std = ["core", "alloc"]
+build-std = ["alloc", "core"]

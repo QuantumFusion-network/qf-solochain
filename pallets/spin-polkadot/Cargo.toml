@@ -15,11 +15,11 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { features = ["derive"], workspace = true, default-features = false }
 scale-info = { features = [
-    "derive",
+	"derive",
 ], workspace = true, default-features = false }
 frame = { workspace = true, features = [
-    "experimental",
-    "runtime",
+	"experimental",
+	"runtime",
 ], default-features = false }
 log = { workspace = true }
 polkadot-parachain-primitives = { workspace = true, default-features = false }
@@ -29,15 +29,15 @@ sp-consensus-grandpa = { workspace = true, default-features = false }
 [features]
 default = ["std"]
 runtime-benchmarks = [
-    "frame/runtime-benchmarks",
-    "polkadot-parachain-primitives/runtime-benchmarks",
+	"frame/runtime-benchmarks",
+	"polkadot-parachain-primitives/runtime-benchmarks",
 ]
 std = [
-    "codec/std",
-    "frame/std",
-    "scale-info/std",
-    "polkadot-parachain-primitives/std",
-    "sp-trie/std",
-    "sp-consensus-grandpa/std",
+	"codec/std",
+	"frame/std",
+	"polkadot-parachain-primitives/std",
+	"scale-info/std",
+	"sp-consensus-grandpa/std",
+	"sp-trie/std",
 ]
 try-runtime = ["frame/try-runtime"]
