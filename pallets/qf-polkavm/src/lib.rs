@@ -113,6 +113,12 @@ pub mod pallet {
         #[pallet::constant]
         type MaxGas: Get<u32>;
 
+        #[pallet::constant]
+        type MaxStorageSlots: Get<u32>;
+
+        #[pallet::constant]
+        type StorageSize: Get<u32>;
+
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
