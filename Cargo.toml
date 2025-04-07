@@ -1,7 +1,7 @@
 [workspace.package]
-authors = ["Max Pestov <ealataur@gmail.com>", "Andrei Orlov <aaorlov1@gmail.com>"]
+authors = ["Quantum Fusion Network <admin@qfnetwork.xyz>"]
 edition = "2024"
-homepage = "https://quantumfusion.pro/"
+homepage = "https://qfnetwork.xyz/"
 license = ""
 repository = "https://github.com/QuantumFusion-network"
 
