@@ -33,6 +33,11 @@ jobs:
           . "$HOME/.cargo/env"
           rustup install
 
+      - name: Check TOML format
+        run: |
+          taplo format --check
+          echo "Please run `taplo format` to fix any TOML formatting issues"
+
       - name: Cargo fmt
         run: |
           cargo fmt --all -- --check
