@@ -113,6 +113,12 @@ pub mod pallet {
         #[pallet::constant]
         type MaxGas: Get<u32>;
 
+        #[pallet::constant]
+        type MaxStorageSlots: Get<u32>;
+
+        #[pallet::constant]
+        type StorageSize: Get<u32>;
+
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
@@ -288,7 +294,7 @@ pub mod pallet {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
 
-            ensure!(op >= 0 && op <= 5, Error::<T>::InvalidOperation);
+            ensure!(op <= 5, Error::<T>::InvalidOperation);
 
             let max_gas = <T as Config>::MaxGas::get()
                 .try_into()
@@ -309,6 +315,7 @@ pub mod pallet {
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
                 ]
                 .to_vec(),
+                [].to_vec(),
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -445,6 +452,26 @@ pub mod pallet {
                 .define_typed("caller", |caller: Caller<T>| -> u64 {
                     (caller.user_data.caller)()
                 })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed(
+                    "set",
+                    |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
+                        let result = caller
+                            .user_data
+                            .rom
+                            .get(offset as usize..offset as usize + length as usize);
+                        if let Some(chunk) = result {
+                            match caller.instance.write_memory(pointer, chunk) {
+                                Err(_) => return 1,
+                                Ok(_) => return 0,
+                            }
+                        }
+
+                        0
+                    },
+                )
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
