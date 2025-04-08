@@ -455,11 +455,13 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed("set", |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
-                    let result = caller
-                        .user_data
-                        .rom
-                        .get(offset as usize..offset as usize + length as usize);
+                .define_typed(
+                    "set",
+                    |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
+                        let result = caller
+                            .user_data
+                            .rom
+                            .get(offset as usize..offset as usize + length as usize);
                         if let Some(chunk) = result {
                             match caller.instance.write_memory(pointer, chunk) {
                                 Err(_) => return 1,
@@ -468,7 +470,8 @@ pub mod pallet {
                         }
 
                         0
-                })
+                    },
+                )
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
