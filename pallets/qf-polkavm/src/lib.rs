@@ -315,6 +315,7 @@ pub mod pallet {
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
                 ]
                 .to_vec(),
+                [].to_vec(),
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -450,6 +451,23 @@ pub mod pallet {
             linker
                 .define_typed("caller", |caller: Caller<T>| -> u64 {
                     (caller.user_data.caller)()
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed("set", |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
+                    let result = caller
+                        .user_data
+                        .rom
+                        .get(offset as usize..offset as usize + length as usize);
+                        if let Some(chunk) = result {
+                            match caller.instance.write_memory(pointer, chunk) {
+                                Err(_) => return 1,
+                                Ok(_) => return 0,
+                            }
+                        }
+
+                        0
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
