@@ -456,7 +456,7 @@ pub mod pallet {
 
             linker
                 .define_typed(
-                    "set",
+                    "get",
                     |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
                         let result = caller
                             .user_data
@@ -470,6 +470,20 @@ pub mod pallet {
                         }
 
                         0
+                    },
+                )
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed(
+                    "set",
+                    |caller: Caller<T>, buffer: u32, length: u32| -> u64 {
+                        if let Ok(data) = caller.instance.read_memory(buffer, length) {
+                            caller.user_data.rom = data;
+                            0
+                        } else {
+                            1
+                        }
                     },
                 )
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
