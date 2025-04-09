@@ -35,19 +35,19 @@ use frame_support::{
 use pallet_aura::Authorities;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
+	ApplyExtrinsicResult,
 	traits::Block as BlockT,
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
 };
 use sp_version::RuntimeVersion;
 
 // Local module imports
 use super::{
 	AccountId, Balance, Block, ConsensusHook, Executive, InherentDataExt, Nonce, ParachainSystem,
-	Runtime, RuntimeCall, RuntimeGenesisConfig, SessionKeys, System, TransactionPayment,
-	SLOT_DURATION, VERSION,
+	Runtime, RuntimeCall, RuntimeGenesisConfig, SLOT_DURATION, SessionKeys, System,
+	TransactionPayment, VERSION,
 };
 
 // we move some impls outside so we can easily use them with `docify`.

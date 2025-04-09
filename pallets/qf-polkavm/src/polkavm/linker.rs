@@ -1,15 +1,13 @@
 extern crate alloc;
 
-use crate::polkavm::api::RegValue;
-use crate::polkavm::error::bail;
-use crate::polkavm::program::ProgramSymbol;
-use crate::polkavm::{Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg};
-use crate::{BalanceOf, Config as PalletConfig};
-use alloc::borrow::ToOwned;
-use alloc::format;
-use alloc::string::String;
-use alloc::sync::Arc;
-use alloc::vec::Vec;
+use crate::{
+	BalanceOf, Config as PalletConfig,
+	polkavm::{
+		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
+		program::ProgramSymbol,
+	},
+};
+use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
 use core::marker::PhantomData;
 
 #[cfg(not(feature = "std"))]
@@ -23,296 +21,292 @@ use std::collections::HashMap as LookupMap;
 use std::collections::hash_map::Entry;
 
 trait CallFn<T: PalletConfig, UserError>: Send + Sync {
-    fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
+	fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
 }
 
 #[repr(transparent)]
 pub struct CallFnArc<T: PalletConfig, UserError>(Arc<dyn CallFn<T, UserError>>);
 
 type FallbackHandlerArc<T, UserError> =
-    Arc<dyn Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static>;
+	Arc<dyn Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static>;
 
 impl<T: PalletConfig, UserError> Clone for CallFnArc<T, UserError> {
-    fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
-    }
+	fn clone(&self) -> Self {
+		Self(Arc::clone(&self.0))
+	}
 }
 
 pub trait IntoCallFn<T: PalletConfig, UserError, Params, Result>: Send + Sync + 'static {
-    #[doc(hidden)]
-    const _REGS_REQUIRED_32: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_32: usize;
 
-    #[doc(hidden)]
-    const _REGS_REQUIRED_64: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_64: usize;
 
-    #[doc(hidden)]
-    fn _into_extern_fn(self) -> CallFnArc<T, UserError>;
+	#[doc(hidden)]
+	fn _into_extern_fn(self) -> CallFnArc<T, UserError>;
 }
 
 /// A type which can be marshalled through the VM's FFI boundary.
 pub trait AbiTy: Sized + Send + 'static {
-    #[doc(hidden)]
-    const _REGS_REQUIRED_32: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_32: usize;
 
-    #[doc(hidden)]
-    const _REGS_REQUIRED_64: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_64: usize;
 
-    #[doc(hidden)]
-    fn _get32(get_reg: impl FnMut() -> RegValue) -> Self;
+	#[doc(hidden)]
+	fn _get32(get_reg: impl FnMut() -> RegValue) -> Self;
 
-    #[doc(hidden)]
-    fn _get64(get_reg: impl FnMut() -> RegValue) -> Self;
+	#[doc(hidden)]
+	fn _get64(get_reg: impl FnMut() -> RegValue) -> Self;
 
-    #[doc(hidden)]
-    fn _set32(self, set_reg: impl FnMut(RegValue));
+	#[doc(hidden)]
+	fn _set32(self, set_reg: impl FnMut(RegValue));
 
-    #[doc(hidden)]
-    fn _set64(self, set_reg: impl FnMut(RegValue));
+	#[doc(hidden)]
+	fn _set64(self, set_reg: impl FnMut(RegValue));
 }
 
 impl AbiTy for u32 {
-    const _REGS_REQUIRED_32: usize = 1;
-    const _REGS_REQUIRED_64: usize = 1;
+	const _REGS_REQUIRED_32: usize = 1;
+	const _REGS_REQUIRED_64: usize = 1;
 
-    fn _get32(mut get_reg: impl FnMut() -> RegValue) -> Self {
-        get_reg() as u32
-    }
+	fn _get32(mut get_reg: impl FnMut() -> RegValue) -> Self {
+		get_reg() as u32
+	}
 
-    fn _get64(mut get_reg: impl FnMut() -> RegValue) -> Self {
-        get_reg() as u32
-    }
+	fn _get64(mut get_reg: impl FnMut() -> RegValue) -> Self {
+		get_reg() as u32
+	}
 
-    fn _set32(self, mut set_reg: impl FnMut(RegValue)) {
-        set_reg(u64::from(self))
-    }
+	fn _set32(self, mut set_reg: impl FnMut(RegValue)) {
+		set_reg(u64::from(self))
+	}
 
-    fn _set64(self, mut set_reg: impl FnMut(RegValue)) {
-        set_reg(u64::from(self))
-    }
+	fn _set64(self, mut set_reg: impl FnMut(RegValue)) {
+		set_reg(u64::from(self))
+	}
 }
 
 impl AbiTy for i32 {
-    const _REGS_REQUIRED_32: usize = <u32 as AbiTy>::_REGS_REQUIRED_32;
-    const _REGS_REQUIRED_64: usize = <u32 as AbiTy>::_REGS_REQUIRED_64;
+	const _REGS_REQUIRED_32: usize = <u32 as AbiTy>::_REGS_REQUIRED_32;
+	const _REGS_REQUIRED_64: usize = <u32 as AbiTy>::_REGS_REQUIRED_64;
 
-    fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
-        <u32 as AbiTy>::_get32(get_reg) as i32
-    }
+	fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
+		<u32 as AbiTy>::_get32(get_reg) as i32
+	}
 
-    fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
-        <u32 as AbiTy>::_get64(get_reg) as i32
-    }
+	fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
+		<u32 as AbiTy>::_get64(get_reg) as i32
+	}
 
-    fn _set32(self, set_reg: impl FnMut(RegValue)) {
-        (self as u32)._set32(set_reg)
-    }
+	fn _set32(self, set_reg: impl FnMut(RegValue)) {
+		(self as u32)._set32(set_reg)
+	}
 
-    fn _set64(self, set_reg: impl FnMut(RegValue)) {
-        i64::from(self)._set64(set_reg)
-    }
+	fn _set64(self, set_reg: impl FnMut(RegValue)) {
+		i64::from(self)._set64(set_reg)
+	}
 }
 
 impl AbiTy for u64 {
-    const _REGS_REQUIRED_32: usize = 2;
-    const _REGS_REQUIRED_64: usize = 1;
+	const _REGS_REQUIRED_32: usize = 2;
+	const _REGS_REQUIRED_64: usize = 1;
 
-    fn _get32(mut get_reg: impl FnMut() -> RegValue) -> Self {
-        let value_lo = get_reg();
-        let value_hi = get_reg();
-        debug_assert!(value_lo <= u64::from(u32::MAX));
-        debug_assert!(value_hi <= u64::from(u32::MAX));
-        value_lo | (value_hi << 32)
-    }
+	fn _get32(mut get_reg: impl FnMut() -> RegValue) -> Self {
+		let value_lo = get_reg();
+		let value_hi = get_reg();
+		debug_assert!(value_lo <= u64::from(u32::MAX));
+		debug_assert!(value_hi <= u64::from(u32::MAX));
+		value_lo | (value_hi << 32)
+	}
 
-    fn _get64(mut get_reg: impl FnMut() -> RegValue) -> Self {
-        get_reg()
-    }
+	fn _get64(mut get_reg: impl FnMut() -> RegValue) -> Self {
+		get_reg()
+	}
 
-    fn _set32(self, mut set_reg: impl FnMut(RegValue)) {
-        set_reg(self);
-        set_reg(self >> 32);
-    }
+	fn _set32(self, mut set_reg: impl FnMut(RegValue)) {
+		set_reg(self);
+		set_reg(self >> 32);
+	}
 
-    fn _set64(self, mut set_reg: impl FnMut(RegValue)) {
-        set_reg(self);
-    }
+	fn _set64(self, mut set_reg: impl FnMut(RegValue)) {
+		set_reg(self);
+	}
 }
 
 impl AbiTy for i64 {
-    const _REGS_REQUIRED_32: usize = <u64 as AbiTy>::_REGS_REQUIRED_32;
-    const _REGS_REQUIRED_64: usize = <u64 as AbiTy>::_REGS_REQUIRED_64;
+	const _REGS_REQUIRED_32: usize = <u64 as AbiTy>::_REGS_REQUIRED_32;
+	const _REGS_REQUIRED_64: usize = <u64 as AbiTy>::_REGS_REQUIRED_64;
 
-    fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
-        <u64 as AbiTy>::_get32(get_reg) as i64
-    }
+	fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
+		<u64 as AbiTy>::_get32(get_reg) as i64
+	}
 
-    fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
-        <u64 as AbiTy>::_get64(get_reg) as i64
-    }
+	fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
+		<u64 as AbiTy>::_get64(get_reg) as i64
+	}
 
-    fn _set32(self, set_reg: impl FnMut(RegValue)) {
-        (self as u64)._set32(set_reg)
-    }
+	fn _set32(self, set_reg: impl FnMut(RegValue)) {
+		(self as u64)._set32(set_reg)
+	}
 
-    fn _set64(self, set_reg: impl FnMut(RegValue)) {
-        (self as u64)._set64(set_reg)
-    }
+	fn _set64(self, set_reg: impl FnMut(RegValue)) {
+		(self as u64)._set64(set_reg)
+	}
 }
 
 // `AbiTy` is deliberately not implemented for `usize`.
 
 /// A type which can be returned from a host function.
 pub trait ReturnTy<UserError>: Sized + 'static {
-    #[doc(hidden)]
-    const _REGS_REQUIRED_32: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_32: usize;
 
-    #[doc(hidden)]
-    const _REGS_REQUIRED_64: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_64: usize;
 
-    #[doc(hidden)]
-    fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError>;
+	#[doc(hidden)]
+	fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError>;
 
-    #[doc(hidden)]
-    fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError>;
+	#[doc(hidden)]
+	fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError>;
 }
 
 impl<UserError, T> ReturnTy<UserError> for T
 where
-    T: AbiTy,
+	T: AbiTy,
 {
-    const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
-    const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
+	const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
+	const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
 
-    fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        self._set32(set_reg);
-        Ok(())
-    }
+	fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		self._set32(set_reg);
+		Ok(())
+	}
 
-    fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        self._set64(set_reg);
-        Ok(())
-    }
+	fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		self._set64(set_reg);
+		Ok(())
+	}
 }
 
 impl<UserError> ReturnTy<UserError> for () {
-    const _REGS_REQUIRED_32: usize = 0;
-    const _REGS_REQUIRED_64: usize = 0;
+	const _REGS_REQUIRED_32: usize = 0;
+	const _REGS_REQUIRED_64: usize = 0;
 
-    fn _handle_return32(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        Ok(())
-    }
+	fn _handle_return32(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		Ok(())
+	}
 
-    fn _handle_return64(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        Ok(())
-    }
+	fn _handle_return64(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		Ok(())
+	}
 }
 
 impl<UserError, E> ReturnTy<UserError> for Result<(), E>
 where
-    UserError: From<E>,
-    E: 'static,
+	UserError: From<E>,
+	E: 'static,
 {
-    const _REGS_REQUIRED_32: usize = 0;
-    const _REGS_REQUIRED_64: usize = 0;
+	const _REGS_REQUIRED_32: usize = 0;
+	const _REGS_REQUIRED_64: usize = 0;
 
-    fn _handle_return32(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        Ok(self?)
-    }
+	fn _handle_return32(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		Ok(self?)
+	}
 
-    fn _handle_return64(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        Ok(self?)
-    }
+	fn _handle_return64(self, _set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		Ok(self?)
+	}
 }
 
 impl<UserError, T, E> ReturnTy<UserError> for Result<T, E>
 where
-    UserError: From<E>,
-    E: 'static,
-    T: AbiTy,
+	UserError: From<E>,
+	E: 'static,
+	T: AbiTy,
 {
-    const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
-    const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
+	const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
+	const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
 
-    fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        self?._set32(set_reg);
-        Ok(())
-    }
+	fn _handle_return32(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		self?._set32(set_reg);
+		Ok(())
+	}
 
-    fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
-        self?._set64(set_reg);
-        Ok(())
-    }
+	fn _handle_return64(self, set_reg: impl FnMut(RegValue)) -> Result<(), UserError> {
+		self?._set64(set_reg);
+		Ok(())
+	}
 }
 
 pub trait FuncArgs: Send {
-    #[doc(hidden)]
-    const _REGS_REQUIRED_32: usize;
-    #[doc(hidden)]
-    const _REGS_REQUIRED_64: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_32: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_64: usize;
 
-    #[doc(hidden)]
-    fn _set(self, is_64_bit: bool, set_reg: impl FnMut(RegValue))
-    where
-        Self: Sized,
-    {
-        if is_64_bit {
-            self._set64(set_reg);
-        } else {
-            self._set32(set_reg);
-        }
-    }
+	#[doc(hidden)]
+	fn _set(self, is_64_bit: bool, set_reg: impl FnMut(RegValue))
+	where
+		Self: Sized,
+	{
+		if is_64_bit {
+			self._set64(set_reg);
+		} else {
+			self._set32(set_reg);
+		}
+	}
 
-    #[doc(hidden)]
-    fn _set32(self, set_reg: impl FnMut(RegValue));
+	#[doc(hidden)]
+	fn _set32(self, set_reg: impl FnMut(RegValue));
 
-    #[doc(hidden)]
-    fn _set64(self, set_reg: impl FnMut(RegValue));
+	#[doc(hidden)]
+	fn _set64(self, set_reg: impl FnMut(RegValue));
 }
 
 pub trait FuncResult: Send + Sized {
-    #[doc(hidden)]
-    const _REGS_REQUIRED_32: usize;
-    #[doc(hidden)]
-    const _REGS_REQUIRED_64: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_32: usize;
+	#[doc(hidden)]
+	const _REGS_REQUIRED_64: usize;
 
-    #[doc(hidden)]
-    fn _get(is_64_bit: bool, get_reg: impl FnMut() -> RegValue) -> Self {
-        if is_64_bit {
-            Self::_get64(get_reg)
-        } else {
-            Self::_get32(get_reg)
-        }
-    }
+	#[doc(hidden)]
+	fn _get(is_64_bit: bool, get_reg: impl FnMut() -> RegValue) -> Self {
+		if is_64_bit { Self::_get64(get_reg) } else { Self::_get32(get_reg) }
+	}
 
-    #[doc(hidden)]
-    fn _get32(get_reg: impl FnMut() -> RegValue) -> Self;
+	#[doc(hidden)]
+	fn _get32(get_reg: impl FnMut() -> RegValue) -> Self;
 
-    #[doc(hidden)]
-    fn _get64(get_reg: impl FnMut() -> RegValue) -> Self;
+	#[doc(hidden)]
+	fn _get64(get_reg: impl FnMut() -> RegValue) -> Self;
 }
 
 impl FuncResult for () {
-    const _REGS_REQUIRED_32: usize = 0;
-    const _REGS_REQUIRED_64: usize = 0;
+	const _REGS_REQUIRED_32: usize = 0;
+	const _REGS_REQUIRED_64: usize = 0;
 
-    fn _get32(_: impl FnMut() -> RegValue) -> Self {}
-    fn _get64(_: impl FnMut() -> RegValue) -> Self {}
+	fn _get32(_: impl FnMut() -> RegValue) -> Self {}
+	fn _get64(_: impl FnMut() -> RegValue) -> Self {}
 }
 
 impl<T> FuncResult for T
 where
-    T: AbiTy,
+	T: AbiTy,
 {
-    const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
-    const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
+	const _REGS_REQUIRED_32: usize = <T as AbiTy>::_REGS_REQUIRED_32;
+	const _REGS_REQUIRED_64: usize = <T as AbiTy>::_REGS_REQUIRED_64;
 
-    fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
-        <T as AbiTy>::_get32(get_reg)
-    }
+	fn _get32(get_reg: impl FnMut() -> RegValue) -> Self {
+		<T as AbiTy>::_get32(get_reg)
+	}
 
-    fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
-        <T as AbiTy>::_get64(get_reg)
-    }
+	fn _get64(get_reg: impl FnMut() -> RegValue) -> Self {
+		<T as AbiTy>::_get64(get_reg)
+	}
 }
 
 macro_rules! impl_into_extern_fn {
@@ -571,419 +565,412 @@ impl_into_extern_fn!(6 A0 A1 A2 A3 A4 A5);
 #[repr(transparent)]
 struct UnsafePhantomData<T>(PhantomData<T>);
 
-// SAFETY: This is only used to hold a type used exclusively at compile time, so regardless of whether it implements `Send` this will be safe.
+// SAFETY: This is only used to hold a type used exclusively at compile time, so
+// regardless of whether it implements `Send` this will be safe.
 unsafe impl<T> Send for UnsafePhantomData<T> {}
 
-// SAFETY: This is only used to hold a type used exclusively at compile time, so regardless of whether it implements `Sync` this will be safe.
+// SAFETY: This is only used to hold a type used exclusively at compile time, so
+// regardless of whether it implements `Sync` this will be safe.
 unsafe impl<T> Sync for UnsafePhantomData<T> {}
 
 struct DynamicFn<T, F> {
-    callback: F,
-    _phantom: UnsafePhantomData<T>,
+	callback: F,
+	_phantom: UnsafePhantomData<T>,
 }
 
 impl<P: PalletConfig, UserError, F, T> CallFn<P, UserError> for DynamicFn<T, F>
 where
-    F: Fn(Caller<'_, P>) -> Result<(), UserError> + Send + Sync + 'static,
+	F: Fn(Caller<'_, P>) -> Result<(), UserError> + Send + Sync + 'static,
 {
-    fn call(&self, user_data: &mut State<P>, instance: &mut RawInstance) -> Result<(), UserError> {
-        let caller = Caller {
-            user_data,
-            instance,
-        };
+	fn call(&self, user_data: &mut State<P>, instance: &mut RawInstance) -> Result<(), UserError> {
+		let caller = Caller { user_data, instance };
 
-        (self.callback)(caller)
-    }
+		(self.callback)(caller)
+	}
 }
 
 pub struct State<T: PalletConfig> {
-    pub addresses: Vec<T::AccountId>,
-    pub balances: Vec<BalanceOf<T>>,
-    pub log_message: Vec<u8>,
-    pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
-    pub print: fn(Vec<u8>) -> u64,
-    pub balance: fn(T::AccountId) -> u64,
-    pub balance_of: fn(T::AccountId) -> u64,
-    pub block_number: fn() -> u64,
-    pub account_id: fn() -> u64,
-    pub caller: fn() -> u64,
+	pub addresses: Vec<T::AccountId>,
+	pub balances: Vec<BalanceOf<T>>,
+	pub log_message: Vec<u8>,
+	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+	pub print: fn(Vec<u8>) -> u64,
+	pub balance: fn(T::AccountId) -> u64,
+	pub balance_of: fn(T::AccountId) -> u64,
+	pub block_number: fn() -> u64,
+	pub account_id: fn() -> u64,
+	pub caller: fn() -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
-    pub fn new(
-        addresses: Vec<T::AccountId>,
-        balances: Vec<BalanceOf<T>>,
-        log_message: Vec<u8>,
-        transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
-        print: fn(Vec<u8>) -> u64,
-        balance: fn(T::AccountId) -> u64,
-        balance_of: fn(T::AccountId) -> u64,
-        block_number: fn() -> u64,
-        account_id: fn() -> u64,
-        caller: fn() -> u64,
-    ) -> Self {
-        Self {
-            addresses,
-            balances,
-            log_message,
-            transfer,
-            print,
-            balance,
-            balance_of,
-            block_number,
-            account_id,
-            caller,
-        }
-    }
+	pub fn new(
+		addresses: Vec<T::AccountId>,
+		balances: Vec<BalanceOf<T>>,
+		log_message: Vec<u8>,
+		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+		print: fn(Vec<u8>) -> u64,
+		balance: fn(T::AccountId) -> u64,
+		balance_of: fn(T::AccountId) -> u64,
+		block_number: fn() -> u64,
+		account_id: fn() -> u64,
+		caller: fn() -> u64,
+	) -> Self {
+		Self {
+			addresses,
+			balances,
+			log_message,
+			transfer,
+			print,
+			balance,
+			balance_of,
+			block_number,
+			account_id,
+			caller,
+		}
+	}
 }
 
 #[non_exhaustive]
 pub struct Caller<'a, T: PalletConfig> {
-    pub user_data: &'a mut State<T>,
-    pub instance: &'a mut RawInstance,
+	pub user_data: &'a mut State<T>,
+	pub instance: &'a mut RawInstance,
 }
 
 pub struct Linker<T: PalletConfig, UserError = core::convert::Infallible> {
-    host_functions: LookupMap<Vec<u8>, CallFnArc<T, UserError>>,
-    #[allow(clippy::type_complexity)]
-    fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
-    phantom: PhantomData<UserError>,
+	host_functions: LookupMap<Vec<u8>, CallFnArc<T, UserError>>,
+	#[allow(clippy::type_complexity)]
+	fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
+	phantom: PhantomData<UserError>,
 }
 
 impl<T: PalletConfig, UserError> Default for Linker<T, UserError> {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl<T: PalletConfig, UserError> Linker<T, UserError> {
-    pub fn new() -> Self {
-        Self {
-            host_functions: Default::default(),
-            fallback_handler: None,
-            phantom: PhantomData,
-        }
-    }
+	pub fn new() -> Self {
+		Self { host_functions: Default::default(), fallback_handler: None, phantom: PhantomData }
+	}
 
-    /// Defines a fallback external call handler, in case no other registered functions match.
-    pub fn define_fallback(
-        &mut self,
-        func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static,
-    ) {
-        self.fallback_handler = Some(Arc::new(func));
-    }
+	/// Defines a fallback external call handler, in case no other registered
+	/// functions match.
+	pub fn define_fallback(
+		&mut self,
+		func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static,
+	) {
+		self.fallback_handler = Some(Arc::new(func));
+	}
 
-    /// Defines a new untyped handler for external calls with a given symbol.
-    pub fn define_untyped(
-        &mut self,
-        symbol: impl AsRef<[u8]>,
-        func: impl Fn(Caller<T>) -> Result<(), UserError> + Send + Sync + 'static,
-    ) -> Result<&mut Self, Error>
-    where
-        UserError: 'static,
-        T: PalletConfig,
-    {
-        let symbol = symbol.as_ref();
-        if self.host_functions.contains_key(symbol) {
-            bail!(
-                "cannot register host function: host function was already registered: {}",
-                ProgramSymbol::new(symbol)
-            );
-        }
+	/// Defines a new untyped handler for external calls with a given symbol.
+	pub fn define_untyped(
+		&mut self,
+		symbol: impl AsRef<[u8]>,
+		func: impl Fn(Caller<T>) -> Result<(), UserError> + Send + Sync + 'static,
+	) -> Result<&mut Self, Error>
+	where
+		UserError: 'static,
+		T: PalletConfig,
+	{
+		let symbol = symbol.as_ref();
+		if self.host_functions.contains_key(symbol) {
+			bail!(
+				"cannot register host function: host function was already registered: {}",
+				ProgramSymbol::new(symbol)
+			);
+		}
 
-        self.host_functions.insert(
-            symbol.to_owned(),
-            CallFnArc(Arc::new(DynamicFn {
-                callback: func,
-                _phantom: UnsafePhantomData(PhantomData::<UserError>),
-            })),
-        );
+		self.host_functions.insert(
+			symbol.to_owned(),
+			CallFnArc(Arc::new(DynamicFn {
+				callback: func,
+				_phantom: UnsafePhantomData(PhantomData::<UserError>),
+			})),
+		);
 
-        Ok(self)
-    }
+		Ok(self)
+	}
 
-    /// Defines a new statically typed handler for external calls with a given symbol.
-    pub fn define_typed<Params, Args>(
-        &mut self,
-        symbol: impl AsRef<[u8]>,
-        func: impl IntoCallFn<T, UserError, Params, Args>,
-    ) -> Result<&mut Self, Error> {
-        let symbol = symbol.as_ref();
-        if self.host_functions.contains_key(symbol) {
-            bail!(
-                "cannot register host function: host function was already registered: {}",
-                ProgramSymbol::new(symbol)
-            );
-        }
+	/// Defines a new statically typed handler for external calls with a given
+	/// symbol.
+	pub fn define_typed<Params, Args>(
+		&mut self,
+		symbol: impl AsRef<[u8]>,
+		func: impl IntoCallFn<T, UserError, Params, Args>,
+	) -> Result<&mut Self, Error> {
+		let symbol = symbol.as_ref();
+		if self.host_functions.contains_key(symbol) {
+			bail!(
+				"cannot register host function: host function was already registered: {}",
+				ProgramSymbol::new(symbol)
+			);
+		}
 
-        self.host_functions
-            .insert(symbol.to_owned(), func._into_extern_fn());
-        Ok(self)
-    }
+		self.host_functions.insert(symbol.to_owned(), func._into_extern_fn());
+		Ok(self)
+	}
 
-    /// Pre-instantiates a new module, resolving its imports and exports.
-    pub fn instantiate_pre(&self, module: &Module) -> Result<InstancePre<T, UserError>, Error> {
-        let mut exports = LookupMap::new();
-        for export in module.exports() {
-            match exports.entry(export.symbol().as_bytes().to_owned()) {
-                Entry::Occupied(_) => {
-                    if module.is_strict() {
-                        return Err(format!("duplicate export: {}", export.symbol()).into());
-                    } else {
-                        log::debug!("Duplicate export: {}", export.symbol());
-                        continue;
-                    }
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert(export.program_counter());
-                }
-            }
-        }
+	/// Pre-instantiates a new module, resolving its imports and exports.
+	pub fn instantiate_pre(&self, module: &Module) -> Result<InstancePre<T, UserError>, Error> {
+		let mut exports = LookupMap::new();
+		for export in module.exports() {
+			match exports.entry(export.symbol().as_bytes().to_owned()) {
+				Entry::Occupied(_) =>
+					if module.is_strict() {
+						return Err(format!("duplicate export: {}", export.symbol()).into());
+					} else {
+						log::debug!("Duplicate export: {}", export.symbol());
+						continue;
+					},
+				Entry::Vacant(entry) => {
+					entry.insert(export.program_counter());
+				},
+			}
+		}
 
-        let mut imports: Vec<Option<CallFnArc<T, UserError>>> =
-            Vec::with_capacity(module.imports().len() as usize);
-        for symbol in module.imports() {
-            let Some(symbol) = symbol else {
-                if module.is_strict() {
-                    return Err("failed to parse an import".into());
-                } else {
-                    imports.push(None);
-                    continue;
-                }
-            };
+		let mut imports: Vec<Option<CallFnArc<T, UserError>>> =
+			Vec::with_capacity(module.imports().len() as usize);
+		for symbol in module.imports() {
+			let Some(symbol) = symbol else {
+				if module.is_strict() {
+					return Err("failed to parse an import".into());
+				} else {
+					imports.push(None);
+					continue;
+				}
+			};
 
-            let host_fn = if let Some(host_fn) = self.host_functions.get(symbol.as_bytes()) {
-                Some(host_fn.clone())
-            } else if self.fallback_handler.is_some() {
-                None
-            } else if module.is_strict() {
-                return Err(format!("missing host function: {}", symbol).into());
-            } else {
-                log::debug!("Missing host function: {}", symbol);
-                None
-            };
+			let host_fn = if let Some(host_fn) = self.host_functions.get(symbol.as_bytes()) {
+				Some(host_fn.clone())
+			} else if self.fallback_handler.is_some() {
+				None
+			} else if module.is_strict() {
+				return Err(format!("missing host function: {}", symbol).into());
+			} else {
+				log::debug!("Missing host function: {}", symbol);
+				None
+			};
 
-            imports.push(host_fn);
-        }
+			imports.push(host_fn);
+		}
 
-        assert_eq!(imports.len(), module.imports().len() as usize);
-        Ok(InstancePre(Arc::new(InstancePreState {
-            module: module.clone(),
-            imports,
-            exports,
-            fallback_handler: self.fallback_handler.clone(),
-        })))
-    }
+		assert_eq!(imports.len(), module.imports().len() as usize);
+		Ok(InstancePre(Arc::new(InstancePreState {
+			module: module.clone(),
+			imports,
+			exports,
+			fallback_handler: self.fallback_handler.clone(),
+		})))
+	}
 }
 
 struct InstancePreState<T: PalletConfig, UserError> {
-    module: Module,
-    imports: Vec<Option<CallFnArc<T, UserError>>>,
-    exports: LookupMap<Vec<u8>, ProgramCounter>,
-    fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
+	module: Module,
+	imports: Vec<Option<CallFnArc<T, UserError>>>,
+	exports: LookupMap<Vec<u8>, ProgramCounter>,
+	fallback_handler: Option<FallbackHandlerArc<T, UserError>>,
 }
 
 pub struct InstancePre<T: PalletConfig, UserError = core::convert::Infallible>(
-    Arc<InstancePreState<T, UserError>>,
+	Arc<InstancePreState<T, UserError>>,
 );
 
 impl<T: PalletConfig, UserError> Clone for InstancePre<T, UserError> {
-    fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
-    }
+	fn clone(&self) -> Self {
+		Self(Arc::clone(&self.0))
+	}
 }
 
 pub struct Instance<T: PalletConfig, UserError = core::convert::Infallible> {
-    instance: RawInstance,
-    pre: InstancePre<T, UserError>,
+	instance: RawInstance,
+	pre: InstancePre<T, UserError>,
 }
 impl<T: PalletConfig, UserError> core::ops::Deref for Instance<T, UserError> {
-    type Target = RawInstance;
-    fn deref(&self) -> &Self::Target {
-        &self.instance
-    }
+	type Target = RawInstance;
+	fn deref(&self) -> &Self::Target {
+		&self.instance
+	}
 }
 
 impl<T: PalletConfig, UserError> core::ops::DerefMut for Instance<T, UserError> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.instance
-    }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.instance
+	}
 }
 
 #[derive(Debug)]
 pub enum CallError<UserError = core::convert::Infallible> {
-    /// The execution finished abnormally with a trap.
-    Trap,
+	/// The execution finished abnormally with a trap.
+	Trap,
 
-    /// The execution ran out of gas.
-    NotEnoughGas,
+	/// The execution ran out of gas.
+	NotEnoughGas,
 
-    /// The execution failed.
-    Error(Error),
+	/// The execution failed.
+	Error(Error),
 
-    /// The execution failed with a custom user error.
-    User(UserError),
+	/// The execution failed with a custom user error.
+	User(UserError),
 }
 
 impl<T: PalletConfig, UserError> InstancePre<T, UserError> {
-    pub fn instantiate(&self) -> Result<Instance<T, UserError>, Error> {
-        Ok(Instance {
-            instance: self.0.module.instantiate()?,
-            pre: self.clone(),
-        })
-    }
+	pub fn instantiate(&self) -> Result<Instance<T, UserError>, Error> {
+		Ok(Instance { instance: self.0.module.instantiate()?, pre: self.clone() })
+	}
 }
 
 pub trait EntryPoint {
-    #[doc(hidden)]
-    fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String>;
+	#[doc(hidden)]
+	fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String>;
 }
 
 impl<'a> EntryPoint for &'a str {
-    fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
-        exports
-            .get(self.as_bytes())
-            .copied()
-            .ok_or_else(|| format!("export not found: '{self}'"))
-    }
+	fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
+		exports
+			.get(self.as_bytes())
+			.copied()
+			.ok_or_else(|| format!("export not found: '{self}'"))
+	}
 }
 
 impl EntryPoint for String {
-    fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
-        EntryPoint::get(self.as_str(), exports)
-    }
+	fn get(self, exports: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
+		EntryPoint::get(self.as_str(), exports)
+	}
 }
 
 impl EntryPoint for ProgramCounter {
-    fn get(self, _: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
-        Ok(self)
-    }
+	fn get(self, _: &LookupMap<Vec<u8>, ProgramCounter>) -> Result<ProgramCounter, String> {
+		Ok(self)
+	}
 }
 
 impl<T: PalletConfig, UserError> Instance<T, UserError> {
-    /// Calls a given exported function with the given arguments.
-    pub fn call_typed<FnArgs>(
-        &mut self,
-        user_data: &mut State<T>,
-        entry_point: impl EntryPoint,
-        args: FnArgs,
-    ) -> Result<(), CallError<UserError>>
-    where
-        FnArgs: FuncArgs,
-        T: PalletConfig,
-    {
-        let entry_point = entry_point
-            .get(&self.pre.0.exports)
-            .map_err(|error| CallError::Error(Error::from_display(error)))?;
-        self.instance.prepare_call_typed(entry_point, args);
+	/// Calls a given exported function with the given arguments.
+	pub fn call_typed<FnArgs>(
+		&mut self,
+		user_data: &mut State<T>,
+		entry_point: impl EntryPoint,
+		args: FnArgs,
+	) -> Result<(), CallError<UserError>>
+	where
+		FnArgs: FuncArgs,
+		T: PalletConfig,
+	{
+		let entry_point = entry_point
+			.get(&self.pre.0.exports)
+			.map_err(|error| CallError::Error(Error::from_display(error)))?;
+		self.instance.prepare_call_typed(entry_point, args);
 
-        loop {
-            let interrupt = self.instance.run().map_err(CallError::Error)?;
-            match interrupt {
-                InterruptKind::Finished => break,
-                InterruptKind::Trap => return Err(CallError::Trap),
-                InterruptKind::Ecalli(hostcall) => {
-                    if let Some(host_fn) = self
-                        .pre
-                        .0
-                        .imports
-                        .get(hostcall as usize)
-                        .and_then(|host_fn| host_fn.as_ref())
-                    {
-                        host_fn
-                            .0
-                            .call(user_data, &mut self.instance)
-                            .map_err(CallError::User)?;
-                    } else if let Some(ref fallback_handler) = self.pre.0.fallback_handler {
-                        let caller = Caller {
-                            user_data,
-                            instance: &mut self.instance,
-                        };
+		loop {
+			let interrupt = self.instance.run().map_err(CallError::Error)?;
+			match interrupt {
+				InterruptKind::Finished => break,
+				InterruptKind::Trap => return Err(CallError::Trap),
+				InterruptKind::Ecalli(hostcall) => {
+					if let Some(host_fn) = self
+						.pre
+						.0
+						.imports
+						.get(hostcall as usize)
+						.and_then(|host_fn| host_fn.as_ref())
+					{
+						host_fn.0.call(user_data, &mut self.instance).map_err(CallError::User)?;
+					} else if let Some(ref fallback_handler) = self.pre.0.fallback_handler {
+						let caller = Caller { user_data, instance: &mut self.instance };
 
-                        fallback_handler(caller, hostcall).map_err(CallError::User)?;
-                    } else {
-                        log::debug!("Called a missing host function with ID = {}", hostcall);
-                        return Err(CallError::Trap);
-                    };
-                }
-                InterruptKind::NotEnoughGas => return Err(CallError::NotEnoughGas),
-                InterruptKind::Segfault(segfault) => {
-                    let module = self.instance.module().clone();
-                    if segfault.page_address >= module.memory_map().stack_address_low()
-                        && segfault.page_address + segfault.page_size
-                            <= module.memory_map().stack_address_high()
-                    {
-                        self.instance
-                            .zero_memory(segfault.page_address, segfault.page_size)
-                            .map_err(|error| {
-                                CallError::Error(Error::from_display(format!(
-                                    "failed to zero memory when handling a segfault at 0x{:x}: {error}",
-                                    segfault.page_address
-                                )))
-                            })?;
+						fallback_handler(caller, hostcall).map_err(CallError::User)?;
+					} else {
+						log::debug!("Called a missing host function with ID = {}", hostcall);
+						return Err(CallError::Trap);
+					};
+				},
+				InterruptKind::NotEnoughGas => return Err(CallError::NotEnoughGas),
+				InterruptKind::Segfault(segfault) => {
+					let module = self.instance.module().clone();
+					if segfault.page_address >= module.memory_map().stack_address_low() &&
+						segfault.page_address + segfault.page_size <=
+							module.memory_map().stack_address_high()
+					{
+						self.instance
+							.zero_memory(segfault.page_address, segfault.page_size)
+							.map_err(|error| {
+								CallError::Error(Error::from_display(format!(
+									"failed to zero memory when handling a segfault at 0x{:x}: {error}",
+									segfault.page_address
+								)))
+							})?;
 
-                        continue;
-                    }
+						continue;
+					}
 
-                    macro_rules! handle {
-                        ($range:ident, $data:ident) => {{
-                            if segfault.page_address >= module.memory_map().$range().start
-                                && segfault.page_address + segfault.page_size <= module.memory_map().$range().end
-                            {
-                                let data_offset = (segfault.page_address - module.memory_map().$range().start) as usize;
-                                let data = module.blob().$data();
-                                if let Some(chunk_length) = data.len().checked_sub(data_offset) {
-                                    let chunk_length = core::cmp::min(chunk_length, segfault.page_size as usize);
-                                    self.instance
-                                        .write_memory(segfault.page_address, &data[data_offset..data_offset + chunk_length])
-                                        .map_err(|error| {
-                                            CallError::Error(Error::from_display(format!(
-                                                "failed to write memory when handling a segfault at 0x{:x}: {error}",
-                                                segfault.page_address
-                                            )))
-                                        })?;
-                                } else {
-                                    self.instance
-                                        .zero_memory(segfault.page_address, segfault.page_size)
-                                        .map_err(|error| {
-                                            CallError::Error(Error::from_display(format!(
-                                                "failed to zero memory when handling a segfault at 0x{:x}: {error}",
-                                                segfault.page_address
-                                            )))
-                                        })?;
-                                };
+					macro_rules! handle {
+						($range:ident, $data:ident) => {{
+							if segfault.page_address >= module.memory_map().$range().start &&
+								segfault.page_address + segfault.page_size <=
+									module.memory_map().$range().end
+							{
+								let data_offset = (segfault.page_address -
+									module.memory_map().$range().start) as usize;
+								let data = module.blob().$data();
+								if let Some(chunk_length) = data.len().checked_sub(data_offset) {
+									let chunk_length =
+										core::cmp::min(chunk_length, segfault.page_size as usize);
+									self.instance
+										.write_memory(
+											segfault.page_address,
+											&data[data_offset..data_offset + chunk_length],
+										)
+										.map_err(|error| {
+											CallError::Error(Error::from_display(format!(
+												"failed to write memory when handling a segfault at 0x{:x}: {error}",
+												segfault.page_address
+											)))
+										})?;
+								} else {
+									self.instance
+										.zero_memory(segfault.page_address, segfault.page_size)
+										.map_err(|error| {
+											CallError::Error(Error::from_display(format!(
+												"failed to zero memory when handling a segfault at 0x{:x}: {error}",
+												segfault.page_address
+											)))
+										})?;
+								};
 
-                                continue;
-                            }
-                        }};
-                    }
+								continue;
+							}
+						}};
+					}
 
-                    handle!(ro_data_range, ro_data);
-                    handle!(rw_data_range, rw_data);
+					handle!(ro_data_range, ro_data);
+					handle!(rw_data_range, rw_data);
 
-                    log::debug!("Unexpected segfault: 0x{:x}", segfault.page_address);
-                    return Err(CallError::Trap);
-                }
-                InterruptKind::Step => {}
-            }
-        }
+					log::debug!("Unexpected segfault: 0x{:x}", segfault.page_address);
+					return Err(CallError::Trap);
+				},
+				InterruptKind::Step => {},
+			}
+		}
 
-        Ok(())
-    }
+		Ok(())
+	}
 
-    /// A conveniance function to call [`Instance::call_typed`] and [`RawInstance::get_result_typed`] in a single function call.
-    pub fn call_typed_and_get_result<FnResult, FnArgs>(
-        &mut self,
-        user_data: &mut State<T>,
-        entry_point: impl EntryPoint,
-        args: FnArgs,
-    ) -> Result<FnResult, CallError<UserError>>
-    where
-        FnArgs: FuncArgs,
-        FnResult: FuncResult,
-        T: PalletConfig,
-    {
-        self.call_typed(user_data, entry_point, args)?;
-        Ok(self.instance.get_result_typed::<FnResult>())
-    }
+	/// A conveniance function to call [`Instance::call_typed`] and
+	/// [`RawInstance::get_result_typed`] in a single function call.
+	pub fn call_typed_and_get_result<FnResult, FnArgs>(
+		&mut self,
+		user_data: &mut State<T>,
+		entry_point: impl EntryPoint,
+		args: FnArgs,
+	) -> Result<FnResult, CallError<UserError>>
+	where
+		FnArgs: FuncArgs,
+		FnResult: FuncResult,
+		T: PalletConfig,
+	{
+		self.call_typed(user_data, entry_point, args)?;
+		Ok(self.instance.get_result_typed::<FnResult>())
+	}
 }

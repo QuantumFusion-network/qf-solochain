@@ -33,23 +33,22 @@ use polkadot_sdk::{staging_xcm_builder as xcm_builder, staging_xcm_executor as x
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
-	derive_impl,
+	PalletId, derive_impl,
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
+		ConstBool, ConstU8, ConstU32, ConstU64, EitherOfDiverse, TransformOrigin, VariantCountOf,
 	},
 	weights::{ConstantMultiplier, Weight},
-	PalletId,
 };
 use frame_system::{
-	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
+	limits::{BlockLength, BlockWeights},
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_runtime_common::{
-	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
+	BlockHashCount, SlowAdjustingFeeUpdate, xcm_sender::NoPriceForMessageDelivery,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::Perbill;
@@ -58,12 +57,12 @@ use xcm::latest::prelude::BodyId;
 
 // Local module imports
 use super::{
+	AVERAGE_ON_INITIALIZE_RATIO, AccountId, Aura, Balance, Balances, Block, BlockNumber,
+	CollatorSelection, ConsensusHook, EXISTENTIAL_DEPOSIT, HOURS, Hash, MAXIMUM_BLOCK_WEIGHT,
+	MICRO_UNIT, MINUTES, MessageQueue, NORMAL_DISPATCH_RATIO, Nonce, PalletInfo, ParachainSystem,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
+	RuntimeTask, SLOT_DURATION, Session, SessionKeys, System, VERSION, WeightToFee, XcmpQueue,
 	weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
-	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
-	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
-	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
-	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, HOURS,
-	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, MINUTES, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 };
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
@@ -97,9 +96,11 @@ parameter_types! {
 	pub const SS58Prefix: u16 = 42;
 }
 
-/// The default types are being injected by [`derive_impl`](`frame_support::derive_impl`) from
-/// [`ParaChainDefaultConfig`](`struct@frame_system::config_preludes::ParaChainDefaultConfig`),
-/// but overridden as needed.
+/// The default types are being injected by
+/// [`derive_impl`](`frame_support::derive_impl`) from
+/// [`ParaChainDefaultConfig`](`struct@
+/// frame_system::config_preludes::ParaChainDefaultConfig`), but overridden as
+/// needed.
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
@@ -110,7 +111,8 @@ impl frame_system::Config for Runtime {
 	type Hash = Hash;
 	/// The block type.
 	type Block = Block;
-	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	/// Maximum number of block number to block hash mappings to keep (oldest
+	/// pruned first).
 	type BlockHashCount = BlockHashCount;
 	/// Runtime version.
 	type Version = Version;
@@ -122,7 +124,8 @@ impl frame_system::Config for Runtime {
 	type BlockWeights = RuntimeBlockWeights;
 	/// The maximum length of a block (in bytes).
 	type BlockLength = RuntimeBlockLength;
-	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
+	/// This is used as an identifier of the chain. 42 is the generic substrate
+	/// prefix.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -232,7 +235,8 @@ impl pallet_message_queue::Config for Runtime {
 		RuntimeCall,
 	>;
 	type Size = u32;
-	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)`
+	// origin:
 	type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
 	type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
 	type HeapSize = sp_core::ConstU32<{ 103 * 1024 }>;
@@ -294,7 +298,8 @@ parameter_types! {
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 }
 
-/// We allow root and the StakingAdmin to execute privileged collator selection operations.
+/// We allow root and the StakingAdmin to execute privileged collator selection
+/// operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
 	EnsureXcm<IsVoiceOfBody<RelayLocation, StakingAdminBodyId>>,

@@ -37,9 +37,10 @@ parameter_types! {
 	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
-/// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
-/// when determining ownership of accounts for asset transacting and when attempting to use XCM
-/// `Transact` in order to determine the dispatch Origin.
+/// Type for specifying how a `Location` can be converted into an `AccountId`.
+/// This is used when determining ownership of accounts for asset transacting
+/// and when attempting to use XCM `Transact` in order to determine the dispatch
+/// Origin.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the parent `AccountId`.
 	ParentIsPreset<AccountId>,
@@ -63,9 +64,10 @@ pub type LocalAssetTransactor = FungibleAdapter<
 	(),
 >;
 
-/// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
-/// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
-/// biases the kind of local `Origin` it will become.
+/// This is the type we use to convert an (incoming) XCM origin into a local
+/// `Origin` instance, ready for dispatching a transaction with Xcm's
+/// `Transact`. There is an `OriginKind` which can biases the kind of local
+/// `Origin` it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
 	// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
 	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
@@ -154,8 +156,8 @@ impl xcm_executor::Config for XcmConfig {
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
-/// The means for routing XCM messages which are not for local execution into the right message
-/// queues.
+/// The means for routing XCM messages which are not for local execution into
+/// the right message queues.
 pub type XcmRouter = WithUniqueTopic<(
 	// Two routers - use UMP to communicate with the relay chain:
 	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, (), ()>,

@@ -1,6 +1,6 @@
 use crate::{
-	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig, EXISTENTIAL_DEPOSIT,
+	AccountId, BalancesConfig, CollatorSelectionConfig, EXISTENTIAL_DEPOSIT, ParachainInfoConfig,
+	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig,
 };
 
 use alloc::{vec, vec::Vec};
@@ -22,7 +22,8 @@ pub const PARACHAIN_ID: u32 = 4775;
 
 /// Generate the session keys from individual elements.
 ///
-/// The input must be a tuple of individual keys (a single arg for now since we have just one key).
+/// The input must be a tuple of individual keys (a single arg for now since we
+/// have just one key).
 pub fn template_session_keys(keys: AuraId) -> SessionKeys {
 	SessionKeys { aura: keys }
 }
@@ -89,7 +90,8 @@ fn development_config_genesis() -> Value {
 	)
 }
 
-/// Provides the JSON representation of predefined genesis config for given `id`.
+/// Provides the JSON representation of predefined genesis config for given
+/// `id`.
 pub fn get_preset(id: &PresetId) -> Option<vec::Vec<u8>> {
 	let patch = match id.as_ref() {
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => local_testnet_genesis(),
