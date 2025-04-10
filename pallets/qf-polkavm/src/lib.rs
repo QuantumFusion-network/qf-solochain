@@ -72,6 +72,7 @@ pub mod pallet {
         <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
     type CodeHash<T> = <T as frame_system::Config>::Hash;
     type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
+    type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 
     #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
@@ -140,6 +141,10 @@ pub mod pallet {
     #[pallet::storage]
     pub(super) type CodeAddress<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
+
+    #[pallet::storage]
+    pub(super) type CodeStorage<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, CodeStorageSlot<T>>;
 
     /// Events that functions in this pallet can emit.
     ///
@@ -301,6 +306,10 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
             ensure!(gas <= max_gas, Error::<T>::GasIsTooHigh);
 
+            // let max_storage_size = <T as Config>::StorageSize::get()
+            //     .try_into()
+            //     .map_err(|_| Error::<T>::IntegerOverflow)?;
+
             let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
@@ -335,6 +344,16 @@ pub mod pallet {
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
+                |contract_address: T::AccountId| -> Vec<u8> { CodeStorage::<T>::get(contract_address).map(|d| d.to_vec()).unwrap_or([].to_vec()) },
+                |contract_address: T::AccountId, max_storage_size: usize, mut data: Vec<u8>| -> u64 {
+                    let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
+                    if let Ok(_) = buffer .try_append(&mut data) {
+                        CodeStorage::<T>::insert(contract_address, buffer);
+                        0
+                    } else {
+                        1
+                    }
+                },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");

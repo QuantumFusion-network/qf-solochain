@@ -608,6 +608,8 @@ pub struct State<T: PalletConfig> {
     pub block_number: fn() -> u64,
     pub account_id: fn() -> u64,
     pub caller: fn() -> u64,
+    pub get: fn(T::AccountId) -> Vec<u8>,
+    pub insert: fn(T::AccountId, usize, Vec<u8>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -623,6 +625,8 @@ impl<T: PalletConfig> State<T> {
         block_number: fn() -> u64,
         account_id: fn() -> u64,
         caller: fn() -> u64,
+        get: fn(T::AccountId) -> Vec<u8>,
+        insert: fn(T::AccountId, usize, Vec<u8>) -> u64,
     ) -> Self {
         Self {
             addresses,
@@ -636,6 +640,8 @@ impl<T: PalletConfig> State<T> {
             block_number,
             account_id,
             caller,
+            get,
+            insert,
         }
     }
 }
