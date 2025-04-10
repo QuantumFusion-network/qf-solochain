@@ -1,0 +1,96 @@
+{
+  "bootNodes": [],
+  "chainType": "Live",
+  "codeSubstitutes": {},
+  "genesis": {
+    "runtimeGenesis": {
+      "code": "0x00",
+      "config": {
+        "aura": {
+          "authorities": []
+        },
+        "auraExt": {},
+        "balances": {
+          "balances": [
+            [
+              "5FNXLtK3tgqszEZzaq3ZGWUnBpGiu6XmTXBr35HeLF3i2K3m",
+              1000000000000000000
+            ],
+            [
+              "5CXLh2YRkb3AGfBGHVoPyEwd3bQfNqpXTfDfaDuba6VS8mat",
+              1000000000000000000
+            ],
+            [
+              "5CPMVKwBQbuu7ZNw7YsgaMkVgJpqF5cyhJs75fVfigFhetLD",
+              1000000000000000000
+            ],
+            [
+              "5HEdGQcg8HJCnFnq6GuCxS8vxEs1FheAWQSJEW89ZP7dHTq3",
+              1000000000000000000
+            ]
+          ],
+          "devAccounts": null
+        },
+        "collatorSelection": {
+          "candidacyBond": 1000000000000,
+          "desiredCandidates": 64,
+          "invulnerables": [
+            "5CXLh2YRkb3AGfBGHVoPyEwd3bQfNqpXTfDfaDuba6VS8mat",
+            "5CPMVKwBQbuu7ZNw7YsgaMkVgJpqF5cyhJs75fVfigFhetLD",
+            "5HEdGQcg8HJCnFnq6GuCxS8vxEs1FheAWQSJEW89ZP7dHTq3"
+          ]
+        },
+        "parachainInfo": {
+          "parachainId": 4775
+        },
+        "parachainSystem": {},
+        "polkadotXcm": {
+          "safeXcmVersion": 5
+        },
+        "session": {
+          "keys": [
+            [
+              "5CXLh2YRkb3AGfBGHVoPyEwd3bQfNqpXTfDfaDuba6VS8mat",
+              "5CXLh2YRkb3AGfBGHVoPyEwd3bQfNqpXTfDfaDuba6VS8mat",
+              {
+                "aura": "5EcboKBY2BZWVG74EbWuMAgoBCK8tmjsNzWcRscZ5JK2ahLX"
+              }
+            ],
+            [
+              "5CPMVKwBQbuu7ZNw7YsgaMkVgJpqF5cyhJs75fVfigFhetLD",
+              "5CPMVKwBQbuu7ZNw7YsgaMkVgJpqF5cyhJs75fVfigFhetLD",
+              {
+                "aura": "5CVG1FFgxB33DKDxjSphvSxmJpP9e7F2Y2vgRRxLQxPbnkPN"
+              }
+            ],
+            [
+              "5HEdGQcg8HJCnFnq6GuCxS8vxEs1FheAWQSJEW89ZP7dHTq3",
+              "5HEdGQcg8HJCnFnq6GuCxS8vxEs1FheAWQSJEW89ZP7dHTq3",
+              {
+                "aura": "5F9zyEW7KWbY9yxDbwPPdimvvoNtqJ6Zgjok6H1PbeE2LdEr"
+              }
+            ]
+          ],
+          "nonAuthorityKeys": []
+        },
+        "sudo": {
+          "key": "5FNXLtK3tgqszEZzaq3ZGWUnBpGiu6XmTXBr35HeLF3i2K3m"
+        },
+        "system": {},
+        "transactionPayment": {
+          "multiplier": "1000000000000000000"
+        }
+      }
+    }
+  },
+  "id": "qf_para_paseo",
+  "name": "QF Parachain (Paseo)",
+  "para_id": 4775,
+  "properties": {
+    "tokenDecimals": 12,
+    "tokenSymbol": "UNIT"
+  },
+  "protocolId": "qf-para-pas",
+  "relay_chain": "paseo",
+  "telemetryEndpoints": null
+}
