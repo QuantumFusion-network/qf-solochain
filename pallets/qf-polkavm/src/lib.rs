@@ -344,8 +344,13 @@ pub mod pallet {
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
-                |contract_address: T::AccountId| -> Option<Vec<u8>> { CodeStorage::<T>::get(contract_address).map(|d| d.to_vec()) },
-                |contract_address: T::AccountId, max_storage_size: usize, mut data: Vec<u8>| -> u64 {
+                |contract_address: T::AccountId| -> Option<Vec<u8>> {
+                    CodeStorage::<T>::get(contract_address).map(|d| d.to_vec())
+                },
+                |contract_address: T::AccountId,
+                 max_storage_size: usize,
+                 mut data: Vec<u8>|
+                 -> u64 {
                     let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
                     if let Ok(_) = buffer.try_append(&mut data) {
                         CodeStorage::<T>::insert(contract_address, buffer);
@@ -474,20 +479,17 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed(
-                    "get",
-                    |caller: Caller<T>, pointer: u32| -> u64 {
-                        let result = (caller.user_data.get)(caller.user_data.addresses[0].clone());
-                        if let Some(chunk) = result {
-                            match caller.instance.write_memory(pointer, &chunk) {
-                                Err(_) => return 1,
-                                Ok(_) => return 0,
-                            }
+                .define_typed("get", |caller: Caller<T>, pointer: u32| -> u64 {
+                    let result = (caller.user_data.get)(caller.user_data.addresses[0].clone());
+                    if let Some(chunk) = result {
+                        match caller.instance.write_memory(pointer, &chunk) {
+                            Err(_) => return 1,
+                            Ok(_) => return 0,
                         }
+                    }
 
-                        0
-                    },
-                )
+                    0
+                })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
