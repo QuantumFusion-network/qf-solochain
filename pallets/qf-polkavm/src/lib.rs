@@ -306,9 +306,9 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
             ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
 
-            // let max_storage_size = <T as Config>::StorageSize::get()
-            //     .try_into()
-            //     .map_err(|_| Error::<T>::IntegerOverflow)?;
+            let max_storage_size = <T as Config>::StorageSize::get()
+                .try_into()
+                .map_err(|_| Error::<T>::IntegerOverflow)?;
 
             let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
@@ -324,7 +324,7 @@ pub mod pallet {
                     104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33,
                 ]
                 .to_vec(),
-                [].to_vec(),
+                max_storage_size,
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -476,13 +476,10 @@ pub mod pallet {
             linker
                 .define_typed(
                     "get",
-                    |caller: Caller<T>, pointer: u32, offset: u32, length: u32| -> u64 {
-                        let result = caller
-                            .user_data
-                            .rom
-                            .get(offset as usize..offset as usize + length as usize);
+                    |caller: Caller<T>, pointer: u32| -> u64 {
+                        let result = (caller.user_data.get)(caller.user_data.addresses[0].clone());
                         if let Some(chunk) = result {
-                            match caller.instance.write_memory(pointer, chunk) {
+                            match caller.instance.write_memory(pointer, &chunk) {
                                 Err(_) => return 1,
                                 Ok(_) => return 0,
                             }
@@ -498,7 +495,11 @@ pub mod pallet {
                     "set",
                     |caller: Caller<T>, buffer: u32, length: u32| -> u64 {
                         if let Ok(data) = caller.instance.read_memory(buffer, length) {
-                            caller.user_data.rom = data;
+                            (caller.user_data.insert)(
+                                caller.user_data.addresses[0].clone(),
+                                caller.user_data.max_storage_size,
+                                data,
+                            );
                             0
                         } else {
                             1
