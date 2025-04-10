@@ -1,0 +1,110 @@
+{
+  "name": "QF DevNet",
+  "id": "qf_devnet",
+  "chainType": "Live",
+  "bootNodes": [
+    "/ip4/103.113.69.222/tcp/30333/p2p/12D3KooWMWYPNvMSSstMoADACyX7EppjuRWtTeugFcVEQcrrjvoR",
+    "/ip4/94.131.14.233/tcp/30333/p2p/12D3KooWJ5Go8kMTuVp45wxwNqTGdt4XjJsf6kJfCWnwB6cDpefM",
+    "/ip4/94.131.14.99/tcp/30333/p2p/12D3KooWRFYBsN6go7fDusiqiLAPMzW8z5yDFS6uXbjnnjuKhoSf"
+  ],
+  "telemetryEndpoints": null,
+  "protocolId": "qf-dev",
+  "properties": {
+    "tokenDecimals": 18,
+    "tokenSymbol": "QF"
+  },
+  "codeSubstitutes": {},
+  "genesis": {
+    "runtimeGenesis": {
+      "code": "0x00",
+      "patch": {
+        "balances": {
+          "balances": [
+            [
+              "5F6r8aH2ckAikGXxAduJG8AtBo5svL8CWVwxQpqHBZ1wzwiT",
+              1000000000000000000000000
+            ],
+            [
+              "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+              1000000000000000000000000
+            ],
+            [
+              "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+              1000000000000000000000000
+            ],
+            [
+              "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq",
+              1000000000000000000000000
+            ],
+            [
+              "5DRhKWBxtcUT6f74YQEhtaqhLsKqWnvS2udLcD1ANawtHnht",
+              1000000000000000000000000
+            ]
+          ]
+        },
+        "session": {
+          "keys": [
+            [
+              "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+              "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+              {
+                "grandpa": "5DLfqhCt7dZDxrMsi3NZan7LwK2SoiptR8oDRnvFrFRaqnhb",
+                "spin": "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9"
+              }
+            ],
+            [
+              "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+              "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+              {
+                "grandpa": "5GSpx8EFfaFAK2e3dJs6UFjD4kgMuhUTuh9RjkRDwoD18zxL",
+                "spin": "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW"
+              }
+            ],
+            [
+              "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq",
+              "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq",
+              {
+                "grandpa": "5CsStZ7r4DnkWK5dpcYCX1S6NT8kMqxXKnV3psfEyHJhxhQN",
+                "spin": "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq"
+              }
+            ]
+          ]
+        },
+        "staking": {
+          "forceEra": "NotForcing",
+          "invulnerables": [
+            "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+            "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+            "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq"
+          ],
+          "minimumValidatorCount": 2,
+          "slashRewardFraction": 100000000,
+          "stakers": [
+            [
+              "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+              "5D5ME8UBKyTMbMBGWYed6xvP3T2NpwC6EYC2ncSdyN2kiDf9",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+              "5DHfKeoMkKxqpNGkhkQHD3fJCjPVom4L3XMDp3s96H2vwUoW",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq",
+              "5FpwTHJ8wTX7vUJhsScAaVdQYuJU3xyq3z2d13N9Fd2C8PHq",
+              100000000000000000000000,
+              "Validator"
+            ]
+          ],
+          "validatorCount": 2
+        },
+        "sudo": {
+          "key": "5F6r8aH2ckAikGXxAduJG8AtBo5svL8CWVwxQpqHBZ1wzwiT"
+        }
+      }
+    }
+  }
+}
