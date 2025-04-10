@@ -112,7 +112,7 @@ pub mod pallet {
         type MaxCodeLen: Get<u32>;
 
         #[pallet::constant]
-        type MaxGas: Get<u32>;
+        type MaxGasLimit: Get<u32>;
 
         #[pallet::constant]
         type MaxStorageSlots: Get<u32>;
@@ -207,7 +207,7 @@ pub mod pallet {
         PolkaVMModulePreInstantiationFailed,
         PolkaVMNotEnoughGas,
         PolkaVMTrap,
-        GasIsTooHigh,
+        GasLimitIsTooHigh,
 
         /// Performing the requested transfer failed. Probably because there isn't enough
         /// free balance in the sender's account.
@@ -294,17 +294,17 @@ pub mod pallet {
             to: T::AccountId,
             value: BalanceOf<T>,
             op: u32,
-            gas: u32,
+            gas_limit: u32,
         ) -> DispatchResult {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
 
             ensure!(op <= 5, Error::<T>::InvalidOperation);
 
-            let max_gas = <T as Config>::MaxGas::get()
+            let max_gas_limit = <T as Config>::MaxGasLimit::get()
                 .try_into()
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
-            ensure!(gas <= max_gas, Error::<T>::GasIsTooHigh);
+            ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
 
             // let max_storage_size = <T as Config>::StorageSize::get()
             //     .try_into()
@@ -315,7 +315,7 @@ pub mod pallet {
                 .into_inner();
 
             let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-            instance.set_gas(gas.into());
+            instance.set_gas(gas_limit.into());
 
             let mut state = State::new(
                 [contract_address.clone(), who.clone(), to].to_vec(),
@@ -374,7 +374,7 @@ pub mod pallet {
                 (&contract_address, &who),
                 ExecResult {
                     result,
-                    gas_before: gas,
+                    gas_before: gas_limit,
                     gas_after: instance.gas(),
                 },
             );
@@ -384,7 +384,7 @@ pub mod pallet {
                 who,
                 contract_address,
                 result,
-                gas_before: gas,
+                gas_before: gas_limit,
                 gas_after: instance.gas(),
             });
 
