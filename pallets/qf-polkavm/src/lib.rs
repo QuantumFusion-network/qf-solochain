@@ -73,6 +73,7 @@ pub mod pallet {
     type CodeHash<T> = <T as frame_system::Config>::Hash;
     type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
     type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+    type SlotNumber = u32;
 
     #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
@@ -144,7 +145,7 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type CodeStorage<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, CodeStorageSlot<T>>;
+        StorageMap<_, Blake2_128Concat, (T::AccountId, SlotNumber), CodeStorageSlot<T>>;
 
     /// Events that functions in this pallet can emit.
     ///
@@ -310,6 +311,10 @@ pub mod pallet {
                 .try_into()
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
 
+            let max_storage_slot = <T as Config>::StorageSize::get()
+                .checked_sub(1)
+                .ok_or(Error::<T>::IntegerOverflow)?;
+
             let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
                 .into_inner();
@@ -325,6 +330,7 @@ pub mod pallet {
                 ]
                 .to_vec(),
                 max_storage_size,
+                max_storage_slot,
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -344,16 +350,17 @@ pub mod pallet {
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
-                |contract_address: T::AccountId| -> Option<Vec<u8>> {
-                    CodeStorage::<T>::get(contract_address).map(|d| d.to_vec())
+                |contract_address: T::AccountId, slot: u32| -> Option<Vec<u8>> {
+                    CodeStorage::<T>::get((contract_address, slot)).map(|d| d.to_vec())
                 },
                 |contract_address: T::AccountId,
+                slot: u32,
                  max_storage_size: usize,
                  mut data: Vec<u8>|
                  -> u64 {
                     let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
                     if let Ok(_) = buffer.try_append(&mut data) {
-                        CodeStorage::<T>::insert(contract_address, buffer);
+                        CodeStorage::<T>::insert((contract_address, slot), buffer);
                         0
                     } else {
                         1
@@ -485,8 +492,14 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed("get", |caller: Caller<T>, pointer: u32| -> u64 {
-                    let result = (caller.user_data.get)(caller.user_data.addresses[0].clone());
+                .define_typed("get", |caller: Caller<T>, slot: u32, pointer: u32| -> u64 {
+                    if slot > caller.user_data.max_storage_slot {
+                        return 1
+                    }
+                    let result = (caller.user_data.get)(
+                        caller.user_data.addresses[0].clone(),
+                        slot,
+                    );
                     if let Some(chunk) = result {
                         match caller.instance.write_memory(pointer, &chunk) {
                             Err(_) => return 1,
@@ -501,10 +514,14 @@ pub mod pallet {
             linker
                 .define_typed(
                     "set",
-                    |caller: Caller<T>, buffer: u32| -> u64 {
+                    |caller: Caller<T>, slot: u32, buffer: u32| -> u64 {
+                        if slot > caller.user_data.max_storage_slot {
+                            return 1
+                        }
                         if let Ok(data) = caller.instance.read_memory(buffer, caller.user_data.max_storage_size as u32) {
                             (caller.user_data.insert)(
                                 caller.user_data.addresses[0].clone(),
+                                slot,
                                 caller.user_data.max_storage_size,
                                 data,
                             );
