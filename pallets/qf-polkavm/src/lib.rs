@@ -495,8 +495,8 @@ pub mod pallet {
             linker
                 .define_typed(
                     "set",
-                    |caller: Caller<T>, buffer: u32, length: u32| -> u64 {
-                        if let Ok(data) = caller.instance.read_memory(buffer, length) {
+                    |caller: Caller<T>, buffer: u32| -> u64 {
+                        if let Ok(data) = caller.instance.read_memory(buffer, caller.user_data.max_storage_size as u32) {
                             (caller.user_data.insert)(
                                 caller.user_data.addresses[0].clone(),
                                 caller.user_data.max_storage_size,
