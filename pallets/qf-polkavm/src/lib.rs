@@ -479,6 +479,12 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
+                .define_typed("storage_size", |caller: Caller<T>| -> u64 {
+                    caller.user_data.max_storage_size as u64
+                })
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
                 .define_typed("get", |caller: Caller<T>, pointer: u32| -> u64 {
                     let result = (caller.user_data.get)(caller.user_data.addresses[0].clone());
                     if let Some(chunk) = result {
