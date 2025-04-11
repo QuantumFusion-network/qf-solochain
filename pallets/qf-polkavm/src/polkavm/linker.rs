@@ -601,6 +601,7 @@ pub struct State<T: PalletConfig> {
     pub balances: Vec<BalanceOf<T>>,
     pub log_message: Vec<u8>,
     pub max_storage_size: usize,
+    pub max_storage_slot: u32,
     pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
     pub print: fn(Vec<u8>) -> u64,
     pub balance: fn(T::AccountId) -> u64,
@@ -608,8 +609,8 @@ pub struct State<T: PalletConfig> {
     pub block_number: fn() -> u64,
     pub account_id: fn() -> u64,
     pub caller: fn() -> u64,
-    pub get: fn(T::AccountId) -> Option<Vec<u8>>,
-    pub insert: fn(T::AccountId, usize, Vec<u8>) -> u64,
+    pub get: fn(T::AccountId, u32) -> Option<Vec<u8>>,
+    pub insert: fn(T::AccountId, u32, usize, Vec<u8>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -618,6 +619,7 @@ impl<T: PalletConfig> State<T> {
         balances: Vec<BalanceOf<T>>,
         log_message: Vec<u8>,
         max_storage_size: usize,
+        max_storage_slot: u32,
         transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
         print: fn(Vec<u8>) -> u64,
         balance: fn(T::AccountId) -> u64,
@@ -625,14 +627,15 @@ impl<T: PalletConfig> State<T> {
         block_number: fn() -> u64,
         account_id: fn() -> u64,
         caller: fn() -> u64,
-        get: fn(T::AccountId) -> Option<Vec<u8>>,
-        insert: fn(T::AccountId, usize, Vec<u8>) -> u64,
+        get: fn(T::AccountId, u32) -> Option<Vec<u8>>,
+        insert: fn(T::AccountId, u32, usize, Vec<u8>) -> u64,
     ) -> Self {
         Self {
             addresses,
             balances,
             log_message,
             max_storage_size,
+            max_storage_slot,
             transfer,
             print,
             balance,

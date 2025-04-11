@@ -354,7 +354,7 @@ pub mod pallet {
                     CodeStorage::<T>::get((contract_address, slot)).map(|d| d.to_vec())
                 },
                 |contract_address: T::AccountId,
-                slot: u32,
+                 slot: u32,
                  max_storage_size: usize,
                  mut data: Vec<u8>|
                  -> u64 {
@@ -494,12 +494,10 @@ pub mod pallet {
             linker
                 .define_typed("get", |caller: Caller<T>, slot: u32, pointer: u32| -> u64 {
                     if slot > caller.user_data.max_storage_slot {
-                        return 1
+                        return 1;
                     }
-                    let result = (caller.user_data.get)(
-                        caller.user_data.addresses[0].clone(),
-                        slot,
-                    );
+                    let result =
+                        (caller.user_data.get)(caller.user_data.addresses[0].clone(), slot);
                     if let Some(chunk) = result {
                         match caller.instance.write_memory(pointer, &chunk) {
                             Err(_) => return 1,
@@ -512,25 +510,25 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed(
-                    "set",
-                    |caller: Caller<T>, slot: u32, buffer: u32| -> u64 {
-                        if slot > caller.user_data.max_storage_slot {
-                            return 1
-                        }
-                        if let Ok(data) = caller.instance.read_memory(buffer, caller.user_data.max_storage_size as u32) {
-                            (caller.user_data.insert)(
-                                caller.user_data.addresses[0].clone(),
-                                slot,
-                                caller.user_data.max_storage_size,
-                                data,
-                            );
-                            0
-                        } else {
-                            1
-                        }
-                    },
-                )
+                .define_typed("set", |caller: Caller<T>, slot: u32, buffer: u32| -> u64 {
+                    if slot > caller.user_data.max_storage_slot {
+                        return 1;
+                    }
+                    if let Ok(data) = caller
+                        .instance
+                        .read_memory(buffer, caller.user_data.max_storage_size as u32)
+                    {
+                        (caller.user_data.insert)(
+                            caller.user_data.addresses[0].clone(),
+                            slot,
+                            caller.user_data.max_storage_size,
+                            data,
+                        );
+                        0
+                    } else {
+                        1
+                    }
+                })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
