@@ -311,7 +311,7 @@ pub mod pallet {
                 .try_into()
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
 
-            let max_storage_slot = <T as Config>::StorageSize::get()
+            let max_storage_slot_idx = <T as Config>::StorageSize::get()
                 .checked_sub(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
 
@@ -330,7 +330,7 @@ pub mod pallet {
                 ]
                 .to_vec(),
                 max_storage_size,
-                max_storage_slot,
+                max_storage_slot_idx,
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
                         if let Err(_) =
@@ -493,7 +493,7 @@ pub mod pallet {
 
             linker
                 .define_typed("get", |caller: Caller<T>, slot: u32, pointer: u32| -> u64 {
-                    if slot > caller.user_data.max_storage_slot {
+                    if slot > caller.user_data.max_storage_slot_idx {
                         return 1;
                     }
                     let result =
@@ -511,7 +511,7 @@ pub mod pallet {
 
             linker
                 .define_typed("set", |caller: Caller<T>, slot: u32, buffer: u32| -> u64 {
-                    if slot > caller.user_data.max_storage_slot {
+                    if slot > caller.user_data.max_storage_slot_idx {
                         return 1;
                     }
                     if let Ok(data) = caller
