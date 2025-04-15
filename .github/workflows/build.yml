@@ -1,5 +1,6 @@
-name: Build, Release, and Publish Docker
+name: "QF-NODE: Build, Release, and Publish Docker"
 
+run-name: "QF-NODE: Build, Release, and Publish Docker - ${{ github.ref_name }}"
 on:
   push:
     tags:
