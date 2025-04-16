@@ -73,6 +73,7 @@ pub mod pallet {
     type CodeHash<T> = <T as frame_system::Config>::Hash;
     type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
     type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+    pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
     type SlotNumber = u32;
 
     #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -119,6 +120,9 @@ pub mod pallet {
         type MaxStorageSlots: Get<u32>;
 
         #[pallet::constant]
+        type MaxStorageKeySize: Get<u32>;
+
+        #[pallet::constant]
         type StorageSize: Get<u32>;
 
         /// The fungible
@@ -145,7 +149,7 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type CodeStorage<T: Config> =
-        StorageMap<_, Blake2_128Concat, (T::AccountId, SlotNumber), CodeStorageSlot<T>>;
+        StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), CodeStorageSlot<T>>;
 
     /// Events that functions in this pallet can emit.
     ///
@@ -311,6 +315,10 @@ pub mod pallet {
                 .try_into()
                 .map_err(|_| Error::<T>::IntegerOverflow)?;
 
+            let max_storage_key_size = <T as Config>::MaxStorageKeySize::get()
+                .try_into()
+                .map_err(|_| Error::<T>::IntegerOverflow)?;
+
             let max_storage_slot_idx = <T as Config>::StorageSize::get()
                 .checked_sub(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
@@ -330,6 +338,7 @@ pub mod pallet {
                 ]
                 .to_vec(),
                 max_storage_size,
+                max_storage_key_size,
                 max_storage_slot_idx,
                 |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
                     if !value.is_zero() && from != to {
@@ -350,17 +359,17 @@ pub mod pallet {
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
-                |contract_address: T::AccountId, slot: u32| -> Option<Vec<u8>> {
-                    CodeStorage::<T>::get((contract_address, slot)).map(|d| d.to_vec())
+                |contract_address: T::AccountId, caller_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
+                    CodeStorage::<T>::get((contract_address, caller_address, key)).map(|d| d.to_vec())
                 },
-                |contract_address: T::AccountId,
-                 slot: u32,
+                |contract_address: T::AccountId, caller_address: T::AccountId,
+                 key: StorageKey<T>,
                  max_storage_size: usize,
                  mut data: Vec<u8>|
                  -> u64 {
                     let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
                     if let Ok(_) = buffer.try_append(&mut data) {
-                        CodeStorage::<T>::insert((contract_address, slot), buffer);
+                        CodeStorage::<T>::insert((contract_address, caller_address, key), buffer);
                         0
                     } else {
                         1
@@ -492,39 +501,63 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed("get", |caller: Caller<T>, slot: u32, pointer: u32| -> u64 {
-                    if slot > caller.user_data.max_storage_slot_idx {
-                        return 1;
-                    }
-                    let result =
-                        (caller.user_data.get)(caller.user_data.addresses[0].clone(), slot);
-                    if let Some(chunk) = result {
-                        match caller.instance.write_memory(pointer, &chunk) {
+                .define_typed("get", |caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
+                    if let Ok(mut raw_storage_key) = caller
+                        .instance
+                        .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+                    {
+                        let mut storage_key = BoundedVec::with_bounded_capacity(caller.user_data.max_storage_key_size as usize);
+                        match storage_key.try_append(&mut raw_storage_key) {
+                            Ok(_) => (),
                             Err(_) => return 1,
-                            Ok(_) => return 0,
-                        }
-                    }
+                        };
 
-                    0
+                        let result = (
+                            caller.user_data.get)(
+                            caller.user_data.addresses[0].clone(),
+                            caller.user_data.addresses[1].clone(),
+                            storage_key,
+                        );
+                        if let Some(chunk) = result {
+                            match caller.instance.write_memory(pointer, &chunk) {
+                                Err(_) => return 1,
+                                Ok(_) => return 0,
+                            }
+                        }
+                        return 0
+                    } else {
+                        return 1
+                    }
                 })
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed("set", |caller: Caller<T>, slot: u32, buffer: u32| -> u64 {
-                    if slot > caller.user_data.max_storage_slot_idx {
-                        return 1;
-                    }
-                    if let Ok(data) = caller
+                .define_typed("set", |caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+                    if let Ok(mut raw_storage_key) = caller
                         .instance
-                        .read_memory(buffer, caller.user_data.max_storage_size as u32)
-                    {
-                        (caller.user_data.insert)(
-                            caller.user_data.addresses[0].clone(),
-                            slot,
-                            caller.user_data.max_storage_size,
-                            data,
-                        );
-                        0
+                        .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+                    { 
+                        if let Ok(data) = caller
+                            .instance
+                            .read_memory(buffer, caller.user_data.max_storage_size as u32)
+                        {
+                            let mut storage_key = BoundedVec::with_bounded_capacity(caller.user_data.max_storage_key_size as usize);
+                            match storage_key.try_append(&mut raw_storage_key) {
+                                Ok(_) => (),
+                                Err(_) => return 1,
+                            };
+                            
+                            (caller.user_data.insert)(
+                                caller.user_data.addresses[0].clone(),
+                                caller.user_data.addresses[1].clone(),
+                                storage_key,
+                                caller.user_data.max_storage_size,
+                                data,
+                            );
+                            return 0
+                        } else {
+                            return 1
+                        }
                     } else {
                         1
                     }
