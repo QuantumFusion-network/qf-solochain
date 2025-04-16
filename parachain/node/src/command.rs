@@ -13,7 +13,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 
 use crate::{
 	chain_spec,
-	cli::{Cli, RelayChainCli, Subcommand},
+	cli::{Cli, RelayChainCli, Subcommand, FastChainCli},
 	service::new_partial,
 };
 
@@ -95,6 +95,42 @@ impl SubstrateCli for RelayChainCli {
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
+	}
+}
+
+impl SubstrateCli for FastChainCli {
+	fn impl_name() -> String {
+		"QF Fastchain".into()
+	}
+
+	fn impl_version() -> String {
+		env!("SUBSTRATE_CLI_IMPL_VERSION").into()
+	}
+
+	fn description() -> String {
+		format!(
+			"Parachain Collator \n\nThe command-line arguments provided first will be \
+		passed to the parachain node, while the arguments provided after -- will be passed \
+		to the relay chain node and after -- will be passed to the fastchain node.\n\n\
+		{} <parachain-args> -- <relay-chain-args> -- <fastchain-args>",
+			Self::executable_name()
+		)
+	}
+
+	fn author() -> String {
+		env!("CARGO_PKG_AUTHORS").into()
+	}
+
+	fn support_url() -> String {
+		"https://github.com/QuantumFusion-network/qf-solochain/issues/new".into()
+	}
+
+	fn copyright_start_year() -> i32 {
+		2025
+	}
+
+	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+		Cli::from_iter([FastChainCli::executable_name()].iter()).load_spec(id)
 	}
 }
 
@@ -234,13 +270,25 @@ pub fn run() -> Result<()> {
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
 					.map(|e| e.para_id)
 					.ok_or("Could not find parachain ID in chain-spec.")?;
-
+				let fargs = cli.fast_chain_args.clone();
+				info!("Fast chain args: {:?}", fargs);
+				let args = cli.relay_chain_args.clone();
+				info!("Relay chain args: {:?}", args);
 				let polkadot_cli = RelayChainCli::new(
 					&config,
 					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
 				);
 
 				let id = ParaId::from(para_id);
+
+				let fast_cli = FastChainCli::new(
+					&config,
+					[FastChainCli::executable_name()].iter().chain(cli.fast_chain_args.iter()),
+				);
+
+				// let tokio_handle = config.tokio_handle.clone();
+				// let fastchain_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
+				// 	.map_err(|err| format!("Fast chain argument error: {}", err))?;
 
 				let tokio_handle = config.tokio_handle.clone();
 				let polkadot_config =
@@ -252,6 +300,7 @@ pub fn run() -> Result<()> {
 				crate::service::start_parachain_node(
 					config,
 					polkadot_config,
+					// fastchain_config,
 					collator_options,
 					id,
 					hwbench,
