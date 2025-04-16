@@ -148,8 +148,12 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
     #[pallet::storage]
-    pub(super) type CodeStorage<T: Config> =
-        StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), CodeStorageSlot<T>>;
+    pub(super) type CodeStorage<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        (T::AccountId, T::AccountId, StorageKey<T>),
+        CodeStorageSlot<T>,
+    >;
 
     /// Events that functions in this pallet can emit.
     ///
@@ -359,10 +363,15 @@ pub mod pallet {
                 || -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
                 || -> u64 { 0 },
                 || -> u64 { 1 },
-                |contract_address: T::AccountId, caller_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
-                    CodeStorage::<T>::get((contract_address, caller_address, key)).map(|d| d.to_vec())
+                |contract_address: T::AccountId,
+                 caller_address: T::AccountId,
+                 key: StorageKey<T>|
+                 -> Option<Vec<u8>> {
+                    CodeStorage::<T>::get((contract_address, caller_address, key))
+                        .map(|d| d.to_vec())
                 },
-                |contract_address: T::AccountId, caller_address: T::AccountId,
+                |contract_address: T::AccountId,
+                 caller_address: T::AccountId,
                  key: StorageKey<T>,
                  max_storage_size: usize,
                  mut data: Vec<u8>|
@@ -501,67 +510,76 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             linker
-                .define_typed("get", |caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
-                    if let Ok(mut raw_storage_key) = caller
-                        .instance
-                        .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
-                    {
-                        let mut storage_key = BoundedVec::with_bounded_capacity(caller.user_data.max_storage_key_size as usize);
-                        match storage_key.try_append(&mut raw_storage_key) {
-                            Ok(_) => (),
-                            Err(_) => return 1,
-                        };
-
-                        let result = (
-                            caller.user_data.get)(
-                            caller.user_data.addresses[0].clone(),
-                            caller.user_data.addresses[1].clone(),
-                            storage_key,
-                        );
-                        if let Some(chunk) = result {
-                            match caller.instance.write_memory(pointer, &chunk) {
-                                Err(_) => return 1,
-                                Ok(_) => return 0,
-                            }
-                        }
-                        return 0
-                    } else {
-                        return 1
-                    }
-                })
-                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
-
-            linker
-                .define_typed("set", |caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
-                    if let Ok(mut raw_storage_key) = caller
-                        .instance
-                        .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
-                    { 
-                        if let Ok(data) = caller
+                .define_typed(
+                    "get",
+                    |caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
+                        if let Ok(mut raw_storage_key) = caller
                             .instance
-                            .read_memory(buffer, caller.user_data.max_storage_size as u32)
+                            .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
                         {
-                            let mut storage_key = BoundedVec::with_bounded_capacity(caller.user_data.max_storage_key_size as usize);
+                            let mut storage_key = BoundedVec::with_bounded_capacity(
+                                caller.user_data.max_storage_key_size as usize,
+                            );
                             match storage_key.try_append(&mut raw_storage_key) {
                                 Ok(_) => (),
                                 Err(_) => return 1,
                             };
-                            
-                            (caller.user_data.insert)(
+
+                            let result = (caller.user_data.get)(
                                 caller.user_data.addresses[0].clone(),
                                 caller.user_data.addresses[1].clone(),
                                 storage_key,
-                                caller.user_data.max_storage_size,
-                                data,
                             );
-                            return 0
+                            if let Some(chunk) = result {
+                                match caller.instance.write_memory(pointer, &chunk) {
+                                    Err(_) => return 1,
+                                    Ok(_) => return 0,
+                                }
+                            }
+                            return 0;
                         } else {
-                            return 1
+                            return 1;
                         }
-                    } else {
-                        1
-                    }
-                })
+                    },
+                )
+                .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+            linker
+                .define_typed(
+                    "set",
+                    |caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+                        if let Ok(mut raw_storage_key) = caller
+                            .instance
+                            .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+                        {
+                            if let Ok(data) = caller
+                                .instance
+                                .read_memory(buffer, caller.user_data.max_storage_size as u32)
+                            {
+                                let mut storage_key = BoundedVec::with_bounded_capacity(
+                                    caller.user_data.max_storage_key_size as usize,
+                                );
+                                match storage_key.try_append(&mut raw_storage_key) {
+                                    Ok(_) => (),
+                                    Err(_) => return 1,
+                                };
+
+                                (caller.user_data.insert)(
+                                    caller.user_data.addresses[0].clone(),
+                                    caller.user_data.addresses[1].clone(),
+                                    storage_key,
+                                    caller.user_data.max_storage_size,
+                                    data,
+                                );
+                                return 0;
+                            } else {
+                                return 1;
+                            }
+                        } else {
+                            1
+                        }
+                    },
+                )
                 .map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
             // Link the host functions with the module.
