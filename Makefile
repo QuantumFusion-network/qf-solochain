@@ -20,21 +20,21 @@ chain-spec-builder:
 polkatool:
 	cargo install --path vendor/polkavm/tools/polkatool
 
-qf-run: qf-node
+qf-run: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all
 
-qf-run-wasm: qf-node
+qf-run-wasm: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all --wasm-runtime-overrides output
 
 qf-node-release: qf-runtime
 	cargo build -p qf-node --release
 	mkdir -p output
-	cp target/release/qf-node output
+	cp target/release/qf-node output/qf-node
 
 qf-node: qf-runtime
 	cargo build -p qf-node
 	mkdir -p output
-	cp target/debug/qf-node output
+	cp target/debug/qf-node output/qf-node
 
 qf-runtime:
 	cargo build -p qf-runtime
@@ -59,7 +59,7 @@ clippy:
 qf-test:
 	SKIP_WASM_BUILD= cargo test
 
-chainspec: qf-runtime
-	chain-spec-builder -c output/chainspec.json create -n qf-runtime -i qf-runtime -r ./output/qf_runtime.wasm -s default
-	cat output/chainspec.json | jq '.properties = {}' > output/chainspec.json.tmp
-	mv output/chainspec.json.tmp output/chainspec.json
+qf-chainspec: qf-runtime
+	chain-spec-builder -c output/qf-chainspec.json create -n qf-runtime -i qf-runtime -r ./output/qf_runtime.wasm -s default
+	cat output/qf-chainspec.json | jq '.properties = {}' > output/qf-chainspec.json.tmp
+	mv output/qf-chainspec.json.tmp output/qf-chainspec.json

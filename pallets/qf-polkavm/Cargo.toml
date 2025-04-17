@@ -64,11 +64,11 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
+	"ruzstd/std",              # polkavm
 	"scale-info/std",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"ruzstd/std", # polkavm
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

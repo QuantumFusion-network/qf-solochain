@@ -24,7 +24,7 @@ RUN git clone https://github.com/QuantumFusion-network/qf-solochain.git
 
 WORKDIR /opt/qf-solochain
 RUN make vendor-clone
-RUN make qf-node
+RUN make qf-node-release
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 

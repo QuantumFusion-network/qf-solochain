@@ -1,9 +1,10 @@
-name: Build, Release, and Publish Docker
+name: "QF-NODE: Build, Release, and Publish Docker"
 
+run-name: "QF-NODE: Build, Release, and Publish Docker - ${{ github.ref_name }}"
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build_binary:
@@ -40,7 +41,7 @@ jobs:
       - name: Build Project
         run: |
           make vendor-clone
-          make qf-node
+          make qf-node-release
 
       - name: Prepare artifacts
         run: |
@@ -100,7 +101,7 @@ jobs:
       - name: Build and Tag Docker Image
         run: |
           cd docker
-          docker build -f Dockerfile.x86_64 -t qf-node:${{ github.ref_name }} .
+          docker build --no-cache -f Dockerfile.x86_64 -t qf-node:${{ github.ref_name }} .
           docker tag qf-node:${{ github.ref_name }} qfnetwork/qf-node:${{ github.ref_name }}
           docker tag qf-node:${{ github.ref_name }} qfnetwork/qf-node:latest
 

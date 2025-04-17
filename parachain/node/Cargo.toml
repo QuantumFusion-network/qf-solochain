@@ -1,0 +1,49 @@
+[package]
+name = "qf-parachain-node"
+description = "QF Parachain Client Node"
+version = "0.1.0"
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+edition.workspace = true
+publish = false
+build = "build.rs"
+
+[dependencies]
+clap = { features = ["derive"], workspace = true }
+codec = { workspace = true, default-features = true }
+color-print = { workspace = true }
+docify = { workspace = true }
+futures = { workspace = true }
+jsonrpsee = { features = ["server"], workspace = true }
+log = { workspace = true, default-features = true }
+serde = { features = ["derive"], workspace = true, default-features = true }
+serde_json = { workspace = true, default-features = true }
+
+polkadot-sdk = { workspace = true, features = ["node"] }
+
+qf-parachain-runtime = { workspace = true }
+
+# Substrate
+prometheus-endpoint = { workspace = true, default-features = true }
+sc-tracing = { workspace = true, default-features = true }
+
+[build-dependencies]
+polkadot-sdk = { workspace = true, features = ["substrate-build-script-utils"] }
+
+[features]
+default = ["std"]
+std = [
+	"log/std",
+	"polkadot-sdk/std",
+	"qf-parachain-runtime/std",
+]
+runtime-benchmarks = [
+	"polkadot-sdk/runtime-benchmarks",
+	"qf-parachain-runtime/runtime-benchmarks",
+]
+try-runtime = [
+	"polkadot-sdk/try-runtime",
+	"qf-parachain-runtime/try-runtime",
+]
