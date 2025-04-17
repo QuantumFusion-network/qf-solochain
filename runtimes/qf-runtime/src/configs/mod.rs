@@ -115,7 +115,9 @@ impl pallet_spin::Config for Runtime {
 }
 
 parameter_types! {
+	/// Session period - 30 minutes
 	pub const Period: BlockNumber = 30 * SESSION_LENGTH;
+	/// Offset – 0 blocks
 	pub const Offset: BlockNumber = 0;
 }
 
@@ -131,17 +133,6 @@ impl pallet_session::Config for Runtime {
 
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 	type SessionManager = Staking;
-}
-
-pallet_staking_reward_curve::build! {
-	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
-		min_inflation: 0_025_000,
-		max_inflation: 0_100_000,
-		ideal_stake: 0_500_000,
-		falloff: 0_050_000,
-		max_piece_count: 40,
-		test_precision: 0_005_000,
-	);
 }
 
 parameter_types! {
@@ -173,15 +164,25 @@ impl onchain::Config for OnChainSeqPhragmen {
 	type MaxWinnersPerPage = MaxWinnersPerPage;
 }
 
+pallet_staking_reward_curve::build! {
+	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
+		min_inflation: 0_025_000,
+		max_inflation: 0_100_000,
+		ideal_stake: 0_500_000,
+		falloff: 0_050_000,
+		max_piece_count: 40,
+		test_precision: 0_005_000,
+	);
+}
+
 parameter_types! {
+	/// Number of sessions per era
 	pub const SessionsPerEra: sp_staking::SessionIndex = 3;
+	/// Вefines the bonding (locking) period for staking funds (measured in eras)
 	pub const BondingDuration: sp_staking::EraIndex = 3;
+	/// Delay before a slash (penalty) becomes effective
 	pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
-	pub const MaxNominators: u32 = 64;
-	pub const MaxControllersInDeprecationBatch: u32 = 5900;
-	pub OffchainRepeat: BlockNumber = 5;
-	pub HistoryDepth: u32 = 84;
 }
 
 /// Upper limit on the number of NPOS nominations.
@@ -209,16 +210,21 @@ impl pallet_staking::Config for Runtime {
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = ();
+	/// Defines how the total inflation per era is computed and split between validators and the system
 	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
+	/// Maximum number of active validators allowed
 	type MaxValidatorSet = ConstU32<100>;
+	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type VoterList = pallet_staking::UseNominatorsAndValidatorsMap<Self>;
 	type NominationsQuota = pallet_staking::FixedNominationsQuota<MAX_QUOTA_NOMINATIONS>;
 	type TargetList = pallet_staking::UseValidatorsMap<Self>;
 	type MaxUnlockingChunks = ConstU32<32>;
+	/// Maximum number of unbonding chunks a staker's ledger may contain.
+	/// Limits how many eras of unbonding can exist in flight
 	type MaxControllersInDeprecationBatch = ConstU32<5900>;
 	type HistoryDepth = ConstU32<32>;
 	type EventListeners = ();
