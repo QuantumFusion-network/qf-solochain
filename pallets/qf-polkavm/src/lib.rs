@@ -74,7 +74,6 @@ pub mod pallet {
     type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
     type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
     pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-    type SlotNumber = u32;
 
     #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
     #[scale_info(skip_type_params(T))]
@@ -124,6 +123,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type StorageSize: Get<u32>;
+
+        #[pallet::constant]
+        type StorageSlotPrice: Get<u128>;
 
         /// The fungible
         type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
