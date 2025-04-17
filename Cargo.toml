@@ -16,8 +16,9 @@ members = [
     "pallets/spin-polkadot",
     "qf-test-runner",
     "pvm-test-runner",
-    "client/*",
+    "client/consensus-spin",
     "primitives/*",
+    "client/consensus-spin/src/mock",
 ]
 exclude = [
     "old",
@@ -127,7 +128,8 @@ sp-runtime = { features = ["serde"], path = "./vendor/polkadot-sdk/substrate/pri
 sp-version = { path = "./vendor/polkadot-sdk/substrate/primitives/version", default-features = false }
 sp-version-proc-macro = { path = "./vendor/polkadot-sdk/substrate/primitives/version/proc-macro", default-features = false }
 
-substrate-test-runtime-client = { path = "./vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
+substrate-test-runtime-client = { path = "./client/consensus-spin/src/mock", default-features = false }
+substrate-test-client = { path = "./vendor/polkadot-sdk/substrate/test-utils/client", default-features = false }
 
 # local pallet templates
 pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
