@@ -181,7 +181,7 @@ parameter_types! {
 	/// Вefines the bonding (locking) period for staking funds (measured in eras)
 	pub const BondingDuration: sp_staking::EraIndex = 3;
 	/// Delay before a slash (penalty) becomes effective
-	pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
+	pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 }
 
@@ -210,7 +210,8 @@ impl pallet_staking::Config for Runtime {
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = ();
-	/// Defines how the total inflation per era is computed and split between validators and the system
+	/// Defines how the total inflation per era is computed
+	/// and split between validators and the system
 	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
@@ -226,11 +227,15 @@ impl pallet_staking::Config for Runtime {
 	/// Maximum number of unbonding chunks a staker's ledger may contain.
 	/// Limits how many eras of unbonding can exist in flight
 	type MaxControllersInDeprecationBatch = ConstU32<5900>;
+	/// Number of eras to keep in on‐chain history (for rewards, points, exposures, etc.)
 	type HistoryDepth = ConstU32<32>;
 	type EventListeners = ();
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
+	/// Maximum number of invulnerable validators
 	type MaxInvulnerables = ConstU32<20>;
+	/// Maximum number of validators that can be marked disabled at once,
+	/// limiting how many can be chilled or forced out in a batch
 	type MaxDisabledValidators = ConstU32<100>;
 	type Filter = Nothing;
 }
@@ -239,7 +244,9 @@ impl pallet_grandpa::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 
 	type WeightInfo = ();
+	/// Max authorities in use
 	type MaxAuthorities = ConstU32<32>;
+	/// The maximum number of nominators for each validator
 	type MaxNominators = ConstU32<0>;
 	type MaxSetIdSessionEntries = ConstU64<0>;
 
