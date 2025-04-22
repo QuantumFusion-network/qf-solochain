@@ -436,7 +436,12 @@ pub mod pallet {
                 instance.gas() as u64
             };
 
-            Ok(PostDispatchInfo { actual_weight: Some(Weight::from_all((u64::from(gas_limit) - normalized_gas_after) * gas_price)), pays_fee: Pays::Yes })
+            Ok(PostDispatchInfo {
+                actual_weight: Some(Weight::from_all(
+                    (u64::from(gas_limit) - normalized_gas_after) * gas_price,
+                )),
+                pays_fee: Pays::Yes,
+            })
         }
     }
 
