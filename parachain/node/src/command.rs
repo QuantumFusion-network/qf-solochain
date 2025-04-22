@@ -16,6 +16,7 @@ use crate::{
 	cli::{Cli, RelayChainCli, Subcommand, FastChainCli},
 	service::new_partial,
 };
+use futures::join;
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	Ok(match id {
@@ -297,17 +298,36 @@ pub fn run() -> Result<()> {
 
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				crate::service::start_parachain_node(
+				// let fast_service = match config.network.network_backend {
+				// 	sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
+				// 		sc_network::NetworkWorker<
+				// 			qf_runtime::opaque::Block,
+				// 			<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+				// 		>,
+				// 	>(config),
+				// 	sc_network::config::NetworkBackendType::Litep2p =>
+				// 		crate::fast_service::new_full::<sc_network::Litep2pNetworkBackend>(config),
+				// };
+				let tokio_handle = config.tokio_handle.clone();
+				let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
+					.map_err(|err| format!("Fast chain argument error: {}", err))?;
+				let fast_service = crate::fast_service::new_full::<
+				sc_network::NetworkWorker<
+					qf_runtime::opaque::Block,
+					<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+				>,
+				>(fast_config);
+
+				let para_srv = crate::service::start_parachain_node(
 					config,
 					polkadot_config,
 					// fastchain_config,
 					collator_options,
 					id,
 					hwbench,
-				)
-				.await
-				.map(|r| r.0)
-				.map_err(Into::into)
+				);
+
+				join!(fast_service, para_srv).0.map_err(Into::into)
 			})
 		},
 	}
@@ -429,5 +449,124 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn node_name(&self) -> Result<String> {
 		self.base.base.node_name()
+	}
+}
+
+impl DefaultConfigurationValues for FastChainCli {
+	fn p2p_listen_port() -> u16 {
+		30333
+	}
+
+	fn rpc_listen_port() -> u16 {
+		9944
+	}
+
+	fn prometheus_listen_port() -> u16 {
+		9615
+	}
+}
+
+impl CliConfiguration<Self> for FastChainCli {
+	fn shared_params(&self) -> &SharedParams {
+		self.base.shared_params()
+	}
+
+	fn import_params(&self) -> Option<&ImportParams> {
+		self.base.import_params()
+	}
+
+	fn network_params(&self) -> Option<&NetworkParams> {
+		self.base.network_params()
+	}
+
+	fn keystore_params(&self) -> Option<&KeystoreParams> {
+		self.base.keystore_params()
+	}
+
+	fn base_path(&self) -> Result<Option<BasePath>> {
+		Ok(self
+			.shared_params()
+			.base_path()?
+			.or_else(|| self.base_path.clone().map(Into::into)))
+	}
+
+	fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<Vec<RpcEndpoint>>> {
+		self.base.rpc_addr(default_listen_port)
+	}
+
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<PrometheusConfig>> {
+		self.base.prometheus_config(default_listen_port, chain_spec)
+	}
+
+	fn init<F>(&self, _support_url: &String, _impl_version: &String, _logger_hook: F) -> Result<()>
+	where
+		F: FnOnce(&mut sc_cli::LoggerBuilder),
+	{
+		unreachable!("PolkadotCli is never initialized; qed");
+	}
+
+	// fn chain_id(&self, is_dev: bool) -> Result<String> {
+	// 	let chain_id = self.base.base.chain_id(is_dev)?;
+
+	// 	Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
+	// }
+
+	fn role(&self, is_dev: bool) -> Result<sc_service::Role> {
+		self.base.role(is_dev)
+	}
+
+	fn transaction_pool(&self, is_dev: bool) -> Result<sc_service::config::TransactionPoolOptions> {
+		self.base.transaction_pool(is_dev)
+	}
+
+	fn trie_cache_maximum_size(&self) -> Result<Option<usize>> {
+		self.base.trie_cache_maximum_size()
+	}
+
+	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
+		self.base.rpc_methods()
+	}
+
+	fn rpc_max_connections(&self) -> Result<u32> {
+		self.base.rpc_max_connections()
+	}
+
+	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {
+		self.base.rpc_cors(is_dev)
+	}
+
+	fn default_heap_pages(&self) -> Result<Option<u64>> {
+		self.base.default_heap_pages()
+	}
+
+	fn force_authoring(&self) -> Result<bool> {
+		self.base.force_authoring()
+	}
+
+	fn disable_grandpa(&self) -> Result<bool> {
+		self.base.disable_grandpa()
+	}
+
+	fn max_runtime_instances(&self) -> Result<Option<usize>> {
+		self.base.max_runtime_instances()
+	}
+
+	fn announce_block(&self) -> Result<bool> {
+		self.base.announce_block()
+	}
+
+	fn telemetry_endpoints(
+		&self,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
+		self.base.telemetry_endpoints(chain_spec)
+	}
+
+	fn node_name(&self) -> Result<String> {
+		self.base.node_name()
 	}
 }
