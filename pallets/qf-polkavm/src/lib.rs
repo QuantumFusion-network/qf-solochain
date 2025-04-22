@@ -53,6 +53,7 @@ pub mod pallet {
     // Import various useful types required by all FRAME pallets.
     use super::*;
     use frame_support::{
+        dispatch::PostDispatchInfo,
         pallet_prelude::*,
         traits::{
             fungible::{Inspect, Mutate},
@@ -84,7 +85,9 @@ pub mod pallet {
 
     #[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
     pub(super) struct ExecResult {
-        result: u64,
+        result: Option<u64>,
+        not_enough_gas: bool,
+        trap: bool,
         gas_before: u32,
         gas_after: i64,
     }
@@ -177,7 +180,9 @@ pub mod pallet {
             // The smart contract account.
             contract_address: T::AccountId,
             /// The new value set.
-            result: u64,
+            result: Option<u64>,
+            not_enough_gas: bool,
+            trap: bool,
             gas_before: u32,
             gas_after: i64,
         },
@@ -306,7 +311,8 @@ pub mod pallet {
             value: BalanceOf<T>,
             op: u32,
             gas_limit: u32,
-        ) -> DispatchResult {
+            gas_price: u64,
+        ) -> DispatchResultWithPostInfo {
             // Check that the extrinsic was signed and get the signer.
             let who = ensure_signed(origin)?;
 
@@ -393,11 +399,11 @@ pub mod pallet {
             let result =
                 instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
 
-            let result = match result {
-                Err(CallError::NotEnoughGas) => Err(Error::<T>::PolkaVMNotEnoughGas)?,
-                Err(CallError::Trap) => Err(Error::<T>::PolkaVMTrap)?,
+            let (result, not_enough_gas, trap) = match result {
+                Err(CallError::NotEnoughGas) => (None, true, false),
+                Err(CallError::Trap) => (None, false, true),
                 Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-                Ok(res) => res,
+                Ok(res) => (Some(res), false, false),
             };
 
             sp_runtime::print("====== AFTER CALL ======");
@@ -406,6 +412,8 @@ pub mod pallet {
                 (&contract_address, &who),
                 ExecResult {
                     result,
+                    not_enough_gas,
+                    trap,
                     gas_before: gas_limit,
                     gas_after: instance.gas(),
                 },
@@ -416,12 +424,19 @@ pub mod pallet {
                 who,
                 contract_address,
                 result,
+                not_enough_gas,
+                trap,
                 gas_before: gas_limit,
                 gas_after: instance.gas(),
             });
 
-            // Return a successful `DispatchResult`
-            Ok(())
+            let normalized_gas_after = if instance.gas() < 0 {
+                0u64
+            } else {
+                instance.gas() as u64
+            };
+
+            Ok(PostDispatchInfo { actual_weight: Some(Weight::from_all((u64::from(gas_limit) - normalized_gas_after) * gas_price)), pays_fee: Pays::Yes })
         }
     }
 
