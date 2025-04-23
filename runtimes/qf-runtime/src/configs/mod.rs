@@ -115,7 +115,7 @@ impl pallet_spin::Config for Runtime {
 }
 
 parameter_types! {
-	/// Session period - 30 minutes
+	/// Session period - 30 leadership tenures
 	pub const Period: BlockNumber = 30 * SESSION_LENGTH;
 	/// Offset – 0 blocks
 	pub const Offset: BlockNumber = 0;
