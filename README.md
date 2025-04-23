@@ -23,7 +23,7 @@ although there are ways to run it, we recommend using [WSL](https://learn.micros
 or a virtual machine.
 
 1. Install Polkadot SDK dependencies following https://docs.polkadot.com/develop/parachains/install-polkadot-sdk/.
-1. Clone the repository and build the node binary.
+2. Clone the repository and build the node binary.
 
     ```console
     git clone --recursive https://github.com/QuantumFusion-network/qf-solochain.git
@@ -31,13 +31,13 @@ or a virtual machine.
     cargo build --release
     ```
 
-1. Inspect available subcommands.
+3. Inspect available subcommands.
 
     ```console
     ./target/release/qf-solochain --help
     ```
 
-1. Run a local node in dev mode.
+4. Run a local node in dev mode.
 
     ```bash
     make qf-run
@@ -76,7 +76,7 @@ Make the raw version of the spec
 ```
 
 ### Prepare the key for validator and collator modes
-No all nodes can generate the key as 
+Not all nodes can generate the key as 
 ```bash
 ./target/debug/qf-node key generate-node-key
 ```
@@ -89,6 +89,9 @@ cargo build -p subkey
 ```bash
 mkdir -p $DATA_PATH/chains/$CHAIN_NAME/network
 ```
+where 
+- `DATA_PATH` - path to the data directory
+- `CHAIN_NAME` - name of the chain ("local_testnet" for default)
 
 2. After that you can generate the key as 
 
@@ -121,6 +124,25 @@ Also you can specify the ports:
 - `--rpc-port <port>` - port for the RPC
 
 ### Run the parachain node
+Before run the parachain node you need to run the relaychain node.
+For run the local relaychain you can customize and use this bash script:
+```bash
+#!/bin/bash
+
+SPEC_PATH="../chain-specs"
+DATA_PATH="../data-relay"
+NODE="<pato to yoyr polkadot node>/polkadot"
+
+mkdir -p $DATA_PATH
+
+# polkadot \
+$NODE \
+--port 40340 \
+--rpc-port 9950 \
+-d $DATA_PATH \
+--chain $SPEC_PATH/relaychain-spec-raw.json --alice
+```
+
 First generate the chainspec as for fastchain but by 
 ```bash
 ./target/debug/qf-parachain-node build-spec --disable-default-bootnode > $SPEC_PATH/parachain-spec.json
