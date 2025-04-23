@@ -612,6 +612,7 @@ pub struct State<T: PalletConfig> {
     pub caller: fn() -> u64,
     pub get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
     pub insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+    pub delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -631,6 +632,7 @@ impl<T: PalletConfig> State<T> {
         caller: fn() -> u64,
         get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
         insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+        delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
     ) -> Self {
         Self {
             addresses,
@@ -648,6 +650,7 @@ impl<T: PalletConfig> State<T> {
             caller,
             get,
             insert,
+            delete,
         }
     }
 }
