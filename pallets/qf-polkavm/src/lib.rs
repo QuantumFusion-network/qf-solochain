@@ -125,6 +125,9 @@ pub mod pallet {
         type MaxStorageKeySize: Get<u32>;
 
         #[pallet::constant]
+        type MinGasPrice: Get<u64>;
+
+        #[pallet::constant]
         type StorageSize: Get<u32>;
 
         #[pallet::constant]
@@ -224,6 +227,7 @@ pub mod pallet {
         PolkaVMNotEnoughGas,
         PolkaVMTrap,
         GasLimitIsTooHigh,
+        GasPriceIsTooLow,
 
         /// Performing the requested transfer failed. Probably because there isn't enough
         /// free balance in the sender's account.
@@ -334,6 +338,8 @@ pub mod pallet {
             let max_storage_slot_idx = <T as Config>::StorageSize::get()
                 .checked_sub(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
+
+            ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
             let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
