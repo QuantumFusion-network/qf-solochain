@@ -401,6 +401,13 @@ pub mod pallet {
                         1
                     }
                 },
+                |contract_address: T::AccountId,
+                 caller_address: T::AccountId,
+                 key: StorageKey<T>|
+                 -> u64 {
+                    CodeStorage::<T>::remove((contract_address, caller_address, key));
+                    0
+                },
             );
 
             sp_runtime::print("====== BEFORE CALL ======");
@@ -577,35 +584,26 @@ pub mod pallet {
 
             linker
                 .define_typed(
-                    "set",
-                    |caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+                    "delete",
+                    |caller: Caller<T>, storage_key_pointer: u32| -> u64 {
                         if let Ok(mut raw_storage_key) = caller
                             .instance
                             .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
                         {
-                            if let Ok(data) = caller
-                                .instance
-                                .read_memory(buffer, caller.user_data.max_storage_size as u32)
-                            {
-                                let mut storage_key = BoundedVec::with_bounded_capacity(
-                                    caller.user_data.max_storage_key_size as usize,
-                                );
-                                match storage_key.try_append(&mut raw_storage_key) {
-                                    Ok(_) => (),
-                                    Err(_) => return 1,
-                                };
+                            let mut storage_key = BoundedVec::with_bounded_capacity(
+                                caller.user_data.max_storage_key_size as usize,
+                            );
+                            match storage_key.try_append(&mut raw_storage_key) {
+                                Ok(_) => (),
+                                Err(_) => return 1,
+                            };
 
-                                (caller.user_data.insert)(
+                            (caller.user_data.delete)(
                                     caller.user_data.addresses[0].clone(),
                                     caller.user_data.addresses[1].clone(),
                                     storage_key,
-                                    caller.user_data.max_storage_size,
-                                    data,
-                                );
-                                return 0;
-                            } else {
-                                return 1;
-                            }
+                            );
+                            return 0;
                         } else {
                             1
                         }
