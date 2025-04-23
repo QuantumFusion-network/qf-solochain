@@ -339,7 +339,10 @@ pub mod pallet {
                 .checked_sub(1)
                 .ok_or(Error::<T>::IntegerOverflow)?;
 
-            ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+            ensure!(
+                gas_price >= <T as Config>::MinGasPrice::get(),
+                Error::<T>::GasPriceIsTooLow
+            );
 
             let raw_blob = Code::<T>::get(&contract_address)
                 .ok_or(Error::<T>::ProgramBlobNotFound)?
