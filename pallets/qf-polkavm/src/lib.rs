@@ -599,9 +599,9 @@ pub mod pallet {
                             };
 
                             (caller.user_data.delete)(
-                                    caller.user_data.addresses[0].clone(),
-                                    caller.user_data.addresses[1].clone(),
-                                    storage_key,
+                                caller.user_data.addresses[0].clone(),
+                                caller.user_data.addresses[1].clone(),
+                                storage_key,
                             );
                             return 0;
                         } else {
