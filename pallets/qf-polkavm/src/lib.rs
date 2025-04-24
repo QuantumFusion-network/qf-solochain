@@ -585,7 +585,11 @@ pub mod pallet {
             linker
                 .define_typed(
                     "read",
-                    |caller: Caller<T>, address_idx: u32, storage_key_pointer: u32, pointer: u32| -> u64 {
+                    |caller: Caller<T>,
+                     address_idx: u32,
+                     storage_key_pointer: u32,
+                     pointer: u32|
+                     -> u64 {
                         if let Ok(mut raw_storage_key) = caller
                             .instance
                             .read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
