@@ -36,14 +36,14 @@ polkadot-sdk = { workspace = true, features = ["substrate-build-script-utils"] }
 default = ["std"]
 std = [
 	"log/std",
-	"qf-parachain-runtime/std",
 	"polkadot-sdk/std",
+	"qf-parachain-runtime/std",
 ]
 runtime-benchmarks = [
-	"qf-parachain-runtime/runtime-benchmarks",
 	"polkadot-sdk/runtime-benchmarks",
+	"qf-parachain-runtime/runtime-benchmarks",
 ]
 try-runtime = [
-	"qf-parachain-runtime/try-runtime",
 	"polkadot-sdk/try-runtime",
+	"qf-parachain-runtime/try-runtime",
 ]

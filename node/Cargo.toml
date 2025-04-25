@@ -78,8 +78,8 @@ runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
-	"sc-service/runtime-benchmarks",
 	"qf-runtime/runtime-benchmarks",
+	"sc-service/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 # Enable features that allow the runtime to be tried and debugged. Name might be subject to change

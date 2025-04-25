@@ -1,0 +1,119 @@
+{
+  "name": "QF Testnet",
+  "id": "qf_testnet",
+  "chainType": "Live",
+  "bootNodes": [],
+  "telemetryEndpoints": null,
+  "protocolId": "qf-test",
+  "properties": {
+    "ss58Format": 42,
+    "tokenDecimals": 18,
+    "tokenSymbol": "QF"
+  },
+  "codeSubstitutes": {},
+  "genesis": {
+    "runtimeGenesis": {
+      "code": "0x00",
+      "patch": {
+        "balances": {
+          "balances": [
+            [
+              "5DPrpzkbQGkVgibdzTWQrQnefD54x8986CfpstcVMMMfAhTg",
+              1000000000000000000000000
+            ],
+            [
+              "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+              1000000000000000000000000
+            ],
+            [
+              "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+              1000000000000000000000000
+            ],
+            [
+              "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj",
+              1000000000000000000000000
+            ],
+            [
+              "5CtuW7sBKecoMbrMD6WNGMDSRBuPo429JB7ZRsKCMZQnbAnz",
+              1000000000000000000000000
+            ],
+            [
+              "5FLfXvnUsqcfWWNZZ8cbXM6mTeQU2pz1Ljkvk1DKiXhw3Tv7",
+              1000000000000000000000000
+            ],
+            [
+              "5CkrkzShcsz54dRtoYofuxgZPpTJzDGSkYK7Ewg2yKiByfNG",
+              1000000000000000000000000
+            ],
+            [
+              "5DRhKWBxtcUT6f74YQEhtaqhLsKqWnvS2udLcD1ANawtHnht",
+              1000000000000000000000000
+            ]
+          ]
+        },
+        "session": {
+          "keys": [
+            [
+              "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+              "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+              {
+                "grandpa": "5GZir6PQab3rRk3GCeYokCB9TydoBSBEeCQKctf7Zu8wPZD2",
+                "spin": "5Hh4AK4jonkg1KSScXx3TNyKwbA6ABZVS2EE258pg7WXfAXm"
+              }
+            ],
+            [
+              "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+              "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+              {
+                "grandpa": "5HcTyZdu2JRRNd5QdDzPHL2zucJYKtZErhSYocnktiWrBqxP",
+                "spin": "5Epi5md1WKAyhnur48u4iP6SjxPnZhMBWYZ6KiT8XDjr9Han"
+              }
+            ],
+            [
+              "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj",
+              "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj",
+              {
+                "grandpa": "5DPQNE3Nq75P2wt1MFsy1JX9RBijSqxDzfVAyoVfkpgtDUTs",
+                "spin": "5EXaiSgPyFAFBgebdcoNeyMgcwm4m13Uis6iALXK8DDR6sdV"
+              }
+            ]
+          ]
+        },
+        "staking": {
+          "forceEra": "NotForcing",
+          "invulnerables": [
+            "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+            "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+            "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj"
+          ],
+          "minimumValidatorCount": 2,
+          "slashRewardFraction": 100000000,
+          "stakers": [
+            [
+              "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+              "5FgXgNMfeBPQquWjzuvpZpkTRsDnPtwuHBNfbbaMLL6DrUqD",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+              "5F6vUk57AGxqG9kUsp8MfbF7Sj8hWfPxm5vWidDXpWciWiGk",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj",
+              "5ELjtaq5FYCF7q37JE87fLUncaULVjSx6vAM6M4r4CtLeJnj",
+              100000000000000000000000,
+              "Validator"
+            ]
+          ],
+          "validatorCount": 2
+        },
+        "sudo": {
+          "key": "5DPrpzkbQGkVgibdzTWQrQnefD54x8986CfpstcVMMMfAhTg"
+        }
+      }
+    }
+  }
+}
