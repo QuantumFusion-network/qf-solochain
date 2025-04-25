@@ -58,7 +58,7 @@ use xcm::latest::prelude::BodyId;
 // Local module imports
 use super::{
 	AVERAGE_ON_INITIALIZE_RATIO, AccountId, Aura, Balance, Balances, Block, BlockNumber,
-	CollatorSelection, ConsensusHook, EXISTENTIAL_DEPOSIT, HOURS, Hash, MAXIMUM_BLOCK_WEIGHT,
+	CollatorSelection, ConsensusHook, EXISTENTIAL_DEPOSIT, Hash, MAXIMUM_BLOCK_WEIGHT,
 	MICRO_UNIT, MINUTES, MessageQueue, NORMAL_DISPATCH_RATIO, Nonce, PalletInfo, ParachainSystem,
 	Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
 	RuntimeTask, SLOT_DURATION, Session, SessionKeys, System, VERSION, WeightToFee, XcmpQueue,
