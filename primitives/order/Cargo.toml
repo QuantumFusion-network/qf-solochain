@@ -1,0 +1,53 @@
+[package]
+name = "order-primitives"
+authors = [""]
+version = "0.1.0"
+license = "GPLv3"
+edition = "2021"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+async-trait = { workspace = true, optional = true }
+log = { workspace = true, default-features = false }
+hex-literal = { workspace = true }
+codec = { workspace = true, default-features = false, features = ["derive"] }
+scale-info = { workspace = true, default-features = false, features = ["derive"] }
+
+frame-support = { workspace = true, default-features = false }
+
+sp-api = { workspace = true, default-features = false }
+sp-io = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
+sp-inherents = { workspace = true, default-features = false }
+sp-trie = { workspace = true, default-features = false }
+sp-state-machine = { workspace = true, default-features = false }
+
+# Cumulus
+cumulus-primitives-core = { workspace = true, default-features = false }
+cumulus-relay-chain-interface = { workspace = true, default-features = false, optional = true }
+
+[dev-dependencies]
+serde = { workspace = true }
+smallvec = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "async-trait",
+    "log/std",
+    "codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "sp-api/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-inherents/std",
+    "sp-trie/std",
+    "sp-state-machine/std",
+    "cumulus-primitives-core/std",
+    "cumulus-relay-chain-interface"
+]
