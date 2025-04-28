@@ -1,9 +1,8 @@
 //! # PolkaVM Pallet
 //!
-//! A pallet with minimal functionality to help developers understand the
-//! essential components of writing a FRAME pallet. It is typically used in
-//! beginner tutorials or in Substrate template nodes as a starting point for
-//! creating a new pallet and **not meant to be used in production**.
+//! A pallet with minimal functionality to help developers understand the essential components of
+//! writing a FRAME pallet. It is typically used in beginner tutorials or in Substrate template
+//! nodes as a starting point for creating a new pallet and **not meant to be used in production**.
 //!
 //! ## Overview
 //!
@@ -15,9 +14,8 @@
 //!   upon success
 //! - another dispatchable function that causes a custom error to be thrown
 //!
-//! Each pallet section is annotated with an attribute using the
-//! `#[pallet::...]` procedural macro. This macro generates the necessary code
-//! for a pallet to be aggregated into a FRAME runtime.
+//! Each pallet section is annotated with an attribute using the `#[pallet::...]` procedural macro.
+//! This macro generates the necessary code for a pallet to be aggregated into a FRAME runtime.
 //!
 //! Learn more about FRAME macros [here](https://docs.substrate.io/reference/frame-macros/).
 //!
@@ -36,8 +34,7 @@
 //! - A **set of dispatchable functions** that define the pallet's functionality (denoted by the
 //!   `#[pallet::call]` attribute). See: [`dispatchables`].
 //!
-//! Run `cargo doc --package pallet-template --open` to view this pallet's
-//! documentation.
+//! Run `cargo doc --package pallet-template --open` to view this pallet's documentation.
 
 // We make sure this pallet uses `no_std` for compiling to Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -50,13 +47,13 @@ mod polkavm;
 pub mod weights;
 pub use weights::*;
 
-// All pallet logic is defined in its own module and must be annotated by the
-// `pallet` attribute.
+// All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various useful types required by all FRAME pallets.
 	use super::*;
 	use frame_support::{
+		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
 		traits::{
 			fungible::{Inspect, Mutate},
@@ -76,6 +73,8 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
+	type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -86,21 +85,23 @@ pub mod pallet {
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	pub(super) struct ExecResult {
-		result: u64,
+		result: Option<u64>,
+		not_enough_gas: bool,
+		trap: bool,
 		gas_before: u32,
 		gas_after: i64,
 	}
 
-	// The `Pallet` struct serves as a placeholder to implement traits, methods and
-	// dispatchables (`Call`s) in this pallet.
+	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
+	// (`Call`s) in this pallet.
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	/// The pallet's configuration trait.
 	///
 	/// All our types and constants a pallet depends on must be declared here.
-	/// These types are defined generically and made concrete when the pallet is
-	/// declared in the `runtime/src/lib.rs` file of your chain.
+	/// These types are defined generically and made concrete when the pallet is declared in the
+	/// `runtime/src/lib.rs` file of your chain.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching runtime event type.
@@ -108,21 +109,34 @@ pub mod pallet {
 
 		/// The maximum length of a contract code in bytes.
 		///
-		/// The value should be chosen carefully taking into the account the
-		/// overall memory limit your runtime has, as well as the [maximum
-		/// allowed callstack depth](#associatedtype.CallStack). Look into the
-		/// `integrity_test()` for some insights.
+		/// The value should be chosen carefully taking into the account the overall memory limit
+		/// your runtime has, as well as the [maximum allowed callstack
+		/// depth](#associatedtype.CallStack). Look into the `integrity_test()` for some insights.
 		#[pallet::constant]
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxGas: Get<u32>;
+		type MaxGasLimit: Get<u32>;
+
+		#[pallet::constant]
+		type MaxStorageSlots: Get<u32>;
+
+		#[pallet::constant]
+		type MaxStorageKeySize: Get<u32>;
+
+		#[pallet::constant]
+		type MinGasPrice: Get<u64>;
+
+		#[pallet::constant]
+		type StorageSize: Get<u32>;
+
+		#[pallet::constant]
+		type StorageSlotPrice: Get<u128>;
 
 		/// The fungible
 		type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
 
-		/// A type representing the weights required by the dispatchables of
-		/// this pallet.
+		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
 	}
 
@@ -141,18 +155,24 @@ pub mod pallet {
 	pub(super) type CodeAddress<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
+	#[pallet::storage]
+	pub(super) type CodeStorage<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		(T::AccountId, T::AccountId, StorageKey<T>),
+		CodeStorageSlot<T>,
+	>;
+
 	/// Events that functions in this pallet can emit.
 	///
-	/// Events are a simple means of indicating to the outside world (such as
-	/// dApps, chain explorers or other users) that some notable update in the
-	/// runtime has occurred. In a FRAME pallet, the documentation for each
-	/// event field and its parameters is added to a node's metadata so it
+	/// Events are a simple means of indicating to the outside world (such as dApps, chain explorers
+	/// or other users) that some notable update in the runtime has occurred. In a FRAME pallet, the
+	/// documentation for each event field and its parameters is added to a node's metadata so it
 	/// can be used by external interfaces or tools.
 	///
-	///	The `generate_deposit` macro generates a function on `Pallet` called
-	/// `deposit_event` which will convert the event type of your pallet into
-	/// `RuntimeEvent` (declared in the pallet's [`Config`] trait) and deposit
-	/// it using [`frame_system::Pallet::deposit_event`].
+	///	The `generate_deposit` macro generates a function on `Pallet` called `deposit_event` which
+	/// will convert the event type of your pallet into `RuntimeEvent` (declared in the pallet's
+	/// [`Config`] trait) and deposit it using [`frame_system::Pallet::deposit_event`].
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -163,7 +183,9 @@ pub mod pallet {
 			// The smart contract account.
 			contract_address: T::AccountId,
 			/// The new value set.
-			result: u64,
+			result: Option<u64>,
+			not_enough_gas: bool,
+			trap: bool,
 			gas_before: u32,
 			gas_after: i64,
 		},
@@ -179,13 +201,12 @@ pub mod pallet {
 
 	/// Errors that can be returned by this pallet.
 	///
-	/// Errors tell users that something went wrong so it's important that their
-	/// naming is informative. Similar to events, error documentation is added
-	/// to a node's metadata so it's equally important that they have helpful
-	/// documentation associated with them.
+	/// Errors tell users that something went wrong so it's important that their naming is
+	/// informative. Similar to events, error documentation is added to a node's metadata so it's
+	/// equally important that they have helpful documentation associated with them.
 	///
-	/// This type of runtime error can be up to 4 bytes in size should you want
-	/// to return additional information.
+	/// This type of runtime error can be up to 4 bytes in size should you want to return additional
+	/// information.
 	#[pallet::error]
 	pub enum Error<T> {
 		IntegerOverflow,
@@ -205,25 +226,24 @@ pub mod pallet {
 		PolkaVMModulePreInstantiationFailed,
 		PolkaVMNotEnoughGas,
 		PolkaVMTrap,
-		GasIsTooHigh,
+		GasLimitIsTooHigh,
+		GasPriceIsTooLow,
 
-		/// Performing the requested transfer failed. Probably because there
-		/// isn't enough free balance in the sender's account.
+		/// Performing the requested transfer failed. Probably because there isn't enough
+		/// free balance in the sender's account.
 		TransferFailed,
 	}
 
 	/// The pallet's dispatchable functions ([`Call`]s).
 	///
-	/// Dispatchable functions allows users to interact with the pallet and
-	/// invoke state changes. These functions materialize as "extrinsics",
-	/// which are often compared to transactions. They must always return a
-	/// `DispatchResult` and be annotated with a weight and call index.
+	/// Dispatchable functions allows users to interact with the pallet and invoke state changes.
+	/// These functions materialize as "extrinsics", which are often compared to transactions.
+	/// They must always return a `DispatchResult` and be annotated with a weight and call index.
 	///
 	/// The [`call_index`] macro is used to explicitly
-	/// define an index for calls in the [`Call`] enum. This is useful for
-	/// pallets that may introduce new dispatchables over time. If the order of
-	/// a dispatchable changes, its index will also change which will break
-	/// backwards compatibility.
+	/// define an index for calls in the [`Call`] enum. This is useful for pallets that may
+	/// introduce new dispatchables over time. If the order of a dispatchable changes, its index
+	/// will also change which will break backwards compatibility.
 	///
 	/// The [`weight`] macro is used to assign a weight to each call.
 	#[pallet::call]
@@ -272,11 +292,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// An example dispatchable that takes a single u32 value as a
-		/// parameter, writes the value to storage and emits an event.
+		/// An example dispatchable that takes a single u32 value as a parameter, writes the value
+		/// to storage and emits an event.
 		///
-		/// It checks that the _origin_ for this call is _Signed_ and returns a
-		/// dispatch error if it isn't. Learn more about origins here: <https://docs.substrate.io/build/origins/>
+		/// It checks that the _origin_ for this call is _Signed_ and returns a dispatch
+		/// error if it isn't. Learn more about origins here: <https://docs.substrate.io/build/origins/>
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::execute())]
 		pub fn execute(
@@ -285,29 +305,47 @@ pub mod pallet {
 			to: T::AccountId,
 			value: BalanceOf<T>,
 			op: u32,
-			gas: u32,
-		) -> DispatchResult {
+			gas_limit: u32,
+			gas_price: u64,
+		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			ensure!(op >= 0 && op <= 5, Error::<T>::InvalidOperation);
+			ensure!(op <= 5, Error::<T>::InvalidOperation);
 
-			let max_gas = <T as Config>::MaxGas::get()
+			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			ensure!(gas <= max_gas, Error::<T>::GasIsTooHigh);
+			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+
+			let max_storage_size = <T as Config>::StorageSize::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let max_storage_key_size = <T as Config>::MaxStorageKeySize::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let max_storage_slot_idx = <T as Config>::StorageSize::get()
+				.checked_sub(1)
+				.ok_or(Error::<T>::IntegerOverflow)?;
+
+			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
 			let raw_blob = Code::<T>::get(&contract_address)
 				.ok_or(Error::<T>::ProgramBlobNotFound)?
 				.into_inner();
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas.into());
+			instance.set_gas(gas_limit.into());
 
 			let mut state = State::new(
 				[contract_address.clone(), who.clone(), to].to_vec(),
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+				max_storage_size,
+				max_storage_key_size,
+				max_storage_slot_idx,
 				|from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
 					if !value.is_zero() && from != to {
 						if let Err(_) =
@@ -327,6 +365,34 @@ pub mod pallet {
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
+				|contract_address: T::AccountId,
+				 account_address: T::AccountId,
+				 key: StorageKey<T>|
+				 -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, account_address, key))
+						.map(|d| d.to_vec())
+				},
+				|contract_address: T::AccountId,
+				 caller_address: T::AccountId,
+				 key: StorageKey<T>,
+				 max_storage_size: usize,
+				 mut data: Vec<u8>|
+				 -> u64 {
+					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
+					if let Ok(_) = buffer.try_append(&mut data) {
+						CodeStorage::<T>::insert((contract_address, caller_address, key), buffer);
+						0
+					} else {
+						1
+					}
+				},
+				|contract_address: T::AccountId,
+				 caller_address: T::AccountId,
+				 key: StorageKey<T>|
+				 -> u64 {
+					CodeStorage::<T>::remove((contract_address, caller_address, key));
+					0
+				},
 			);
 
 			sp_runtime::print("====== BEFORE CALL ======");
@@ -334,18 +400,24 @@ pub mod pallet {
 			let result =
 				instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
 
-			let result = match result {
-				Err(CallError::NotEnoughGas) => Err(Error::<T>::PolkaVMNotEnoughGas)?,
-				Err(CallError::Trap) => Err(Error::<T>::PolkaVMTrap)?,
+			let (result, not_enough_gas, trap) = match result {
+				Err(CallError::NotEnoughGas) => (None, true, false),
+				Err(CallError::Trap) => (None, false, true),
 				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				Ok(res) => res,
+				Ok(res) => (Some(res), false, false),
 			};
 
 			sp_runtime::print("====== AFTER CALL ======");
 
 			ExecutionResult::<T>::insert(
 				(&contract_address, &who),
-				ExecResult { result, gas_before: gas, gas_after: instance.gas() },
+				ExecResult {
+					result,
+					not_enough_gas,
+					trap,
+					gas_before: gas_limit,
+					gas_after: instance.gas(),
+				},
 			);
 
 			// Emit an event.
@@ -353,12 +425,21 @@ pub mod pallet {
 				who,
 				contract_address,
 				result,
-				gas_before: gas,
+				not_enough_gas,
+				trap,
+				gas_before: gas_limit,
 				gas_after: instance.gas(),
 			});
 
-			// Return a successful `DispatchResult`
-			Ok(())
+			let normalized_gas_after =
+				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
+
+			Ok(PostDispatchInfo {
+				actual_weight: Some(Weight::from_all(
+					(u64::from(gas_limit) - normalized_gas_after) * gas_price,
+				)),
+				pays_fee: Pays::Yes,
+			})
 		}
 	}
 
@@ -440,6 +521,112 @@ pub mod pallet {
 				.define_typed("caller", |caller: Caller<T>| -> u64 { (caller.user_data.caller)() })
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
+			linker
+				.define_typed("storage_size", |caller: Caller<T>| -> u64 {
+					caller.user_data.max_storage_size as u64
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed(
+					"get",
+					|caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
+						if let Ok(mut raw_storage_key) = caller
+							.instance
+							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+						{
+							let mut storage_key = BoundedVec::with_bounded_capacity(
+								caller.user_data.max_storage_key_size as usize,
+							);
+							match storage_key.try_append(&mut raw_storage_key) {
+								Ok(_) => (),
+								Err(_) => return 1,
+							};
+
+							let result = (caller.user_data.get)(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[1].clone(),
+								storage_key,
+							);
+							if let Some(chunk) = result {
+								match caller.instance.write_memory(pointer, &chunk) {
+									Err(_) => return 1,
+									Ok(_) => return 0,
+								}
+							}
+							return 0;
+						} else {
+							return 1;
+						}
+					},
+				)
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed(
+					"read",
+					|caller: Caller<T>,
+					 address_idx: u32,
+					 storage_key_pointer: u32,
+					 pointer: u32|
+					 -> u64 {
+						if let Ok(mut raw_storage_key) = caller
+							.instance
+							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+						{
+							let mut storage_key = BoundedVec::with_bounded_capacity(
+								caller.user_data.max_storage_key_size as usize,
+							);
+							match storage_key.try_append(&mut raw_storage_key) {
+								Ok(_) => (),
+								Err(_) => return 1,
+							};
+
+							let result = (caller.user_data.get)(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[address_idx as usize].clone(),
+								storage_key,
+							);
+							if let Some(chunk) = result {
+								match caller.instance.write_memory(pointer, &chunk) {
+									Err(_) => return 1,
+									Ok(_) => return 0,
+								}
+							}
+							return 0;
+						} else {
+							return 1;
+						}
+					},
+				)
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed("delete", |caller: Caller<T>, storage_key_pointer: u32| -> u64 {
+					if let Ok(mut raw_storage_key) = caller
+						.instance
+						.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+					{
+						let mut storage_key = BoundedVec::with_bounded_capacity(
+							caller.user_data.max_storage_key_size as usize,
+						);
+						match storage_key.try_append(&mut raw_storage_key) {
+							Ok(_) => (),
+							Err(_) => return 1,
+						};
+
+						(caller.user_data.delete)(
+							caller.user_data.addresses[0].clone(),
+							caller.user_data.addresses[1].clone(),
+							storage_key,
+						);
+						return 0;
+					} else {
+						1
+					}
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
 			// Link the host functions with the module.
 			let instance_pre = linker
 				.instantiate_pre(&module)
@@ -457,9 +644,8 @@ pub mod pallet {
 	pub trait AddressGenerator<T: Config> {
 		/// The address of a contract based on the given instantiate parameters.
 		///
-		/// Changing the formular for an already deployed chain is fine as long
-		/// as no collisions with the old formular. Changes only affect
-		/// existing contracts.
+		/// Changing the formular for an already deployed chain is fine as long as no collisions
+		/// with the old formular. Changes only affect existing contracts.
 		fn contract_address(
 			deploying_address: &T::AccountId,
 			code_hash: &CodeHash<T>,
@@ -467,8 +653,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> AddressGenerator<T> for Pallet<T> {
-		/// Formula: `hash("contract_addr_v1" ++ deploying_address ++
-		/// code_hash)`
+		/// Formula: `hash("contract_addr_v1" ++ deploying_address ++ code_hash)`
 		fn contract_address(
 			deploying_address: &T::AccountId,
 			code_hash: &CodeHash<T>,

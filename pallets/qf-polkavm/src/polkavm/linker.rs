@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, Config as PalletConfig,
+	BalanceOf, Config as PalletConfig, StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
@@ -565,12 +565,12 @@ impl_into_extern_fn!(6 A0 A1 A2 A3 A4 A5);
 #[repr(transparent)]
 struct UnsafePhantomData<T>(PhantomData<T>);
 
-// SAFETY: This is only used to hold a type used exclusively at compile time, so
-// regardless of whether it implements `Send` this will be safe.
+// SAFETY: This is only used to hold a type used exclusively at compile time, so regardless of
+// whether it implements `Send` this will be safe.
 unsafe impl<T> Send for UnsafePhantomData<T> {}
 
-// SAFETY: This is only used to hold a type used exclusively at compile time, so
-// regardless of whether it implements `Sync` this will be safe.
+// SAFETY: This is only used to hold a type used exclusively at compile time, so regardless of
+// whether it implements `Sync` this will be safe.
 unsafe impl<T> Sync for UnsafePhantomData<T> {}
 
 struct DynamicFn<T, F> {
@@ -593,6 +593,9 @@ pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
 	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
+	pub max_storage_size: usize,
+	pub max_storage_key_size: u32,
+	pub max_storage_slot_idx: u32,
 	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
 	pub balance: fn(T::AccountId) -> u64,
@@ -600,6 +603,9 @@ pub struct State<T: PalletConfig> {
 	pub block_number: fn() -> u64,
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
+	pub get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
+	pub insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+	pub delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -607,6 +613,9 @@ impl<T: PalletConfig> State<T> {
 		addresses: Vec<T::AccountId>,
 		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
+		max_storage_size: usize,
+		max_storage_key_size: u32,
+		max_storage_slot_idx: u32,
 		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 		print: fn(Vec<u8>) -> u64,
 		balance: fn(T::AccountId) -> u64,
@@ -614,11 +623,17 @@ impl<T: PalletConfig> State<T> {
 		block_number: fn() -> u64,
 		account_id: fn() -> u64,
 		caller: fn() -> u64,
+		get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
+		insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+		delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
 	) -> Self {
 		Self {
 			addresses,
 			balances,
 			log_message,
+			max_storage_size,
+			max_storage_key_size,
+			max_storage_slot_idx,
 			transfer,
 			print,
 			balance,
@@ -626,6 +641,9 @@ impl<T: PalletConfig> State<T> {
 			block_number,
 			account_id,
 			caller,
+			get,
+			insert,
+			delete,
 		}
 	}
 }
@@ -654,8 +672,7 @@ impl<T: PalletConfig, UserError> Linker<T, UserError> {
 		Self { host_functions: Default::default(), fallback_handler: None, phantom: PhantomData }
 	}
 
-	/// Defines a fallback external call handler, in case no other registered
-	/// functions match.
+	/// Defines a fallback external call handler, in case no other registered functions match.
 	pub fn define_fallback(
 		&mut self,
 		func: impl Fn(Caller<T>, u32) -> Result<(), UserError> + Send + Sync + 'static,
@@ -692,8 +709,7 @@ impl<T: PalletConfig, UserError> Linker<T, UserError> {
 		Ok(self)
 	}
 
-	/// Defines a new statically typed handler for external calls with a given
-	/// symbol.
+	/// Defines a new statically typed handler for external calls with a given symbol.
 	pub fn define_typed<Params, Args>(
 		&mut self,
 		symbol: impl AsRef<[u8]>,
