@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, Config as PalletConfig, StorageKey,
+	BalanceOf, Config as PalletConfig, StorageKey, CodeStorageKey, CodeStorageSlot, MutatingStorageOperation,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
@@ -9,6 +9,7 @@ use crate::{
 };
 use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
 use core::marker::PhantomData;
+use scale_info::prelude::collections::HashMap;
 
 #[cfg(not(feature = "std"))]
 use alloc::collections::BTreeMap as LookupMap;
@@ -593,6 +594,8 @@ pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
 	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
+	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
+	pub raw_storage: HashMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
@@ -613,6 +616,8 @@ impl<T: PalletConfig> State<T> {
 		addresses: Vec<T::AccountId>,
 		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
+		mutating_operations: Vec<MutatingStorageOperation<T>>,
+		raw_storage: HashMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
 		max_storage_slot_idx: u32,
@@ -631,6 +636,8 @@ impl<T: PalletConfig> State<T> {
 			addresses,
 			balances,
 			log_message,
+			mutating_operations,
+			raw_storage,
 			max_storage_size,
 			max_storage_key_size,
 			max_storage_slot_idx,

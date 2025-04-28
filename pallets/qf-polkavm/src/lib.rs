@@ -61,7 +61,7 @@ pub mod pallet {
 		},
 	};
 	use frame_system::pallet_prelude::*;
-	use scale_info::{TypeInfo, prelude::vec::Vec};
+	use scale_info::{TypeInfo, prelude::{collections::HashMap, vec::Vec}};
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
 	use polkavm::{
@@ -73,8 +73,16 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
-	type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
-	pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, <T as frame_system::Config>::AccountId, StorageKey<T>);
+
+	pub(super) enum MutatingStorageOperationType {
+		Set,
+		Delete,
+	}
+
+	pub(super) type MutatingStorageOperation<T> = (MutatingStorageOperationType, CodeStorageKey<T>, CodeStorageSlot<T>);
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -159,7 +167,7 @@ pub mod pallet {
 	pub(super) type CodeStorage<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
-		(T::AccountId, T::AccountId, StorageKey<T>),
+		CodeStorageKey<T>,
 		CodeStorageSlot<T>,
 	>;
 
@@ -343,6 +351,8 @@ pub mod pallet {
 				[contract_address.clone(), who.clone(), to].to_vec(),
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+				[].to_vec(),
+				HashMap::new(),
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
