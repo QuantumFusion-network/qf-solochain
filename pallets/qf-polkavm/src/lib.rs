@@ -39,6 +39,8 @@
 // We make sure this pallet uses `no_std` for compiling to Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
@@ -61,8 +63,9 @@ pub mod pallet {
 		},
 	};
 	use frame_system::pallet_prelude::*;
-	use scale_info::{TypeInfo, prelude::{collections::HashMap, vec::Vec}};
+	use scale_info::{TypeInfo, prelude::vec::Vec};
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
+	use alloc::collections::btree_map::BTreeMap;
 
 	use polkavm::{
 		CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
@@ -77,6 +80,7 @@ pub mod pallet {
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, <T as frame_system::Config>::AccountId, StorageKey<T>);
 
+	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
 		Set,
 		Delete,
@@ -352,7 +356,7 @@ pub mod pallet {
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
 				[].to_vec(),
-				HashMap::new(),
+				BTreeMap::new(),
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,

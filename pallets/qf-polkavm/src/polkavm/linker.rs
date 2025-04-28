@@ -9,7 +9,7 @@ use crate::{
 };
 use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
 use core::marker::PhantomData;
-use scale_info::prelude::collections::HashMap;
+use alloc::collections::btree_map::BTreeMap;
 
 #[cfg(not(feature = "std"))]
 use alloc::collections::BTreeMap as LookupMap;
@@ -595,7 +595,7 @@ pub struct State<T: PalletConfig> {
 	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
-	pub raw_storage: HashMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
+	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
@@ -617,7 +617,7 @@ impl<T: PalletConfig> State<T> {
 		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
 		mutating_operations: Vec<MutatingStorageOperation<T>>,
-		raw_storage: HashMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
+		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
 		max_storage_slot_idx: u32,
