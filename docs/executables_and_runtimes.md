@@ -1,15 +1,12 @@
 ## Executables and runtimes
 
-### Main node executable and runtime
-The main node executable is `qf-node` and the runtime is `qf-runtime`.
-
 ### Build the node binary
 For building the fastchain node binary use 
 ```bash
 cargo build -p qf-node --release
 ```
 
-or for parachain node use
+and for parachain node use
 
 ```bash
 cargo build -p qf-parachain-node --release
@@ -21,7 +18,8 @@ cargo build -p qf-parachain-node --release
 export SPEC_PATH=./chainspecs   # or your own path
 ```
 
-2. For building the chainspec use 
+2. For building the chainspec, use:
+
 ```bash
 ./target/debug/qf-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/fastchain-spec-raw.json
 ```
@@ -60,7 +58,7 @@ or
 ```
 
 ### Run the fastchain node
-- As full node (no need to generate the key)
+- As a full node (no need to generate the key)
 ```bash
 ./target/debug/qf-node --chain $SPEC_PATH/fastchain-spec-raw.json -d $DATA_PATH
 ```
@@ -72,11 +70,11 @@ or
 
 Also you can specify the ports:
 - `--port <port>` - port for the node
-- `--rpc-port <port>` - port for the RPC
+- `--rpc-port <port>` - port for the p2p connection
 
 ### Run the parachain node
-Before run the parachain node you need to run the relaychain node.
-For run the local relaychain you can customize and use this bash script:
+Before running the local parachain node you need to have a running relaychain node.
+To run the local relaychain you can use this bash script:
 ```bash
 #!/bin/bash
 
