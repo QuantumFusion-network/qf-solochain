@@ -23,12 +23,7 @@ export SPEC_PATH=./chainspecs   # or your own path
 
 2. For building the chainspec use 
 ```bash
-./target/debug/qf-node build-spec --disable-default-bootnode > $SPEC_PATH/fastchain-spec.json
-```
-
-Make the raw version of the spec 
-```bash
-./target/debug/qf-node build-spec --chain $SPEC_PATH/fastchain-spec.json --raw > $SPEC_PATH/fastchain-spec-raw.json
+./target/debug/qf-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/fastchain-spec-raw.json
 ```
 
 ### Prepare the key for validator and collator modes
@@ -101,8 +96,7 @@ $NODE \
 
 First generate the chainspec as for fastchain but by 
 ```bash
-./target/debug/qf-parachain-node build-spec --disable-default-bootnode > $SPEC_PATH/parachain-spec.json
-./target/debug/qf-parachain-node build-spec --chain $SPEC_PATH/parachain-spec.json --raw > $SPEC_PATH/parachain-spec-raw.json
+./target/debug/qf-parachain-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/parachain-spec-raw.json
 ```
 
 - As full node (no need to generate the key)
