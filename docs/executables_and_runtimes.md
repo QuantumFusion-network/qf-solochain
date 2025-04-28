@@ -6,13 +6,13 @@ The main node executable is `qf-node` and the runtime is `qf-runtime`.
 ### Build the node binary
 For building the fastchain node binary use 
 ```bash
-cargo build -p qf-node
+cargo build -p qf-node --release
 ```
 
 or for parachain node use
 
 ```bash
-cargo build -p qf-parachain-node
+cargo build -p qf-parachain-node --release
 ```
 
 ### Make the chainspec
@@ -38,7 +38,7 @@ Not all nodes can generate the key as
 ```
 and you should build the `subkey` for generating keys by command 
 ```bash
-cargo build -p subkey
+cargo build -p subkey --release
 ```
 
 1. You must create the folders in `data` for storing the keys by command 
