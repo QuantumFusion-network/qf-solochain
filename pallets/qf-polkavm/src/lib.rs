@@ -54,6 +54,7 @@ pub use weights::*;
 pub mod pallet {
 	// Import various useful types required by all FRAME pallets.
 	use super::*;
+	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{
 		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
@@ -65,7 +66,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use scale_info::{TypeInfo, prelude::vec::Vec};
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
-	use alloc::collections::btree_map::BTreeMap;
 
 	use polkavm::{
 		CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
@@ -78,7 +78,11 @@ pub mod pallet {
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, <T as frame_system::Config>::AccountId, StorageKey<T>);
+	pub(super) type CodeStorageKey<T> = (
+		<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::AccountId,
+		StorageKey<T>,
+	);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -86,7 +90,8 @@ pub mod pallet {
 		Delete,
 	}
 
-	pub(super) type MutatingStorageOperation<T> = (MutatingStorageOperationType, CodeStorageKey<T>, CodeStorageSlot<T>);
+	pub(super) type MutatingStorageOperation<T> =
+		(MutatingStorageOperationType, CodeStorageKey<T>, CodeStorageSlot<T>);
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -168,12 +173,8 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
 	#[pallet::storage]
-	pub(super) type CodeStorage<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CodeStorageKey<T>,
-		CodeStorageSlot<T>,
-	>;
+	pub(super) type CodeStorage<T: Config> =
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///

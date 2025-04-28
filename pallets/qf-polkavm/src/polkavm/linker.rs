@@ -1,15 +1,17 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, Config as PalletConfig, StorageKey, CodeStorageKey, CodeStorageSlot, MutatingStorageOperation,
+	BalanceOf, CodeStorageKey, CodeStorageSlot, Config as PalletConfig, MutatingStorageOperation,
+	StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
 	},
 };
-use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
+use alloc::{
+	borrow::ToOwned, collections::btree_map::BTreeMap, format, string::String, sync::Arc, vec::Vec,
+};
 use core::marker::PhantomData;
-use alloc::collections::btree_map::BTreeMap;
 
 #[cfg(not(feature = "std"))]
 use alloc::collections::BTreeMap as LookupMap;
