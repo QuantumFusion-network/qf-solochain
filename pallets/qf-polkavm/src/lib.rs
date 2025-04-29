@@ -376,7 +376,6 @@ pub mod pallet {
 					return 0;
 				},
 				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
-				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
