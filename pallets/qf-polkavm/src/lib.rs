@@ -91,7 +91,7 @@ pub mod pallet {
 	}
 
 	pub(super) type MutatingStorageOperation<T> =
-		(MutatingStorageOperationType, CodeStorageKey<T>, CodeStorageSlot<T>);
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -646,11 +646,23 @@ pub mod pallet {
 							Err(_) => return 1,
 						};
 
-						(caller.user_data.delete)(
+						caller.user_data.mutating_operations.push(
+							(
+								MutatingStorageOperationType::Delete,
+								(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[1].clone(),
+									storage_key.clone(),
+								),
+								None,
+							)
+						);
+						caller.user_data.raw_storage.insert((
 							caller.user_data.addresses[0].clone(),
 							caller.user_data.addresses[1].clone(),
 							storage_key,
-						);
+						), None);
+
 						return 0;
 					} else {
 						1
