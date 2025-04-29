@@ -605,11 +605,19 @@ pub mod pallet {
 								Err(_) => return 1,
 							};
 
-							let result = (caller.user_data.get)(
+							let result = match caller.user_data.raw_storage.get(&(
 								caller.user_data.addresses[0].clone(),
 								caller.user_data.addresses[address_idx as usize].clone(),
-								storage_key,
-							);
+								storage_key.clone(),
+							)) {
+								Some(Some(r)) => Some(r.to_vec()),
+								Some(None) => None,
+								None => (caller.user_data.get)(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[address_idx as usize].clone(),
+									storage_key,
+								),
+							};
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
 									Err(_) => return 1,
