@@ -25,12 +25,16 @@
 
 mod xcm_config;
 
-use polkadot_sdk::{staging_parachain_info as parachain_info, staging_xcm as xcm, *};
+use polkadot_sdk::{
+	frame_system::EventRecord, sp_runtime::traits::Convert,
+	staging_parachain_info as parachain_info, staging_xcm as xcm, *,
+};
 #[cfg(not(feature = "runtime-benchmarks"))]
 use polkadot_sdk::{staging_xcm_builder as xcm_builder, staging_xcm_executor as xcm_executor};
 
 // Substrate and Polkadot dependencies
-use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
+use alloc::{boxed::Box, vec::Vec};
+use cumulus_pallet_parachain_system::{RelayChainStateProof, RelayNumberMonotonicallyIncreases};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	PalletId, derive_impl,
@@ -45,11 +49,14 @@ use frame_system::{
 	EnsureRoot,
 	limits::{BlockLength, BlockWeights},
 };
+use order_primitives::well_known_keys::EVENTS;
+use pallet_on_demand::{FeeBasedCriteria, FixedReward};
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_runtime_common::{
 	BlockHashCount, SlowAdjustingFeeUpdate, xcm_sender::NoPriceForMessageDelivery,
 };
+use polkadot_runtime_parachains::on_demand;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::Perbill;
 use sp_version::RuntimeVersion;
@@ -59,9 +66,9 @@ use xcm::latest::prelude::BodyId;
 use super::{
 	AVERAGE_ON_INITIALIZE_RATIO, AccountId, Aura, Balance, Balances, Block, BlockNumber,
 	CollatorSelection, ConsensusHook, EXISTENTIAL_DEPOSIT, Hash, MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT,
-	MINUTES, MessageQueue, NORMAL_DISPATCH_RATIO, Nonce, PalletInfo, ParachainSystem, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-	SLOT_DURATION, Session, SessionKeys, System, VERSION, WeightToFee, XcmpQueue,
+	MILLI_UNIT, MINUTES, MessageQueue, NORMAL_DISPATCH_RATIO, Nonce, PalletInfo, ParachainSystem,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
+	RuntimeTask, SLOT_DURATION, Session, SessionKeys, System, VERSION, WeightToFee, XcmpQueue,
 	weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
 };
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
@@ -318,5 +325,71 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct BenchHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_on_demand::BenchmarkHelper<Balance> for BenchHelper {
+	fn mock_threshold_parameter() -> Balance {
+		1_000u32.into()
+	}
+}
+
+pub struct ToAccountIdImpl;
+impl Convert<AccountId, AccountId> for ToAccountIdImpl {
+	fn convert(v: AccountId) -> AccountId {
+		v
+	}
+}
+
+parameter_types! {
+	pub const Reward: Balance = MILLI_UNIT;
+}
+
+pub struct OrderPlacementChecker;
+impl pallet_on_demand::OrdersPlaced<Balance, AccountId> for OrderPlacementChecker {
+	fn orders_placed(
+		relay_state_proof: RelayChainStateProof,
+		expected_para_id: ParaId,
+	) -> Vec<(Balance, AccountId)> {
+		let events = relay_state_proof
+			.read_entry::<Vec<Box<EventRecord<rococo_runtime::RuntimeEvent, Hash>>>>(EVENTS, None)
+			.ok()
+			.map(|vec| vec.into_iter().filter_map(|event| Some(event)).collect::<Vec<_>>())
+			.unwrap_or_default();
+
+		let result: Vec<(Balance, AccountId)> = events
+			.into_iter()
+			.filter_map(|item| match item.event {
+				rococo_runtime::RuntimeEvent::OnDemandAssignmentProvider(
+					on_demand::Event::OnDemandOrderPlaced { para_id, spot_price, ordered_by },
+				) if para_id == expected_para_id => Some((spot_price, ordered_by)),
+				_ => None,
+			})
+			.collect();
+
+		result
+	}
+}
+
+/// On-demand order creation threshold parameter.
+pub type ThresholdParameter = Balance;
+
+impl pallet_on_demand::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type BlockNumber = BlockNumber;
+	type ThresholdParameter = ThresholdParameter; // Represents fee threshold.
+	type RelayChainBalance = Balance;
+	type Currency = Balances;
+	type OnReward = crate::OnDemand;
+	type RewardSize = FixedReward<Balance, Reward>;
+	type ToAccountId = ToAccountIdImpl;
+	type OrderPlacementCriteria = FeeBasedCriteria<Runtime, ExtrinsicBaseWeight>;
+	type OrdersPlaced = OrderPlacementChecker;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = BenchHelper;
 	type WeightInfo = ();
 }

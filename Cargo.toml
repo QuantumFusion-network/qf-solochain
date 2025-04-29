@@ -51,8 +51,11 @@ clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }
 jsonrpsee = { version = "0.24.7" }
+order-primitives = { path = "primitives/order", default-features = false }
 pallet-transaction-payment-rpc = { path = "vendor/polkadot-sdk/substrate/frame/transaction-payment/rpc", default-features = false }
+polkadot-primitives = { path = "vendor/polkadot-sdk/polkadot/primitives", default-features = false }
 polkadot-parachain-primitives = { path = "vendor/polkadot-sdk/polkadot/parachain", default-features = false }
+polkadot-runtime-parachains = { path = "vendor/polkadot-sdk/polkadot/runtime/parachains", default-features = false }
 polkadot-sdk = { path = "vendor/polkadot-sdk/umbrella", default-features = false }
 polkavm = { path = "vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
@@ -64,6 +67,7 @@ sc-chain-spec = { path = "vendor/polkadot-sdk/substrate/client/chain-spec", defa
 sc-cli = { path = "vendor/polkadot-sdk/substrate/client/cli", default-features = false }
 sc-client-api = { path = "vendor/polkadot-sdk/substrate/client/api", default-features = false }
 sc-consensus = { path = "vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }
+sc-consensus-aura = { path = "vendor/polkadot-sdk/substrate/client/consensus/aura", default-features = false }
 sc-consensus-grandpa = { path = "vendor/polkadot-sdk/substrate/client/consensus/grandpa", default-features = false }
 sc-consensus-slots = { path = "vendor/polkadot-sdk/substrate/client/consensus/slots", default-features = false }
 sc-executor = { path = "vendor/polkadot-sdk/substrate/client/executor", default-features = false }
@@ -80,11 +84,14 @@ sc-transaction-pool = { path = "vendor/polkadot-sdk/substrate/client/transaction
 sc-transaction-pool-api = { path = "vendor/polkadot-sdk/substrate/client/transaction-pool/api", default-features = false }
 serde_json = { version = "1.0.124", default-features = false }
 sp-blockchain = { path = "vendor/polkadot-sdk/substrate/primitives/blockchain", default-features = false }
+sp-consensus-aura = { path = "vendor/polkadot-sdk/substrate/primitives/consensus/aura", default-features = false }
 sp-io = { path = "vendor/polkadot-sdk/substrate/primitives/io", default-features = false }
 sp-keyring = { path = "vendor/polkadot-sdk/substrate/primitives/keyring", default-features = false }
+sp-state-machine = { path = "vendor/polkadot-sdk/substrate/primitives/state-machine", default-features = false }
 sp-timestamp = { path = "vendor/polkadot-sdk/substrate/primitives/timestamp", default-features = false }
 sp-tracing = { path = "vendor/polkadot-sdk/substrate/primitives/tracing", default-features = false }
 sp-trie = { path = "vendor/polkadot-sdk/substrate/primitives/trie", default-features = false }
+staging-xcm-builder = { path = "vendor/polkadot-sdk/polkadot/xcm/xcm-builder", default-features = false }
 substrate-build-script-utils = { path = "vendor/polkadot-sdk/substrate/utils/build-script-utils", default-features = false }
 substrate-frame-rpc-system = { path = "vendor/polkadot-sdk/substrate/utils/frame/rpc/system", default-features = false }
 
@@ -100,12 +107,18 @@ frame-system-benchmarking = { path = "vendor/polkadot-sdk/substrate/frame/system
 frame-system-rpc-runtime-api = { path = "vendor/polkadot-sdk/substrate/frame/system/rpc/runtime-api", default-features = false }
 frame-try-runtime = { path = "vendor/polkadot-sdk/substrate/frame/try-runtime", default-features = false }
 
+cumulus-client-consensus-aura = { path = "vendor/polkadot-sdk/cumulus/client/consensus/aura", default-features = false }
+cumulus-client-consensus-common = { path = "vendor/polkadot-sdk/cumulus/client/consensus/common", default-features = false }
 cumulus-pallet-parachain-system = { path = "vendor/polkadot-sdk/cumulus/pallets/parachain-system", default-features = false }
 cumulus-primitives-aura = { path = "vendor/polkadot-sdk/cumulus/primitives/aura", default-features = false }
+cumulus-primitives-core = { path = "vendor/polkadot-sdk/cumulus/primitives/core", default-features = false }
+cumulus-relay-chain-interface = { path = "vendor/polkadot-sdk/cumulus/client/relay-chain-interface", default-features = false }
 
 pallet-aura = { path = "vendor/polkadot-sdk/substrate/frame/aura", default-features = false }
+pallet-collator-selection = { path = "vendor/polkadot-sdk/cumulus/pallets/collator-selection", default-features = false }
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-grandpa = { path = "vendor/polkadot-sdk/substrate/frame/grandpa", default-features = false }
+pallet-on-demand = { path = "pallets/on-demand", default-features = false }
 pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
 pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
 pallet-spin = { path = "pallets/spin", default-features = false }
@@ -146,6 +159,9 @@ sp-runtime = { features = ["serde"], path = "vendor/polkadot-sdk/substrate/primi
 sp-version = { path = "vendor/polkadot-sdk/substrate/primitives/version", default-features = false }
 sp-version-proc-macro = { path = "vendor/polkadot-sdk/substrate/primitives/version/proc-macro", default-features = false }
 
+# Polkadot
+rococo-runtime = { path = "vendor/polkadot-sdk/polkadot/runtime/rococo", default-features = false }
+
 substrate-test-runtime-client = { path = "vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
 
 # polkavm
@@ -163,6 +179,10 @@ polkavm-derive-impl-macro = { path = "vendor/polkavm/crates/polkavm-derive-impl-
 polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", default-features = false }
 polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
+
+# Other
+subxt = "0.38.0"
+on-demand-service = { path = "client/on-demand" }
 
 # hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
 [patch.'https://github.com/w3f/fflonk']

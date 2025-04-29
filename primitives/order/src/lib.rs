@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::well_known_keys::EVENTS;
-use codec::{Codec, Decode, Encode, MaxEncodedLen};
-use cumulus_primitives_core::{ParaId, relay_chain::BlockNumber as RelayBlockNumber};
-use frame_support::{Parameter, pallet_prelude::InherentIdentifier};
+use codec::{Codec, Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
+use cumulus_primitives_core::{relay_chain::BlockNumber as RelayBlockNumber, ParaId};
+use frame_support::{pallet_prelude::InherentIdentifier, Parameter};
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::traits::{MaybeDisplay, MaybeSerializeDeserialize, Member};
@@ -15,12 +15,16 @@ pub mod well_known_keys;
 // Identifier of the order inherent
 pub const ON_DEMAND_INHERENT_IDENTIFIER: InherentIdentifier = *b"orderiht";
 
-#[derive(Encode, Decode, sp_core::RuntimeDebug, Clone, PartialEq, TypeInfo)]
+#[derive(
+	Encode, Decode, sp_core::RuntimeDebug, Clone, PartialEq, TypeInfo, DecodeWithMemTracking,
+)]
 pub struct OrderInherentData {
 	pub data: Option<InherentData>,
 }
 
-#[derive(Encode, Decode, sp_core::RuntimeDebug, Clone, PartialEq, TypeInfo)]
+#[derive(
+	Encode, Decode, sp_core::RuntimeDebug, Clone, PartialEq, TypeInfo, DecodeWithMemTracking,
+)]
 pub struct InherentData {
 	pub relay_storage_proof: sp_trie::StorageProof,
 	pub relay_state_root: H256,
