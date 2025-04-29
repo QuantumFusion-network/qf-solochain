@@ -564,11 +564,11 @@ pub mod pallet {
 							)) {
 								Some(Some(r)) => Some(r.to_vec()),
 								Some(None) => None,
-								None =>  (caller.user_data.get)(
+								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
 									caller.user_data.addresses[1].clone(),
 									storage_key,
-									),
+								),
 							};
 
 							if let Some(chunk) = result {
@@ -646,22 +646,23 @@ pub mod pallet {
 							Err(_) => return 1,
 						};
 
-						caller.user_data.mutating_operations.push(
+						caller.user_data.mutating_operations.push((
+							MutatingStorageOperationType::Delete,
 							(
-								MutatingStorageOperationType::Delete,
-								(
-									caller.user_data.addresses[0].clone(),
-									caller.user_data.addresses[1].clone(),
-									storage_key.clone(),
-								),
-								None,
-							)
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[1].clone(),
+								storage_key.clone(),
+							),
+							None,
+						));
+						caller.user_data.raw_storage.insert(
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[1].clone(),
+								storage_key,
+							),
+							None,
 						);
-						caller.user_data.raw_storage.insert((
-							caller.user_data.addresses[0].clone(),
-							caller.user_data.addresses[1].clone(),
-							storage_key,
-						), None);
 
 						return 0;
 					} else {
