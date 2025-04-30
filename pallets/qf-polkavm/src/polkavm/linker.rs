@@ -1,13 +1,16 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, Config as PalletConfig, StorageKey,
+	BalanceOf, CodeStorageKey, CodeStorageSlot, Config as PalletConfig, MutatingStorageOperation,
+	StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
 	},
 };
-use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
+use alloc::{
+	borrow::ToOwned, collections::btree_map::BTreeMap, format, string::String, sync::Arc, vec::Vec,
+};
 use core::marker::PhantomData;
 
 #[cfg(not(feature = "std"))]
@@ -593,13 +596,14 @@ pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
 	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
+	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
+	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
 	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
 	pub balance: fn(T::AccountId) -> u64,
-	pub balance_of: fn(T::AccountId) -> u64,
 	pub block_number: fn() -> u64,
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
@@ -613,13 +617,14 @@ impl<T: PalletConfig> State<T> {
 		addresses: Vec<T::AccountId>,
 		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
+		mutating_operations: Vec<MutatingStorageOperation<T>>,
+		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
 		max_storage_slot_idx: u32,
 		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 		print: fn(Vec<u8>) -> u64,
 		balance: fn(T::AccountId) -> u64,
-		balance_of: fn(T::AccountId) -> u64,
 		block_number: fn() -> u64,
 		account_id: fn() -> u64,
 		caller: fn() -> u64,
@@ -631,13 +636,14 @@ impl<T: PalletConfig> State<T> {
 			addresses,
 			balances,
 			log_message,
+			mutating_operations,
+			raw_storage,
 			max_storage_size,
 			max_storage_key_size,
 			max_storage_slot_idx,
 			transfer,
 			print,
 			balance,
-			balance_of,
 			block_number,
 			account_id,
 			caller,

@@ -39,6 +39,8 @@
 // We make sure this pallet uses `no_std` for compiling to Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
@@ -52,6 +54,7 @@ pub use weights::*;
 pub mod pallet {
 	// Import various useful types required by all FRAME pallets.
 	use super::*;
+	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{
 		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
@@ -73,8 +76,22 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
-	type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
-	pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeStorageKey<T> = (
+		<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::AccountId,
+		StorageKey<T>,
+	);
+
+	#[derive(Clone)]
+	pub(super) enum MutatingStorageOperationType {
+		Set,
+		Delete,
+	}
+
+	pub(super) type MutatingStorageOperation<T> =
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -156,12 +173,8 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
 
 	#[pallet::storage]
-	pub(super) type CodeStorage<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		(T::AccountId, T::AccountId, StorageKey<T>),
-		CodeStorageSlot<T>,
-	>;
+	pub(super) type CodeStorage<T: Config> =
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -343,6 +356,8 @@ pub mod pallet {
 				[contract_address.clone(), who.clone(), to].to_vec(),
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+				[].to_vec(),
+				BTreeMap::new(),
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
@@ -360,7 +375,6 @@ pub mod pallet {
 					sp_runtime::print(&*m);
 					return 0;
 				},
-				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
 				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
@@ -408,6 +422,16 @@ pub mod pallet {
 			};
 
 			sp_runtime::print("====== AFTER CALL ======");
+
+			if !not_enough_gas && !trap {
+				state.mutating_operations.iter().for_each(|op| match op {
+					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Set, key, value) =>
+						if let Some(data) = value {
+							CodeStorage::<T>::insert(key, data)
+						},
+				})
+			}
 
 			ExecutionResult::<T>::insert(
 				(&contract_address, &who),
@@ -543,11 +567,20 @@ pub mod pallet {
 								Err(_) => return 1,
 							};
 
-							let result = (caller.user_data.get)(
+							let result = match caller.user_data.raw_storage.get(&(
 								caller.user_data.addresses[0].clone(),
 								caller.user_data.addresses[1].clone(),
-								storage_key,
-							);
+								storage_key.clone(),
+							)) {
+								Some(Some(r)) => Some(r.to_vec()),
+								Some(None) => None,
+								None => (caller.user_data.get)(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[1].clone(),
+									storage_key,
+								),
+							};
+
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
 									Err(_) => return 1,
@@ -582,11 +615,19 @@ pub mod pallet {
 								Err(_) => return 1,
 							};
 
-							let result = (caller.user_data.get)(
+							let result = match caller.user_data.raw_storage.get(&(
 								caller.user_data.addresses[0].clone(),
 								caller.user_data.addresses[address_idx as usize].clone(),
-								storage_key,
-							);
+								storage_key.clone(),
+							)) {
+								Some(Some(r)) => Some(r.to_vec()),
+								Some(None) => None,
+								None => (caller.user_data.get)(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[address_idx as usize].clone(),
+									storage_key,
+								),
+							};
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
 									Err(_) => return 1,
@@ -596,6 +637,63 @@ pub mod pallet {
 							return 0;
 						} else {
 							return 1;
+						}
+					},
+				)
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed(
+					"set",
+					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+						if let Ok(mut raw_storage_key) = caller
+							.instance
+							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+						{
+							if let Ok(mut raw_data) = caller
+								.instance
+								.read_memory(buffer, caller.user_data.max_storage_size as u32)
+							{
+								let mut storage_key = BoundedVec::with_bounded_capacity(
+									caller.user_data.max_storage_key_size as usize,
+								);
+								match storage_key.try_append(&mut raw_storage_key) {
+									Ok(_) => (),
+									Err(_) => return 1,
+								}
+
+								let mut data = BoundedVec::with_bounded_capacity(
+									caller.user_data.max_storage_size as usize,
+								);
+								match data.try_append(&mut raw_data) {
+									Ok(_) => (),
+									Err(_) => return 1,
+								}
+
+								caller.user_data.mutating_operations.push((
+									MutatingStorageOperationType::Set,
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.addresses[1].clone(),
+										storage_key.clone(),
+									),
+									Some(data.clone()),
+								));
+								caller.user_data.raw_storage.insert(
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.addresses[1].clone(),
+										storage_key,
+									),
+									Some(data),
+								);
+
+								return 0;
+							} else {
+								1
+							}
+						} else {
+							1
 						}
 					},
 				)
@@ -615,11 +713,24 @@ pub mod pallet {
 							Err(_) => return 1,
 						};
 
-						(caller.user_data.delete)(
-							caller.user_data.addresses[0].clone(),
-							caller.user_data.addresses[1].clone(),
-							storage_key,
+						caller.user_data.mutating_operations.push((
+							MutatingStorageOperationType::Delete,
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[1].clone(),
+								storage_key.clone(),
+							),
+							None,
+						));
+						caller.user_data.raw_storage.insert(
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.addresses[1].clone(),
+								storage_key,
+							),
+							None,
 						);
+
 						return 0;
 					} else {
 						1
