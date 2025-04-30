@@ -633,6 +633,58 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
+				.define_typed("set", |caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+					if let Ok(mut raw_storage_key) = caller
+						.instance
+						.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
+					{
+						if let Ok(mut raw_data) = caller
+                            .instance
+                            .read_memory(buffer, caller.user_data.max_storage_size as u32)
+                        {
+							let mut storage_key = BoundedVec::with_bounded_capacity(
+								caller.user_data.max_storage_key_size as usize,
+							);
+							match storage_key.try_append(&mut raw_storage_key) {
+								Ok(_) => (),
+								Err(_) => return 1,
+							}
+
+							let mut data = BoundedVec::with_bounded_capacity(caller.user_data.max_storage_size as usize);
+							match data.try_append(&mut raw_data) {
+								Ok(_) => (),
+								Err(_) => return 1,
+							}
+
+							caller.user_data.mutating_operations.push((
+								MutatingStorageOperationType::Set,
+								(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[1].clone(),
+									storage_key.clone(),
+								),
+								Some(data.clone()),
+							));
+							caller.user_data.raw_storage.insert(
+								(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.addresses[1].clone(),
+									storage_key,
+								),
+								Some(data),
+							);
+
+							return 0;
+						} else {
+							1
+						}
+					} else {
+						1
+					}
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
 				.define_typed("delete", |caller: Caller<T>, storage_key_pointer: u32| -> u64 {
 					if let Ok(mut raw_storage_key) = caller
 						.instance
