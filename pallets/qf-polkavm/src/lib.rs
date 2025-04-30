@@ -423,6 +423,15 @@ pub mod pallet {
 
 			sp_runtime::print("====== AFTER CALL ======");
 
+			if !not_enough_gas && !trap {
+				state.mutating_operations.iter().for_each(|op| {
+					match op {
+						(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+						(MutatingStorageOperationType::Set, key, value) => if let Some(data) = value { CodeStorage::<T>::insert(key, data) },
+					}
+				})
+			}
+
 			ExecutionResult::<T>::insert(
 				(&contract_address, &who),
 				ExecResult {
