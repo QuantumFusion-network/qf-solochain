@@ -28,52 +28,52 @@ pub use pallet::*;
 #[frame::pallet]
 pub mod pallet {
 	use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
-	use polkadot_parachain_primitives::primitives::HeadData;
+	// use polkadot_parachain_primitives::primitives::HeadData;
 	use sp_consensus_grandpa::Commit;
 
-	/// The validation data provides information about how to create the inputs
-	/// for validation of a candidate.
-	///
-	/// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/polkadot/primitives/src/v8/mod.rs#L663)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	pub struct PersistedValidationData<
-		H: Clone + Debug + PartialEq = H256,
-		N: Clone + Debug + PartialEq = BlockNumber,
-	> {
-		/// The parent head-data.
-		pub parent_head: HeadData,
-		/// The relay-chain block number this is in the context of.
-		pub relay_parent_number: N,
-		/// The relay-chain block storage root this is in the context of.
-		pub relay_parent_storage_root: H,
-		/// The maximum legal size of a POV block, in bytes.
-		pub max_pov_size: u32,
-	}
+	// /// The validation data provides information about how to create the inputs
+	// /// for validation of a candidate.
+	// ///
+	// /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/polkadot/primitives/src/v8/mod.rs#L663)
+	// #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	// pub struct PersistedValidationData<
+	// 	H: Clone + Debug + PartialEq = H256,
+	// 	N: Clone + Debug + PartialEq = BlockNumber,
+	// > {
+	// 	/// The parent head-data.
+	// 	pub parent_head: HeadData,
+	// 	/// The relay-chain block number this is in the context of.
+	// 	pub relay_parent_number: N,
+	// 	/// The relay-chain block storage root this is in the context of.
+	// 	pub relay_parent_storage_root: H,
+	// 	/// The maximum legal size of a POV block, in bytes.
+	// 	pub max_pov_size: u32,
+	// }
 
-	/// The inherent data that is passed by the fastchain validator to the
-	/// parachain runtime.
-	///
-	///  See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/cumulus/primitives/parachain-inherent/src/lib.rs#L46)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	pub struct FastchainInherentData {
-		pub validation_data: PersistedValidationData,
-		/// A storage proof of a predefined set of keys from the relay-chain.
-		///
-		/// Specifically this witness contains the data for:
-		///
-		/// - the current slot number at the given relay parent
-		/// - active host configuration as per the relay parent,
-		/// - the relay dispatch queue sizes
-		/// - the list of egress HRMP channels (in the list of recipients form)
-		/// - the metadata for the egress HRMP channels
-		pub relay_chain_state: sp_trie::StorageProof,
-		// /// Downward messages in the order they were sent.
-		// pub downward_messages: Vec<InboundDownwardMessage>,
-		// /// HRMP messages grouped by channels. The messages in the inner vec must be in order
-		// they /// were sent. In combination with the rule of no more than one message in a
-		// channel per block, /// this means `sent_at` is **strictly** greater than the previous
-		// one (if any). pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
-	}
+	// /// The inherent data that is passed by the fastchain validator to the
+	// /// parachain runtime.
+	// ///
+	// ///  See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/cumulus/primitives/parachain-inherent/src/lib.rs#L46)
+	// #[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	// pub struct FastchainInherentData {
+	// 	pub validation_data: PersistedValidationData,
+	// 	/// A storage proof of a predefined set of keys from the relay-chain.
+	// 	///
+	// 	/// Specifically this witness contains the data for:
+	// 	///
+	// 	/// - the current slot number at the given relay parent
+	// 	/// - active host configuration as per the relay parent,
+	// 	/// - the relay dispatch queue sizes
+	// 	/// - the list of egress HRMP channels (in the list of recipients form)
+	// 	/// - the metadata for the egress HRMP channels
+	// 	pub relay_chain_state: sp_trie::StorageProof,
+	// 	// /// Downward messages in the order they were sent.
+	// 	// pub downward_messages: Vec<InboundDownwardMessage>,
+	// 	// /// HRMP messages grouped by channels. The messages in the inner vec must be in order
+	// 	// they /// were sent. In combination with the rule of no more than one message in a
+	// 	// channel per block, /// this means `sent_at` is **strictly** greater than the previous
+	// 	// one (if any). pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
+	// }
 
 	/// A GRANDPA justification for block finality, it includes a commit message
 	/// and an ancestry proof including all headers routing all precommit
@@ -82,7 +82,7 @@ pub mod pallet {
 	/// since honest voters don't vote past authority set change blocks.
 	///
 	/// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	#[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 	#[scale_info(skip_type_params(MaxVotesAncestries))]
 	pub struct GrandpaJustification<MaxVotesAncestries: Get<u32>, H: Header> {
 		pub round: u64,
@@ -96,10 +96,10 @@ pub mod pallet {
 	///
 	/// Should be sent from a fastchain node to the parachain SPIN pallet via an
 	/// extrinsic call.
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	#[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 	#[scale_info(skip_type_params(MaxVotesAncestries))]
 	pub struct AliveMessageProof<MaxVotesAncestries: Get<u32>, H: Header> {
-		pub fastchain_inherent_data: FastchainInherentData,
+		// pub fastchain_inherent_data: FastchainInherentData,
 		pub grandpa_justification: GrandpaJustification<MaxVotesAncestries, H>,
 	}
 
