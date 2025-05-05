@@ -86,13 +86,19 @@ pub struct Cli {
 	pub relay_chain_args: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, clap::Parser)]
+#[command(
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
+)]
 pub struct FastChainCli {
 	/// The actual relay chain cli object.
+	#[command(flatten)]
 	pub base: sc_cli::RunCmd,
 
 	/// The base path that should be used by the relay chain.
-	pub base_path: Option<PathBuf>,
+	pub fast_base_path: Option<PathBuf>,
 
 	pub test: Option<String>,
 }
@@ -104,7 +110,7 @@ impl FastChainCli {
 	) -> Self {
 		let base_path = fast_config.base_path.path().join("fastchain");
 		Self {
-			base_path: Some(base_path),
+			fast_base_path: Some(base_path),
 			base: clap::Parser::parse_from(fast_chain_args),
 			test: None,
 		}

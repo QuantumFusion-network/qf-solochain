@@ -25,6 +25,12 @@ polkadot-sdk = { workspace = true, features = ["node"] }
 
 qf-parachain-runtime = { workspace = true }
 qf-runtime = { workspace = true }
+qf-node = { workspace = true, default-features = false }
+
+fern = { version = "*" }
+log4rs ={ version = "*" }
+humantime = "2.1.0"
+tokio ={ workspace = true, default-features = false, features = ["full"] }
 
 # substrate client
 sc-cli = { workspace = true, default-features = true }
@@ -45,6 +51,9 @@ sp-consensus-grandpa = { workspace = true, default-features = true }
 sc-client-api = { workspace = true, default-features = true }
 sc-rpc-api = { workspace = true, default-features = true }
 sc-basic-authorship = { workspace = true, default-features = true }
+
+# These dependencies are used for runtime benchmarking
+frame-benchmarking-cli = { workspace = true, default-features = true }
 
 # substrate primitives
 sp-runtime = { workspace = true, default-features = true }

@@ -3,11 +3,12 @@ use polkadot_sdk::*;
 use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use log::info;
+use log::{info, error};
 use qf_parachain_runtime::Block;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-	NetworkParams, Result, RpcEndpoint, SharedParams, SubstrateCli,
+	NetworkParams, Result, RpcEndpoint, SharedParams, SubstrateCli, build_runtime, Signals,
+	Runner
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 
@@ -16,7 +17,11 @@ use crate::{
 	cli::{Cli, RelayChainCli, Subcommand, FastChainCli},
 	service::new_partial,
 };
+
+pub use sc_tracing::logging::LoggerBuilder;
+use sc_service::Configuration;
 use futures::join;
+use tokio::runtime::Runtime;
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	Ok(match id {
@@ -133,6 +138,33 @@ impl SubstrateCli for FastChainCli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		Cli::from_iter([FastChainCli::executable_name()].iter()).load_spec(id)
 	}
+
+	fn create_runner_with_logger_hook<
+		T: sc_cli::CliConfiguration<DVC>,
+		DVC: sc_cli::DefaultConfigurationValues,
+		F,
+	>(
+		&self,
+		command: &T,
+		logger_hook: F,
+	) -> Result<Runner<Self>>
+	where
+		F: FnOnce(&mut LoggerBuilder, &Configuration),
+	{
+		let tokio_runtime = build_runtime()?;
+
+		// `capture` needs to be called in a tokio context.
+		// Also capture them as early as possible.
+		let signals = tokio_runtime.block_on(async { Signals::capture() })?;
+
+		let config = command.create_configuration(self, tokio_runtime.handle().clone())?;
+
+		// command.init(&Self::support_url(), &Self::impl_version(), |logger_builder| {
+		// 	logger_hook(logger_builder, &config)
+		// })?;
+
+		Runner::new(config, tokio_runtime, signals)
+	}
 }
 
 macro_rules! construct_async_run {
@@ -149,6 +181,7 @@ macro_rules! construct_async_run {
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
+	// let fast_cli = FastChainCli::from_args();
 
 	match &cli.subcommand {
 		Some(Subcommand::BuildSpec(cmd)) => {
@@ -253,7 +286,92 @@ pub fn run() -> Result<()> {
 		},
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
+
+			// Extract necessary arguments before spawning the thread
+			let fast_chain_args = cli.fast_chain_args.clone();
+			info!("{:?}", cli.fast_chain_args);
+			info!("{:?}", cli.relay_chain_args);
+			let fast_cli = FastChainCli::from_iter(&fast_chain_args);
+			// let fast_command = &cli.run.normalize();
+			// let fast_tokio_runtime = build_runtime()?;
+			// let fast_config = cli.create_configuration(fast_command, fast_tokio_runtime.handle().clone())?;
+			// let fast_signals = fast_tokio_runtime.block_on(async { Signals::capture() })?;
+			// let fast_cli = FastChainCli::new(&fast_config, fast_chain_args.iter());
+			let fast_runner = fast_cli.create_runner(&fast_cli.base)?;
 			let collator_options = cli.run.collator_options();
+
+			let fast_thread = std::thread::spawn(move || {
+
+				// Create a runner without initializing a new logger
+				// let mut config = fast_runner.config_mut();
+				// Set up the configuration manually based on run_normalized and fast_chain_args
+				
+				// Create a tokio runtime
+				// let runtime = sc_cli::build_runtime().expect("Failed to build runtime");
+				
+				// // Create a runner manually without going through cli.create_runner()
+				let runner = fast_runner; // sc_cli::Runner::new(
+				// 	config,
+				// 	runtime,
+				// 	sc_cli::Signals::dummy(), // Or create proper signals
+				// ).expect("Failed to create runner");
+				
+				// Run the fast chain
+
+				let _ = runner.run_node_until_exit(|config| async move {
+
+					let fast_cli = FastChainCli::new(
+						&config,
+						[FastChainCli::executable_name()].iter().chain(fast_chain_args.iter()),
+					);
+					let tokio_handle = config.tokio_handle.clone();
+					let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
+						.map_err(|err| format!("Fast chain argument error: {}", err))?;
+					let fast_service = crate::fast_service::new_full::<
+					sc_network::NetworkWorker<
+						qf_runtime::opaque::Block,
+						<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+					>,
+					>(fast_config);
+
+					fast_service.await
+				});
+			});
+
+
+			// let fast_thread = std::thread::spawn(move || {
+			// 	let cli = Cli::from_args();
+
+			// 	let fast_runner = match cli.create_runner(&cli.run.normalize()) {
+			// 		Ok(runner) => runner,
+			// 		Err(e) => {
+			// 			error!("Can't get runner: {:?}", e);
+			// 			return; // Exit the thread early
+			// 		}
+			// 	};
+				
+			// 	let fargs = cli.fast_chain_args.clone();
+			// 	info!("Fast chain args: {:?}", fargs);
+
+			// 	let _ = fast_runner.run_node_until_exit(|config| async move {
+
+			// 		let fast_cli = FastChainCli::new(
+			// 			&config,
+			// 			[FastChainCli::executable_name()].iter().chain(fargs.iter()),
+			// 		);
+			// 		let tokio_handle = config.tokio_handle.clone();
+			// 		let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
+			// 			.map_err(|err| format!("Fast chain argument error: {}", err))?;
+			// 		let fast_service = crate::fast_service::new_full::<
+			// 		sc_network::NetworkWorker<
+			// 			qf_runtime::opaque::Block,
+			// 			<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+			// 		>,
+			// 		>(fast_config);
+
+			// 		fast_service.await
+			// 	});
+			// });
 
 			runner.run_node_until_exit(|config| async move {
 				let hwbench = (!cli.no_hardware_benchmarks)
@@ -284,19 +402,14 @@ pub fn run() -> Result<()> {
 
 				let fast_cli = FastChainCli::new(
 					&config,
-					[FastChainCli::executable_name()].iter().chain(cli.fast_chain_args.iter()),
+					[FastChainCli::executable_name()].iter().chain(fargs.iter()),
 				);
 
 				// let tokio_handle = config.tokio_handle.clone();
 				// let fastchain_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
 				// 	.map_err(|err| format!("Fast chain argument error: {}", err))?;
 
-				let tokio_handle = config.tokio_handle.clone();
-				let polkadot_config =
-					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-						.map_err(|err| format!("Relay chain argument error: {}", err))?;
-
-				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+				let main_tokio_handle = config.tokio_handle.clone();
 
 				// let fast_service = match config.network.network_backend {
 				// 	sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
@@ -318,6 +431,12 @@ pub fn run() -> Result<()> {
 				>,
 				>(fast_config);
 
+				let polkadot_config =
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, main_tokio_handle)
+						.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+
 				let para_srv = crate::service::start_parachain_node(
 					config,
 					polkadot_config,
@@ -327,7 +446,8 @@ pub fn run() -> Result<()> {
 					hwbench,
 				);
 
-				join!(fast_service, para_srv).0.map_err(Into::into)
+				para_srv.await.map(|r| r.0).map_err(Into::into)
+				// join!(fast_service, para_srv).0.map_err(Into::into)
 			})
 		},
 	}
@@ -487,7 +607,7 @@ impl CliConfiguration<Self> for FastChainCli {
 		Ok(self
 			.shared_params()
 			.base_path()?
-			.or_else(|| self.base_path.clone().map(Into::into)))
+			.or_else(|| self.fast_base_path.clone().map(Into::into)))
 	}
 
 	fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<Vec<RpcEndpoint>>> {
