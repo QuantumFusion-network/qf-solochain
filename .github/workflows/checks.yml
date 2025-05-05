@@ -21,6 +21,12 @@ jobs:
         # with:
         #   submodules: recursive
 
+      - name: Check Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          config: '.markdownlint.yaml'
+          globs: '**/*.md'
+
       - run: |
           make vendor-clone
 
