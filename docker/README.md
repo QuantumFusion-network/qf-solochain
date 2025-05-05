@@ -26,7 +26,7 @@ We recommend to build first the ```qf-node-image``` because it builds a longer t
 make build_node_image
 ```
 Or
-You can 
+You can
 ```bash
 make build_dev_image
 ```
