@@ -1,7 +1,7 @@
 ## Executables and runtimes
 
 ### Build the node binary
-For building the fastchain node binary use 
+For building the fastchain node binary use
 ```bash
 cargo build -p qf-node --release
 ```
@@ -25,29 +25,29 @@ export SPEC_PATH=./chainspecs   # or your own path
 ```
 
 ### Prepare the key for validator and collator modes
-Not all nodes can generate the key as 
+Not all nodes can generate the key as
 ```bash
 ./target/debug/qf-node key generate-node-key
 ```
-and you should build the `subkey` for generating keys by command 
+and you should build the `subkey` for generating keys by command
 ```bash
 cargo build -p subkey --release
 ```
 
-1. You must create the folders in `data` for storing the keys by command 
+1. You must create the folders in `data` for storing the keys by command
 ```bash
 mkdir -p $DATA_PATH/chains/$CHAIN_NAME/network
 ```
-where 
+where
 - `DATA_PATH` - path to the data directory
 - `CHAIN_NAME` - name of the chain ("local_testnet" for default)
 
-2. After that you can generate the key as 
+2. After that you can generate the key as
 
 ```bash
 ./target/debug/subkey generate-node-key > $DATA_PATH/chains/$CHAIN_NAME/network/secret_ed25519
 ```
-where 
+where
 - `DATA_PATH` - path to the data directory
 - `CHAIN_NAME` - name of the chain ("local_testnet" for default)
 
@@ -92,7 +92,7 @@ $NODE \
 --chain $SPEC_PATH/relaychain-spec-raw.json --alice
 ```
 
-First generate the chainspec as for fastchain but by 
+First generate the chainspec as for fastchain but by
 ```bash
 ./target/debug/qf-parachain-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/parachain-spec-raw.json
 ```
