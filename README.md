@@ -44,9 +44,8 @@ or a virtual machine.
     ```
 
 ## Executables and runtimes
-[Described here](docs/executables_and_runtimes.md)
 
-
+See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 ## Run the Full Node
 
 - To build and run a full node in a container please read instruction [docker/README.md](docker/README.md)
