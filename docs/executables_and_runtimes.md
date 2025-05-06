@@ -14,15 +14,16 @@ cargo build -p qf-parachain-node --release
 
 ### Make the chainspec
 1. Define the path to the chainspec
-```bash
-export SPEC_PATH=./chainspecs   # or your own path
-```
+
+    ```bash
+    export SPEC_PATH=./chainspecs   # or your own path
+    ```
 
 2. For building the chainspec, use:
 
-```bash
-./target/debug/qf-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/fastchain-spec-raw.json
-```
+    ```bash
+    ./target/debug/qf-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/fastchain-spec-raw.json
+    ```
 
 ### Prepare the key for validator and collator modes
 Not all nodes can generate the key as
@@ -35,21 +36,22 @@ cargo build -p subkey --release
 ```
 
 1. You must create the folders in `data` for storing the keys by command
-```bash
-mkdir -p $DATA_PATH/chains/$CHAIN_NAME/network
-```
-where
-- `DATA_PATH` - path to the data directory
-- `CHAIN_NAME` - name of the chain ("local_testnet" for default)
+
+    ```bash
+    mkdir -p $DATA_PATH/chains/$CHAIN_NAME/network
+    ```
+    where
+    - `DATA_PATH` - path to the data directory
+    - `CHAIN_NAME` - name of the chain ("local_testnet" for default)
 
 2. After that you can generate the key as
 
-```bash
-./target/debug/subkey generate-node-key > $DATA_PATH/chains/$CHAIN_NAME/network/secret_ed25519
-```
-where
-- `DATA_PATH` - path to the data directory
-- `CHAIN_NAME` - name of the chain ("local_testnet" for default)
+    ```bash
+    ./target/debug/subkey generate-node-key > $DATA_PATH/chains/$CHAIN_NAME/network/secret_ed25519
+    ```
+    where
+    - `DATA_PATH` - path to the data directory
+    - `CHAIN_NAME` - name of the chain ("local_testnet" for default)
 
 or
 
