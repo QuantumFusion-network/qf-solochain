@@ -78,10 +78,7 @@ pub mod pallet {
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> = (
-		<T as frame_system::Config>::AccountId,
-		StorageKey<T>,
-	);
+	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -378,11 +375,8 @@ pub mod pallet {
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
-				|contract_address: T::AccountId,
-				 key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, key))
-						.map(|d| d.to_vec())
+				|contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, key)).map(|d| d.to_vec())
 				},
 				|contract_address: T::AccountId,
 				 key: StorageKey<T>,
@@ -397,9 +391,7 @@ pub mod pallet {
 						1
 					}
 				},
-				|contract_address: T::AccountId,
-				 key: StorageKey<T>|
-				 -> u64 {
+				|contract_address: T::AccountId, key: StorageKey<T>| -> u64 {
 					CodeStorage::<T>::remove((contract_address, key));
 					0
 				},
@@ -563,10 +555,11 @@ pub mod pallet {
 								Err(_) => return 1,
 							};
 
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								storage_key.clone(),
-							)) {
+							let result = match caller
+								.user_data
+								.raw_storage
+								.get(&(caller.user_data.addresses[0].clone(), storage_key.clone()))
+							{
 								Some(Some(r)) => Some(r.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
@@ -619,17 +612,11 @@ pub mod pallet {
 
 								caller.user_data.mutating_operations.push((
 									MutatingStorageOperationType::Set,
-									(
-										caller.user_data.addresses[0].clone(),
-										storage_key.clone(),
-									),
+									(caller.user_data.addresses[0].clone(), storage_key.clone()),
 									Some(data.clone()),
 								));
 								caller.user_data.raw_storage.insert(
-									(
-										caller.user_data.addresses[0].clone(),
-										storage_key,
-									),
+									(caller.user_data.addresses[0].clone(), storage_key),
 									Some(data),
 								);
 
@@ -660,19 +647,13 @@ pub mod pallet {
 
 						caller.user_data.mutating_operations.push((
 							MutatingStorageOperationType::Delete,
-							(
-								caller.user_data.addresses[0].clone(),
-								storage_key.clone(),
-							),
+							(caller.user_data.addresses[0].clone(), storage_key.clone()),
 							None,
 						));
-						caller.user_data.raw_storage.insert(
-							(
-								caller.user_data.addresses[0].clone(),
-								storage_key,
-							),
-							None,
-						);
+						caller
+							.user_data
+							.raw_storage
+							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
 
 						return 0;
 					} else {
