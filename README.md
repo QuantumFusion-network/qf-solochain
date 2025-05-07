@@ -23,7 +23,8 @@ although there are ways to run it, we recommend using [WSL](https://learn.micros
 or a virtual machine.
 
 1. Install Polkadot SDK dependencies following https://docs.polkadot.com/develop/parachains/install-polkadot-sdk/.
-1. Clone the repository and build the node binary.
+
+2. Clone the repository and build the node binary.
 
     ```console
     git clone --recursive https://github.com/QuantumFusion-network/qf-solochain.git
@@ -31,17 +32,22 @@ or a virtual machine.
     cargo build --release
     ```
 
-1. Inspect available subcommands.
+3. Inspect available subcommands.
 
     ```console
     ./target/release/qf-solochain --help
     ```
 
-1. Run a local node in dev mode.
+4. Run a local node in dev mode.
 
     ```bash
     make qf-run
     ```
+
+## Executables and runtimes
+
+Explanation what executables and runtimes we have and how to run local testnet step by step. For advanced usage.
+See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 
 ## Run the Full Node
 
