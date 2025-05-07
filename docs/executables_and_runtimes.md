@@ -1,6 +1,6 @@
-## Executables and runtimes
+# Executables and runtimes
 
-### Build the node binary
+## Build the node binary
 For building the fastchain node binary use
 ```bash
 cargo build -p qf-node --release
@@ -12,7 +12,8 @@ and for parachain node use
 cargo build -p qf-parachain-node --release
 ```
 
-### Make the chainspec
+## Make the chainspec
+**NOTE:** Chainspec - is the our runtime in json format with encoded binary wasm code and config inside. You can read about chainspecs in [official documentation](https://docs.polkadot.com/develop/parachains/deployment/generate-chain-specs)
 1. Define the path to the chainspec
 
     ```bash
@@ -25,7 +26,10 @@ cargo build -p qf-parachain-node --release
     ./target/debug/qf-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/fastchain-spec-raw.json
     ```
 
-### Prepare the key for validator and collator modes
+## Prepare the key for validator and collator modes
+
+**NOTE:** In this part we describe how we manage the keys for this tutorial. But you can view the [official documentation with additional methods](https://docs.polkadot.com/infrastructure/running-a-validator/onboarding-and-offboarding/key-management/#generate-session-keys)
+
 Not all nodes can generate the key as
 ```bash
 ./target/debug/qf-node key generate-node-key
@@ -59,7 +63,7 @@ or
 ./target/debug/qf-node key generate-node-key > $DATA_PATH/chains/$CHAIN_NAME/network/secret_ed25519
 ```
 
-### Run the fastchain node
+## Run the fastchain node
 - As a full node (no need to generate the key)
 ```bash
 ./target/debug/qf-node --chain $SPEC_PATH/fastchain-spec-raw.json -d $DATA_PATH
@@ -74,7 +78,7 @@ Also you can specify the ports:
 - `--port <port>` - port for the node
 - `--rpc-port <port>` - port for the p2p connection
 
-### Run the parachain node
+## Run the parachain node
 Before running the local parachain node you need to have a running relaychain node.
 To run the local relaychain you can use this bash script:
 ```bash
@@ -82,7 +86,7 @@ To run the local relaychain you can use this bash script:
 
 SPEC_PATH="../chain-specs"
 DATA_PATH="../data-relay"
-NODE="<pato to yoyr polkadot node>/polkadot"
+NODE="<path to your polkadot node>/polkadot"
 
 mkdir -p $DATA_PATH
 

@@ -23,6 +23,7 @@ although there are ways to run it, we recommend using [WSL](https://learn.micros
 or a virtual machine.
 
 1. Install Polkadot SDK dependencies following https://docs.polkadot.com/develop/parachains/install-polkadot-sdk/.
+
 2. Clone the repository and build the node binary.
 
     ```console
@@ -45,7 +46,9 @@ or a virtual machine.
 
 ## Executables and runtimes
 
+Explanation what executables and runtimes we have and how to run local testnet step by step. For advanced usage.
 See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
+
 ## Run the Full Node
 
 - To build and run a full node in a container please read instruction [docker/README.md](docker/README.md)
