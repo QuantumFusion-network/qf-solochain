@@ -80,7 +80,6 @@ pub mod pallet {
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> = (
 		<T as frame_system::Config>::AccountId,
-		<T as frame_system::Config>::AccountId,
 		StorageKey<T>,
 	);
 
@@ -380,31 +379,28 @@ pub mod pallet {
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
 				|contract_address: T::AccountId,
-				 account_address: T::AccountId,
 				 key: StorageKey<T>|
 				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, account_address, key))
+					CodeStorage::<T>::get((contract_address, key))
 						.map(|d| d.to_vec())
 				},
 				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
 				 key: StorageKey<T>,
 				 max_storage_size: usize,
 				 mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, caller_address, key), buffer);
+						CodeStorage::<T>::insert((contract_address, key), buffer);
 						0
 					} else {
 						1
 					}
 				},
 				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
 				 key: StorageKey<T>|
 				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, caller_address, key));
+					CodeStorage::<T>::remove((contract_address, key));
 					0
 				},
 			);
@@ -569,65 +565,16 @@ pub mod pallet {
 
 							let result = match caller.user_data.raw_storage.get(&(
 								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
 								storage_key.clone(),
 							)) {
 								Some(Some(r)) => Some(r.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
-									caller.user_data.addresses[1].clone(),
 									storage_key,
 								),
 							};
 
-							if let Some(chunk) = result {
-								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
-									Ok(_) => return 0,
-								}
-							}
-							return 0;
-						} else {
-							return 1;
-						}
-					},
-				)
-				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
-
-			linker
-				.define_typed(
-					"read",
-					|caller: Caller<T>,
-					 address_idx: u32,
-					 storage_key_pointer: u32,
-					 pointer: u32|
-					 -> u64 {
-						if let Ok(mut raw_storage_key) = caller
-							.instance
-							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
-						{
-							let mut storage_key = BoundedVec::with_bounded_capacity(
-								caller.user_data.max_storage_key_size as usize,
-							);
-							match storage_key.try_append(&mut raw_storage_key) {
-								Ok(_) => (),
-								Err(_) => return 1,
-							};
-
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[address_idx as usize].clone(),
-								storage_key.clone(),
-							)) {
-								Some(Some(r)) => Some(r.to_vec()),
-								Some(None) => None,
-								None => (caller.user_data.get)(
-									caller.user_data.addresses[0].clone(),
-									caller.user_data.addresses[address_idx as usize].clone(),
-									storage_key,
-								),
-							};
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
 									Err(_) => return 1,
@@ -674,7 +621,6 @@ pub mod pallet {
 									MutatingStorageOperationType::Set,
 									(
 										caller.user_data.addresses[0].clone(),
-										caller.user_data.addresses[1].clone(),
 										storage_key.clone(),
 									),
 									Some(data.clone()),
@@ -682,7 +628,6 @@ pub mod pallet {
 								caller.user_data.raw_storage.insert(
 									(
 										caller.user_data.addresses[0].clone(),
-										caller.user_data.addresses[1].clone(),
 										storage_key,
 									),
 									Some(data),
@@ -717,7 +662,6 @@ pub mod pallet {
 							MutatingStorageOperationType::Delete,
 							(
 								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
 								storage_key.clone(),
 							),
 							None,
@@ -725,7 +669,6 @@ pub mod pallet {
 						caller.user_data.raw_storage.insert(
 							(
 								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
 								storage_key,
 							),
 							None,
