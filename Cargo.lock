@@ -8038,6 +8038,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "order-primitives"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cumulus-primitives-core",
+ "cumulus-relay-chain-interface",
+ "frame-support",
+ "hex-literal",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-api",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-trie",
+]
+
+[[package]]
+name = "order-service"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "cumulus-client-consensus-aura",
+ "cumulus-client-consensus-common",
+ "cumulus-primitives-core",
+ "cumulus-relay-chain-interface",
+ "futures",
+ "log",
+ "order-primitives",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "sc-client-api",
+ "sc-consensus-aura",
+ "sc-service",
+ "sc-transaction-pool-api",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-keystore",
+ "sp-runtime",
+ "subxt",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9107,6 +9161,37 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-staking",
+]
+
+[[package]]
+name = "pallet-on-demand"
+version = "0.1.0"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "order-primitives",
+ "pallet-aura",
+ "pallet-balances",
+ "pallet-collator-selection",
+ "pallet-session",
+ "pallet-staking",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "sp-application-crypto",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "staging-xcm-builder",
 ]
 
 [[package]]
@@ -12662,8 +12747,12 @@ dependencies = [
  "docify",
  "hex-literal",
  "log",
+ "order-primitives",
+ "pallet-on-demand",
  "parity-scale-codec",
+ "polkadot-runtime-parachains",
  "polkadot-sdk 0.1.0",
+ "rococo-runtime",
  "scale-info",
  "serde_json",
  "smallvec",
