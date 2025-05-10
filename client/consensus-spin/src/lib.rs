@@ -540,390 +540,340 @@ where
 }
 
 // TODO: uncomment and make tests pass: https://github.com/QuantumFusion-network/spec/issues/216
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use parking_lot::Mutex;
-//     use sc_block_builder::BlockBuilderBuilder;
-//     use sc_client_api::BlockchainEvents;
-//     use sc_consensus::BoxJustificationImport;
-//     use sc_consensus_slots::{BackoffAuthoringOnFinalizedHeadLagging,
-// SimpleSlotWorker};     use sc_keystore::LocalKeystore;
-//     use sc_network_test::{Block as TestBlock, *};
-//     use sp_application_crypto::{AppCrypto, key_types::AURA};
-//     use sp_consensus::{DisableProofRecording, NoNetwork as DummyOracle,
-// Proposal};     use sp_inherents::InherentData;
-//     use sp_keyring::sr25519::Keyring;
-//     use sp_keystore::Keystore;
-//     use sp_runtime::{
-//         Digest,
-//         traits::{Block as BlockT, Header as _},
-//     };
-//     use sp_timestamp::Timestamp;
-//     use qfp_consensus_spin::sr25519::AuthorityPair;
-//     use std::{
-//         task::Poll,
-//         time::{Duration, Instant},
-//     };
-//     use substrate_test_runtime_client::{
-//         TestClient,
-//         runtime::{H256, Header},
-//     };
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use parking_lot::Mutex;
+	use qfp_consensus_spin::sr25519::AuthorityPair;
+	use sc_block_builder::BlockBuilderBuilder;
+	use sc_client_api::BlockchainEvents;
+	use sc_consensus::BoxJustificationImport;
+	use sc_consensus_slots::{BackoffAuthoringOnFinalizedHeadLagging, SimpleSlotWorker};
+	use sc_keystore::LocalKeystore;
+	use sc_network_test::{Block as TestBlock, *};
+	use sp_application_crypto::{AppCrypto, key_types::AURA};
+	use sp_consensus::{DisableProofRecording, NoNetwork as DummyOracle, Proposal};
+	use sp_inherents::InherentData;
+	use sp_keyring::sr25519::Keyring;
+	use sp_keystore::Keystore;
+	use sp_runtime::{
+		Digest,
+		traits::{Block as BlockT, Header as _},
+	};
+	use sp_timestamp::Timestamp;
+	use std::{
+		task::Poll,
+		time::{Duration, Instant},
+	};
+	use substrate_test_runtime_client::{
+		TestClient,
+		runtime::{H256, Header},
+	};
 
-//     const SLOT_DURATION_MS: u64 = 1000;
+	const SLOT_DURATION_MS: u64 = 1000;
 
-//     type Error = sp_blockchain::Error;
+	type Error = sp_blockchain::Error;
 
-//     struct DummyFactory(Arc<TestClient>);
-//     struct DummyProposer(Arc<TestClient>);
+	struct DummyFactory(Arc<TestClient>);
+	struct DummyProposer(Arc<TestClient>);
 
-//     impl Environment<TestBlock> for DummyFactory {
-//         type Proposer = DummyProposer;
-//         type CreateProposer = futures::future::Ready<Result<DummyProposer,
-// Error>>;         type Error = Error;
+	impl Environment<TestBlock> for DummyFactory {
+		type Proposer = DummyProposer;
+		type CreateProposer = futures::future::Ready<Result<DummyProposer, Error>>;
+		type Error = Error;
 
-//         fn init(&mut self, _: &<TestBlock as BlockT>::Header) ->
-// Self::CreateProposer {
-// futures::future::ready(Ok(DummyProposer(self.0.clone())))         }
-//     }
+		fn init(&mut self, _: &<TestBlock as BlockT>::Header) -> Self::CreateProposer {
+			futures::future::ready(Ok(DummyProposer(self.0.clone())))
+		}
+	}
 
-//     impl Proposer<TestBlock> for DummyProposer {
-//         type Error = Error;
-//         type Proposal = future::Ready<Result<Proposal<TestBlock, ()>,
-// Error>>;         type ProofRecording = DisableProofRecording;
-//         type Proof = ();
+	impl Proposer<TestBlock> for DummyProposer {
+		type Error = Error;
+		type Proposal = future::Ready<Result<Proposal<TestBlock, ()>, Error>>;
+		type ProofRecording = DisableProofRecording;
+		type Proof = ();
 
-//         fn propose(
-//             self,
-//             _: InherentData,
-//             digests: Digest,
-//             _: Duration,
-//             _: Option<usize>,
-//         ) -> Self::Proposal {
-//             let r = BlockBuilderBuilder::new(&*self.0)
-//                 .on_parent_block(self.0.chain_info().best_hash)
-//                 .fetch_parent_block_number(&*self.0)
-//                 .unwrap()
-//                 .with_inherent_digests(digests)
-//                 .build()
-//                 .unwrap()
-//                 .build();
+		fn propose(
+			self,
+			_: InherentData,
+			digests: Digest,
+			_: Duration,
+			_: Option<usize>,
+		) -> Self::Proposal {
+			let r = BlockBuilderBuilder::new(&*self.0)
+				.on_parent_block(self.0.chain_info().best_hash)
+				.fetch_parent_block_number(&*self.0)
+				.unwrap()
+				.with_inherent_digests(digests)
+				.build()
+				.unwrap()
+				.build();
 
-//             future::ready(r.map(|b| Proposal {
-//                 block: b.block,
-//                 proof: (),
-//                 storage_changes: b.storage_changes,
-//             }))
-//         }
-//     }
+			future::ready(r.map(|b| Proposal {
+				block: b.block,
+				proof: (),
+				storage_changes: b.storage_changes,
+			}))
+		}
+	}
 
-//     type SpinVerifier = import_queue::SpinVerifier<
-//         PeersFullClient,
-//         AuthorityPair,
-//         Box<
-//             dyn CreateInherentDataProviders<
-//                     TestBlock,
-//                     (),
-//                     InherentDataProviders = (InherentDataProvider,),
-//                 >,
-//         >,
-//         u64,
-//     >;
-//     type SpinPeer = Peer<(), PeersClient>;
+	type SpinVerifier = import_queue::SpinVerifier<
+		PeersFullClient,
+		AuthorityPair,
+		Box<
+			dyn CreateInherentDataProviders<
+					TestBlock,
+					(),
+					InherentDataProviders = (InherentDataProvider,),
+				>,
+		>,
+		u64,
+	>;
+	type SpinPeer = Peer<(), PeersClient>;
 
-//     #[derive(Default)]
-//     pub struct SpinTestNet {
-//         peers: Vec<SpinPeer>,
-//     }
+	#[derive(Default)]
+	pub struct SpinTestNet {
+		peers: Vec<SpinPeer>,
+	}
 
-//     impl TestNetFactory for SpinTestNet {
-//         type Verifier = SpinVerifier;
-//         type PeerData = ();
-//         type BlockImport = PeersClient;
+	impl TestNetFactory for SpinTestNet {
+		type Verifier = SpinVerifier;
+		type PeerData = ();
+		type BlockImport = PeersClient;
 
-//         fn make_verifier(&self, client: PeersClient, _peer_data: &()) ->
-// Self::Verifier {             let client = client.as_client();
-//             let slot_duration = slot_duration(&*client).expect("slot duration
-// available");
+		fn make_verifier(&self, client: PeersClient, _peer_data: &()) -> Self::Verifier {
+			let client = client.as_client();
+			let slot_duration = slot_duration(&*client).expect("slot duration available");
 
-//             assert_eq!(slot_duration.as_millis() as u64, SLOT_DURATION_MS);
-//             import_queue::SpinVerifier::new(
-//                 client,
-//                 Box::new(|_, _| async {
-//                     let slot =
-// InherentDataProvider::from_timestamp_and_slot_duration(
-// Timestamp::current(),
-// SlotDuration::from_millis(SLOT_DURATION_MS),                     );
-//                     Ok((slot,))
-//                 }),
-//                 CheckForEquivocation::Yes,
-//                 None,
-//                 CompatibilityMode::None,
-//             )
-//         }
+			assert_eq!(slot_duration.as_millis() as u64, SLOT_DURATION_MS);
+			import_queue::SpinVerifier::new(
+				client,
+				Box::new(|_, _| async {
+					let slot = InherentDataProvider::from_timestamp_and_slot_duration(
+						Timestamp::current(),
+						SlotDuration::from_millis(SLOT_DURATION_MS),
+					);
+					Ok((slot,))
+				}),
+				CheckForEquivocation::Yes,
+				None,
+				CompatibilityMode::None,
+			)
+		}
 
-//         fn make_block_import(
-//             &self,
-//             client: PeersClient,
-//         ) -> (
-//             BlockImportAdapter<Self::BlockImport>,
-//             Option<BoxJustificationImport<Block>>,
-//             Self::PeerData,
-//         ) {
-//             (client.as_block_import(), None, ())
-//         }
+		fn make_block_import(
+			&self,
+			client: PeersClient,
+		) -> (
+			BlockImportAdapter<Self::BlockImport>,
+			Option<BoxJustificationImport<Block>>,
+			Self::PeerData,
+		) {
+			(client.as_block_import(), None, ())
+		}
 
-//         fn peer(&mut self, i: usize) -> &mut SpinPeer {
-//             &mut self.peers[i]
-//         }
+		fn peer(&mut self, i: usize) -> &mut SpinPeer {
+			&mut self.peers[i]
+		}
 
-//         fn peers(&self) -> &Vec<SpinPeer> {
-//             &self.peers
-//         }
+		fn peers(&self) -> &Vec<SpinPeer> {
+			&self.peers
+		}
 
-//         fn peers_mut(&mut self) -> &mut Vec<SpinPeer> {
-//             &mut self.peers
-//         }
+		fn peers_mut(&mut self) -> &mut Vec<SpinPeer> {
+			&mut self.peers
+		}
 
-//         fn mut_peers<F: FnOnce(&mut Vec<SpinPeer>)>(&mut self, closure: F) {
-//             closure(&mut self.peers);
-//         }
-//     }
+		fn mut_peers<F: FnOnce(&mut Vec<SpinPeer>)>(&mut self, closure: F) {
+			closure(&mut self.peers);
+		}
+	}
 
-//     #[tokio::test]
-//     async fn authoring_blocks() {
-//         sp_tracing::try_init_simple();
-//         let net = SpinTestNet::new(3);
+	#[tokio::test]
+	async fn authoring_blocks() {
+		sp_tracing::try_init_simple();
+		let net = SpinTestNet::new(3);
 
-//         let peers = &[
-//             (0, Keyring::Alice),
-//             (1, Keyring::Bob),
-//             (2, Keyring::Charlie),
-//         ];
+		let peers = &[(0, Keyring::Alice), (1, Keyring::Bob), (2, Keyring::Charlie)];
 
-//         let net = Arc::new(Mutex::new(net));
-//         let mut import_notifications = Vec::new();
-//         let mut aura_futures = Vec::new();
+		let net = Arc::new(Mutex::new(net));
+		let mut import_notifications = Vec::new();
+		let mut aura_futures = Vec::new();
 
-//         let mut keystore_paths = Vec::new();
-//         for (peer_id, key) in peers {
-//             let mut net = net.lock();
-//             let peer = net.peer(*peer_id);
-//             let client = peer.client().as_client();
-//             let select_chain = peer.select_chain().expect("full client has a
-// select chain");             let keystore_path =
-// tempfile::tempdir().expect("Creates keystore path");             let keystore
-// = Arc::new(                 LocalKeystore::open(keystore_path.path(),
-// None).expect("Creates keystore."),             );
+		let mut keystore_paths = Vec::new();
+		for (peer_id, key) in peers {
+			let mut net = net.lock();
+			let peer = net.peer(*peer_id);
+			let client = peer.client().as_client();
+			let select_chain = peer.select_chain().expect("full client has a select chain");
+			let keystore_path = tempfile::tempdir().expect("Creates keystore path");
+			let keystore = Arc::new(
+				LocalKeystore::open(keystore_path.path(), None).expect("Creates keystore."),
+			);
 
-//             keystore
-//                 .sr25519_generate_new(AURA, Some(&key.to_seed()))
-//                 .expect("Creates authority key");
-//             keystore_paths.push(keystore_path);
+			keystore
+				.sr25519_generate_new(AURA, Some(&key.to_seed()))
+				.expect("Creates authority key");
+			keystore_paths.push(keystore_path);
 
-//             let environ = DummyFactory(client.clone());
-//             import_notifications.push(
-//                 client
-//                     .import_notification_stream()
-//                     .take_while(|n| {
-//                         future::ready(!(n.origin != BlockOrigin::Own &&
-// n.header.number() < &5))                     })
-//                     .for_each(move |_| future::ready(())),
-//             );
+			let environ = DummyFactory(client.clone());
+			import_notifications.push(
+				client
+					.import_notification_stream()
+					.take_while(|n| {
+						future::ready(!(n.origin != BlockOrigin::Own && n.header.number() < &5))
+					})
+					.for_each(move |_| future::ready(())),
+			);
 
-//             let slot_duration = slot_duration(&*client).expect("slot duration
-// available");
+			let slot_duration = slot_duration(&*client).expect("slot duration available");
 
-//             aura_futures.push(
-//                 start_spin::<AuthorityPair, _, _, _, _, _, _, _, _, _,
-// _>(StartSpinParams {                     slot_duration,
-//                     block_import: client.clone(),
-//                     select_chain,
-//                     client,
-//                     proposer_factory: environ,
-//                     sync_oracle: DummyOracle,
-//                     justification_sync_link: (),
-//                     create_inherent_data_providers: |_, _| async {
-//                         let slot =
-// InherentDataProvider::from_timestamp_and_slot_duration(
-// Timestamp::current(),
-// SlotDuration::from_millis(SLOT_DURATION_MS),                         );
+			aura_futures.push(
+				start_spin::<AuthorityPair, _, _, _, _, _, _, _, _, _, _>(StartSpinParams {
+					slot_duration,
+					block_import: client.clone(),
+					select_chain,
+					client,
+					proposer_factory: environ,
+					sync_oracle: DummyOracle,
+					justification_sync_link: (),
+					create_inherent_data_providers: |_, _| async {
+						let slot = InherentDataProvider::from_timestamp_and_slot_duration(
+							Timestamp::current(),
+							SlotDuration::from_millis(SLOT_DURATION_MS),
+						);
 
-//                         Ok((slot,))
-//                     },
-//                     force_authoring: false,
-//                     backoff_authoring_blocks: Some(
-//                         BackoffAuthoringOnFinalizedHeadLagging::default(),
-//                     ),
-//                     keystore,
-//                     block_proposal_slot_portion: SlotProportion::new(0.5),
-//                     max_block_proposal_slot_portion: None,
-//                     telemetry: None,
-//                     compatibility_mode: CompatibilityMode::None,
-//                 })
-//                 .expect("Starts aura"),
-//             );
-//         }
+						Ok((slot,))
+					},
+					force_authoring: false,
+					backoff_authoring_blocks: Some(
+						BackoffAuthoringOnFinalizedHeadLagging::default(),
+					),
+					keystore,
+					block_proposal_slot_portion: SlotProportion::new(0.5),
+					max_block_proposal_slot_portion: None,
+					telemetry: None,
+					compatibility_mode: CompatibilityMode::None,
+				})
+				.expect("Starts aura"),
+			);
+		}
 
-//         future::select(
-//             future::poll_fn(move |cx| {
-//                 net.lock().poll(cx);
-//                 Poll::<()>::Pending
-//             }),
-//             future::select(
-//                 future::join_all(aura_futures),
-//                 future::join_all(import_notifications),
-//             ),
-//         )
-//         .await;
-//     }
+		future::select(
+			future::poll_fn(move |cx| {
+				net.lock().poll(cx);
+				Poll::<()>::Pending
+			}),
+			future::select(future::join_all(aura_futures), future::join_all(import_notifications)),
+		)
+		.await;
+	}
 
-//     #[tokio::test]
-//     async fn current_node_authority_should_claim_slot() {
-//         let net = SpinTestNet::new(4);
+	#[tokio::test]
+	async fn current_node_authority_should_claim_slot() {
+		let net = SpinTestNet::new(4);
 
-//         let mut authorities = vec![
-//             Keyring::Alice.public().into(),
-//             Keyring::Bob.public().into(),
-//             Keyring::Charlie.public().into(),
-//         ];
+		let mut authorities = vec![
+			Keyring::Alice.public().into(),
+			Keyring::Bob.public().into(),
+			Keyring::Charlie.public().into(),
+		];
 
-//         let keystore_path = tempfile::tempdir().expect("Creates keystore
-// path");         let keystore = LocalKeystore::open(keystore_path.path(),
-// None).expect("Creates keystore.");         let public = keystore
-//             .sr25519_generate_new(AuthorityPair::ID, None)
-//             .expect("Key should be created");
-//         authorities.push(public.into());
+		let keystore_path = tempfile::tempdir().expect("Creates keystore path");
+		let keystore = LocalKeystore::open(keystore_path.path(), None).expect("Creates keystore.");
+		let public = keystore
+			.sr25519_generate_new(AuthorityPair::ID, None)
+			.expect("Key should be created");
+		authorities.push(public.into());
 
-//         let net = Arc::new(Mutex::new(net));
+		let net = Arc::new(Mutex::new(net));
 
-//         let mut net = net.lock();
-//         let peer = net.peer(3);
-//         let client = peer.client().as_client();
-//         let environ = DummyFactory(client.clone());
+		let mut net = net.lock();
+		let peer = net.peer(3);
+		let client = peer.client().as_client();
+		let environ = DummyFactory(client.clone());
 
-//         let mut worker = SpinWorker {
-//             client: client.clone(),
-//             block_import: client,
-//             env: environ,
-//             keystore: keystore.into(),
-//             sync_oracle: DummyOracle,
-//             justification_sync_link: (),
-//             force_authoring: false,
-//             backoff_authoring_blocks:
-// Some(BackoffAuthoringOnFinalizedHeadLagging::default()),
-// telemetry: None,             block_proposal_slot_portion:
-// SlotProportion::new(0.5),             max_block_proposal_slot_portion: None,
-//             compatibility_mode: Default::default(),
-//             _phantom: PhantomData::<fn() -> AuthorityPair>,
-//         };
+		let mut worker = SpinWorker {
+			client: client.clone(),
+			block_import: client,
+			env: environ,
+			keystore: keystore.into(),
+			sync_oracle: DummyOracle,
+			justification_sync_link: (),
+			force_authoring: false,
+			backoff_authoring_blocks: Some(BackoffAuthoringOnFinalizedHeadLagging::default()),
+			telemetry: None,
+			block_proposal_slot_portion: SlotProportion::new(0.5),
+			max_block_proposal_slot_portion: None,
+			compatibility_mode: Default::default(),
+			_phantom: PhantomData::<fn() -> AuthorityPair>,
+		};
 
-//         let head = Header::new(
-//             1,
-//             H256::from_low_u64_be(0),
-//             H256::from_low_u64_be(0),
-//             Default::default(),
-//             Default::default(),
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 0.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 1.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 2.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 3.into(), &authorities)
-//                 .await
-//                 .is_some()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 4.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 5.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 6.into(), &authorities)
-//                 .await
-//                 .is_none()
-//         );
-//         assert!(
-//             worker
-//                 .claim_slot(&head, 7.into(), &authorities)
-//                 .await
-//                 .is_some()
-//         );
-//     }
+		let head = Header::new(
+			1,
+			H256::from_low_u64_be(0),
+			H256::from_low_u64_be(0),
+			Default::default(),
+			Default::default(),
+		);
+		assert!(worker.claim_slot(&head, 0.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 1.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 2.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 3.into(), &authorities).await.is_some());
+		assert!(worker.claim_slot(&head, 4.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 5.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 6.into(), &authorities).await.is_none());
+		assert!(worker.claim_slot(&head, 7.into(), &authorities).await.is_some());
+	}
 
-//     #[tokio::test]
-//     async fn on_slot_returns_correct_block() {
-//         let net = SpinTestNet::new(4);
+	#[tokio::test]
+	async fn on_slot_returns_correct_block() {
+		let net = SpinTestNet::new(4);
 
-//         let keystore_path = tempfile::tempdir().expect("Creates keystore
-// path");         let keystore = LocalKeystore::open(keystore_path.path(),
-// None).expect("Creates keystore.");         keystore
-//             .sr25519_generate_new(AuthorityPair::ID,
-// Some(&Keyring::Alice.to_seed()))             .expect("Key should be
-// created");
+		let keystore_path = tempfile::tempdir().expect("Creates keystore path");
+		let keystore = LocalKeystore::open(keystore_path.path(), None).expect("Creates keystore.");
+		keystore
+			.sr25519_generate_new(AuthorityPair::ID, Some(&Keyring::Alice.to_seed()))
+			.expect("Key should be created");
 
-//         let net = Arc::new(Mutex::new(net));
+		let net = Arc::new(Mutex::new(net));
 
-//         let mut net = net.lock();
-//         let peer = net.peer(3);
-//         let client = peer.client().as_client();
-//         let environ = DummyFactory(client.clone());
+		let mut net = net.lock();
+		let peer = net.peer(3);
+		let client = peer.client().as_client();
+		let environ = DummyFactory(client.clone());
 
-//         let mut worker = SpinWorker {
-//             client: client.clone(),
-//             block_import: client.clone(),
-//             env: environ,
-//             keystore: keystore.into(),
-//             sync_oracle: DummyOracle,
-//             justification_sync_link: (),
-//             force_authoring: false,
-//             backoff_authoring_blocks: Option::<()>::None,
-//             telemetry: None,
-//             block_proposal_slot_portion: SlotProportion::new(0.5),
-//             max_block_proposal_slot_portion: None,
-//             compatibility_mode: Default::default(),
-//             _phantom: PhantomData::<fn() -> AuthorityPair>,
-//         };
+		let mut worker = SpinWorker {
+			client: client.clone(),
+			block_import: client.clone(),
+			env: environ,
+			keystore: keystore.into(),
+			sync_oracle: DummyOracle,
+			justification_sync_link: (),
+			force_authoring: false,
+			backoff_authoring_blocks: Option::<()>::None,
+			telemetry: None,
+			block_proposal_slot_portion: SlotProportion::new(0.5),
+			max_block_proposal_slot_portion: None,
+			compatibility_mode: Default::default(),
+			_phantom: PhantomData::<fn() -> AuthorityPair>,
+		};
 
-//         let head = client.expect_header(client.info().genesis_hash).unwrap();
+		let head = client.expect_header(client.info().genesis_hash).unwrap();
 
-//         let res = worker
-//             .on_slot(SlotInfo {
-//                 slot: 0.into(),
-//                 ends_at: Instant::now() + Duration::from_secs(100),
-//                 create_inherent_data: Box::new(()),
-//                 duration: Duration::from_millis(1000),
-//                 chain_head: head,
-//                 block_size_limit: None,
-//             })
-//             .await
-//             .unwrap();
+		let res = worker
+			.on_slot(SlotInfo {
+				slot: 0.into(),
+				ends_at: Instant::now() + Duration::from_secs(100),
+				create_inherent_data: Box::new(()),
+				duration: Duration::from_millis(1000),
+				chain_head: head,
+				block_size_limit: None,
+			})
+			.await
+			.unwrap();
 
-//         // The returned block should be imported and we should be able to get
-// its header by now.         assert!(client.header(res.block.hash()).unwrap().
-// is_some());     }
-// }
+		// The returned block should be imported and we should be able to get its header by now.
+		assert!(client.header(res.block.hash()).unwrap().is_some());
+	}
+}
