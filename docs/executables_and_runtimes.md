@@ -98,7 +98,7 @@ $NODE \
 --chain $SPEC_PATH/relaychain-spec-raw.json --alice
 ```
 
-First generate the chainspec as for fastchain but by
+First generate the chainspec, similar to how we did it for fastchain:
 ```bash
 ./target/debug/qf-parachain-node build-spec --disable-default-bootnode --raw > $SPEC_PATH/parachain-spec-raw.json
 ```
