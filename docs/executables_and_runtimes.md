@@ -15,9 +15,7 @@ It's designed to run tests for the QF blockchain implementation, likely focusing
  functionality and integration tests.
 
 - **pvm-test-runner**: This is a test runner specifically for the PolkaVM (PVM) component.
- PolkaVM appears to be a virtual machine implementation used in the project, as evidenced by references
-  in the codebase like pallets/qf-polkavm/src/polkavm/sandbox/linux.rs. This executable
-   runs tests related to the PolkaVM functionality.
+A test runner for running PolkaVM contracts
 
 - **qf-parachain-node**: This is the node implementation for running Quantum Fusion as a parachain.
  Parachains are specialized blockchains that connect to the Polkadot relay chain.
