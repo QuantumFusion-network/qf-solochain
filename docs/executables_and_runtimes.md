@@ -1,5 +1,13 @@
 # Executables and runtimes
 
+Project with `cargo build --release` creates the following executables.
+
+```console
+$ find target/release -maxdepth 1 -executable -type f
+target/release/qf-test-runner
+target/release/pvm-test-runner
+target/release/qf-parachain-node
+target/release/qf-node
 ## Build the node binary
 For building the fastchain node binary use
 ```bash
