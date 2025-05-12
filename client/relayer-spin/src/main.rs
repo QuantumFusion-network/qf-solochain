@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 				let data = hex::decode(&data[2..]).unwrap();
 
-				let res = try_submit_alive_message(&parachain_api, data).await;
+				let res = try_submit_fastchain_finality_proof_message(&parachain_api, data).await;
 				eprintln!("Submitted alive message. Result: {res:?}");
 			},
 			Err(err) => eprintln!("Error receiving justification: {err:?}"),
@@ -55,13 +55,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	Ok(())
 }
 
-async fn try_submit_alive_message(
+async fn try_submit_fastchain_finality_proof_message(
 	parachain_api: &OnlineClient<PolkadotConfig>,
 	data: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let proof = AliveMessageProof::decode_all(&mut data.as_slice()).unwrap();
 
-	let tx = parachain_metadata::tx().pallet_spin_polkadot().submit_alive_message(proof);
+	let tx = parachain_metadata::tx().pallet_spin_polkadot().submit_fastchain_finality_proof_message(proof);
 
 	let from = dev::alice();
 	let submitted_tx = parachain_api.tx().sign_and_submit_then_watch_default(&tx, &from).await?;

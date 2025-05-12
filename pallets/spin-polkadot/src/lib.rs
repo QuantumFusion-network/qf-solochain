@@ -23,13 +23,39 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use storage_types::StoredAuthoritySet;
+
+use bp_header_chain::{
+    AuthoritySet, ChainWithGrandpa,
+    StoredHeaderData,
+    justification::GrandpaJustification,
+};
+use bp_runtime::{BlockNumberOf, HashOf, HasherOf, HeaderId, HeaderOf};
+use frame::{prelude::*, traits::Header};
+use sp_std::{boxed::Box, prelude::*};
+
+mod storage_types;
+
 pub use pallet::*;
+
+/// Bridged chain from the pallet configuration.
+pub type BridgedChain<T> = <T as Config>::BridgedChain;
+/// Block number of the bridged chain.
+pub type BridgedBlockNumber<T> = BlockNumberOf<<T as Config>::BridgedChain>;
+/// Block hash of the bridged chain.
+pub type BridgedBlockHash<T> = HashOf<<T as Config>::BridgedChain>;
+/// Block id of the bridged chain.
+pub type BridgedBlockId<T> = HeaderId<BridgedBlockHash<T>, BridgedBlockNumber<T>>;
+/// Hasher of the bridged chain.
+pub type BridgedBlockHasher<T> = HasherOf<<T as Config>::BridgedChain>;
+/// Header of the bridged chain.
+pub type BridgedHeader<T> = HeaderOf<<T as Config>::BridgedChain>;
+/// Header data of the bridged chain that is stored at this chain by this pallet.
+pub type BridgedStoredHeaderData<T> = StoredHeaderData<BridgedBlockNumber<T>, BridgedBlockHash<T>>;
 
 #[frame::pallet]
 pub mod pallet {
-	use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
-	// use polkadot_parachain_primitives::primitives::HeadData;
-	use sp_consensus_grandpa::Commit;
+	use super::*;
 
 	// /// The validation data provides information about how to create the inputs
 	// /// for validation of a candidate.
@@ -75,37 +101,40 @@ pub mod pallet {
 	// 	// one (if any). pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
 	// }
 
-	/// A GRANDPA justification for block finality, it includes a commit message
-	/// and an ancestry proof including all headers routing all precommit
-	/// target blocks to the commit target block. Due to the current voting
-	/// strategy the precommit targets should be the same as the commit target,
-	/// since honest voters don't vote past authority set change blocks.
-	///
-	/// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
-	#[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	#[scale_info(skip_type_params(MaxVotesAncestries))]
-	pub struct GrandpaJustification<MaxVotesAncestries: Get<u32>, H: Header> {
-		pub round: u64,
-		// TODO: replace with bounded size data structure
-		pub commit: Commit<H>,
-		pub votes_ancestries: BoundedVec<H, MaxVotesAncestries>,
-	}
+	// /// A GRANDPA justification for block finality, it includes a commit message
+	// /// and an ancestry proof including all headers routing all precommit
+	// /// target blocks to the commit target block. Due to the current voting
+	// /// strategy the precommit targets should be the same as the commit target,
+	// /// since honest voters don't vote past authority set change blocks.
+	// ///
+	// /// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
+	// #[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	// #[scale_info(skip_type_params(MaxVotesAncestries))]
+	// pub struct GrandpaJustification<MaxVotesAncestries: Get<u32>, H: Header> {
+	// 	pub round: u64,
+	// 	// TODO: replace with bounded size data structure
+	// 	pub commit: Commit<H>,
+	// 	pub votes_ancestries: BoundedVec<H, MaxVotesAncestries>,
+	// }
 
-	/// Alive message proof combining `FastchainInherentData` and
-	/// `GrandpaJustification`.
-	///
-	/// Should be sent from a fastchain node to the parachain SPIN pallet via an
-	/// extrinsic call.
-	#[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	#[scale_info(skip_type_params(MaxVotesAncestries))]
-	pub struct AliveMessageProof<MaxVotesAncestries: Get<u32>, H: Header> {
-		// pub fastchain_inherent_data: FastchainInherentData,
-		pub grandpa_justification: GrandpaJustification<MaxVotesAncestries, H>,
-	}
+	// /// Alive message proof combining `FastchainInherentData` and
+	// /// `GrandpaJustification`.
+	// ///
+	// /// Should be sent from a fastchain node to the parachain SPIN pallet via an
+	// /// extrinsic call.
+	// #[derive(CloneNoBound, Encode, Decode, DecodeWithMemTracking, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
+	// #[scale_info(skip_type_params(MaxVotesAncestries))]
+	// pub struct AliveMessageProof<MaxVotesAncestries: Get<u32>, H: Header> {
+	// 	// pub fastchain_inherent_data: FastchainInherentData,
+	// 	pub grandpa_justification: GrandpaJustification<MaxVotesAncestries, H>,
+	// }
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// The chain we are bridging to here.
+        type BridgedChain: ChainWithGrandpa;
 
 		#[pallet::constant]
 		type TimeoutBlocks: Get<BlockNumberFor<Self>>;
@@ -137,10 +166,9 @@ pub mod pallet {
 	pub type ValidatorSet<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, (), ValueQuery>;
 
-	/// Last seen alive message
+	/// The current GRANDPA Authority set.
 	#[pallet::storage]
-	pub type LastAliveMessage<T: Config> =
-		StorageValue<_, AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>>;
+	pub type CurrentAuthoritySet<T: Config> = StorageValue<_, StoredAuthoritySet<T>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -158,6 +186,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// The given justification is invalid for the given header.
+        InvalidJustification,
+        /// The authority set from the underlying header chain is invalid.
+        InvalidAuthoritySet,
+        /// Too many authorities in the set.
+        TooManyAuthoritiesInSet,
 		IntegerOverflow,
 		CoolDownPeriod,
 		BlockNumberDecreased,
@@ -226,14 +260,21 @@ pub mod pallet {
 		/// mode.
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
-		pub fn submit_alive_message(
+		pub fn submit_fastchain_finality_proof_message(
 			origin: OriginFor<T>,
-			proof: AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>,
+			finality_target: Box<BridgedHeader<T>>,
+            justification: GrandpaJustification<BridgedHeader<T>>,
+            _current_set_id: sp_consensus_grandpa::SetId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// TODO: validate GRANDPA justification proof on client side
-			// proof.validate();
+			let (hash, number) = (finality_target.hash(), *finality_target.number());
+
+            let authority_set = <CurrentAuthoritySet<T>>::get();
+            let _unused_proof_size = authority_set.unused_proof_size();
+            let _set_id = authority_set.set_id;
+            let authority_set: AuthoritySet = authority_set.into();
+            verify_justification::<T>(&justification, hash, number, authority_set)?;
 
 			let current_block_number = frame_system::Pallet::<T>::block_number();
 
@@ -281,9 +322,34 @@ pub mod pallet {
 				},
 			}
 
-			<LastAliveMessage<T>>::put(proof);
-
 			Ok(().into())
 		}
 	}
+}
+
+/// Verify a GRANDPA justification (finality proof) for a given header.
+///
+/// Will use the GRANDPA current authorities known to the pallet.
+///
+/// If successful it returns the decoded GRANDPA justification so we can refund any weight which
+/// was overcharged in the initial call.
+pub(crate) fn verify_justification<T: Config>(
+	justification: &GrandpaJustification<BridgedHeader<T>>,
+	hash: BridgedBlockHash<T>,
+	number: BridgedBlockNumber<T>,
+	authority_set: bp_header_chain::AuthoritySet,
+) -> Result<(), sp_runtime::DispatchError> {
+	use bp_header_chain::justification::verify_justification;
+
+	Ok(verify_justification::<BridgedHeader<T>>(
+		(hash, number),
+		&authority_set
+			.try_into()
+			.map_err(|_| <Error<T>>::InvalidAuthoritySet)?,
+		justification,
+	)
+	.map_err(|e| {
+		log::error!("Received invalid justification for {:?}: {:?}", hash, e,);
+		<Error<T>>::InvalidJustification
+	})?)
 }

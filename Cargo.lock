@@ -9579,12 +9579,16 @@ dependencies = [
 name = "pallet-spin-polkadot"
 version = "0.1.0"
 dependencies = [
+ "bp-header-chain",
+ "bp-runtime",
  "log",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "polkadot-sdk-frame",
  "scale-info",
  "sp-consensus-grandpa",
+ "sp-runtime",
+ "sp-std 14.0.0",
  "sp-trie",
 ]
 
@@ -12672,6 +12676,9 @@ dependencies = [
 name = "qf-parachain-runtime"
 version = "0.1.0"
 dependencies = [
+ "bp-header-chain",
+ "bp-polkadot-core",
+ "bp-runtime",
  "cumulus-pallet-parachain-system",
  "docify",
  "hex-literal",
