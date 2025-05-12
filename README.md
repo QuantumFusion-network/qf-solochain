@@ -46,7 +46,7 @@ or a virtual machine.
 
 ## Executables and runtimes
 
-Explanation what executables and runtimes we have and how to run local testnet step by step. For advanced usage.
+This section describes the project's executables and runtimes and provides step-by-step instructions for running a local testnet. This guide is suitable for advanced users.
 See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 
 ## Run the Full Node
