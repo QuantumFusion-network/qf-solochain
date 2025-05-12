@@ -11,8 +11,7 @@ target/release/qf-node
 ```
 
 - **qf-test-runner**: This is a test runner executable for the Quantum Fusion network.
-It's designed to run tests for the QF blockchain implementation, likely focusing on runtime
- functionality and integration tests.
+It's designed to run tests for the QF blockchain implementation.
 
 - **pvm-test-runner**: This is a test runner specifically for the PolkaVM (PVM) component.
 A test runner for running PolkaVM contracts
