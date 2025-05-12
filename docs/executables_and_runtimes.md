@@ -10,13 +10,23 @@ target/release/qf-parachain-node
 target/release/qf-node
 ```
 
-- **qf-test-runner**: This is a test runner executable for the Quantum Fusion network. It's designed to run tests for the QF blockchain implementation, likely focusing on runtime functionality and integration tests.
+- **qf-test-runner**: This is a test runner executable for the Quantum Fusion network.
+It's designed to run tests for the QF blockchain implementation, likely focusing on runtime
+ functionality and integration tests.
 
-- **pvm-test-runner**: This is a test runner specifically for the PolkaVM (PVM) component. PolkaVM appears to be a virtual machine implementation used in the project, as evidenced by references in the codebase like pallets/qf-polkavm/src/polkavm/sandbox/linux.rs. This executable runs tests related to the PolkaVM functionality.
+- **pvm-test-runner**: This is a test runner specifically for the PolkaVM (PVM) component.
+ PolkaVM appears to be a virtual machine implementation used in the project, as evidenced by references
+  in the codebase like pallets/qf-polkavm/src/polkavm/sandbox/linux.rs. This executable
+   runs tests related to the PolkaVM functionality.
 
-- **qf-parachain-node**: This is the node implementation for running Quantum Fusion as a parachain. Parachains are specialized blockchains that connect to the Polkadot relay chain. This executable allows QF to operate as part of the Polkadot ecosystem, with features like XCM (Cross-Consensus Message) support for cross-chain communication, as seen in the XCM configuration files.
+- **qf-parachain-node**: This is the node implementation for running Quantum Fusion as a parachain.
+ Parachains are specialized blockchains that connect to the Polkadot relay chain.
+  This executable allows QF to operate as part of the Polkadot ecosystem, with features
+   like XCM (Cross-Consensus Message) support for cross-chain communication, as seen in the XCM configuration files.
 
-- **qf-node**: This is the standalone node implementation for the Quantum Fusion blockchain (referred to as "fastchain" in the documentation). It can run independently without connecting to a relay chain, and can operate in different modes including as a full node or as a validator.
+- **qf-node**: This is the standalone node implementation for the Quantum Fusion blockchain
+ (referred to as "fastchain" in the documentation). It can run independently without connecting
+  to a relay chain, and can operate in different modes including as a full node or as a validator.
 
 ## Build the node binary
 For building the fastchain node binary, use
