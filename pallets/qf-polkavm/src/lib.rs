@@ -552,7 +552,7 @@ pub mod pallet {
 							);
 							match storage_key.try_append(&mut raw_storage_key) {
 								Ok(_) => (),
-								Err(_) => return 1,
+								Err(_) => return 10,
 							};
 
 							let result = match caller
@@ -570,13 +570,13 @@ pub mod pallet {
 
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
+									Err(_) => return 11,
 									Ok(_) => return 0,
 								}
 							}
 							return 0;
 						} else {
-							return 1;
+							return 12;
 						}
 					},
 				)
@@ -599,7 +599,7 @@ pub mod pallet {
 								);
 								match storage_key.try_append(&mut raw_storage_key) {
 									Ok(_) => (),
-									Err(_) => return 1,
+									Err(_) => return 20,
 								}
 
 								let mut data = BoundedVec::with_bounded_capacity(
@@ -607,7 +607,7 @@ pub mod pallet {
 								);
 								match data.try_append(&mut raw_data) {
 									Ok(_) => (),
-									Err(_) => return 1,
+									Err(_) => return 21,
 								}
 
 								caller.user_data.mutating_operations.push((
@@ -622,10 +622,10 @@ pub mod pallet {
 
 								return 0;
 							} else {
-								1
+								22
 							}
 						} else {
-							1
+							23
 						}
 					},
 				)
