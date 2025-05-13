@@ -642,7 +642,7 @@ pub mod pallet {
 						);
 						match storage_key.try_append(&mut raw_storage_key) {
 							Ok(_) => (),
-							Err(_) => return 1,
+							Err(_) => return 31,
 						};
 
 						caller.user_data.mutating_operations.push((
@@ -657,7 +657,7 @@ pub mod pallet {
 
 						return 0;
 					} else {
-						1
+						32
 					}
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
