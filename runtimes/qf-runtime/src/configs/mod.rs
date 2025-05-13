@@ -303,6 +303,7 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
 	pub const PolkaVmMaxCodeLen: u32 = 131072;
+	pub const PolkaVmMaxUserDataLen: u32 = 64;
 	pub const PolkaVmMaxGasLimit: u32 = 2097152;
 	pub const PolkaVmMaxStorageKeySize: u32 = 64;
 	pub const PolkaVmMaxStorageSlots: u32 = 4;
@@ -314,6 +315,7 @@ parameter_types! {
 impl pallet_qf_polkavm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MaxCodeLen = PolkaVmMaxCodeLen;
+	type MaxUserDataLen = PolkaVmMaxUserDataLen;
 	type MaxGasLimit = PolkaVmMaxGasLimit;
 	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
 	type MaxStorageSlots = PolkaVmMaxStorageSlots;
