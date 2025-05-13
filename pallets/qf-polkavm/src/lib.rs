@@ -129,6 +129,9 @@ pub mod pallet {
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
+		type MaxUserDataLen: Get<u32>;
+
+		#[pallet::constant]
 		type MaxGasLimit: Get<u32>;
 
 		#[pallet::constant]
@@ -224,7 +227,7 @@ pub mod pallet {
 		InvalidOperands,
 
 		// PolkaVM errors
-		ProgramBlobTooLarge,
+		ProgramBlobIsTooLarge,
 		ProgramBlobParsingFailed,
 		PolkaVMConfigurationFailed,
 		PolkaVMEngineCreationFailed,
@@ -241,6 +244,8 @@ pub mod pallet {
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
 		TransferFailed,
+
+		UserDataIsTooLarge,
 	}
 
 	/// The pallet's dispatchable functions ([`Call`]s).
@@ -269,7 +274,7 @@ pub mod pallet {
 			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
 			raw_blob
 				.try_append(&mut program_blob)
-				.map_err(|_| Error::<T>::ProgramBlobTooLarge)?;
+				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
 
 			let module = Self::prepare(raw_blob[..].into())?;
 			let exports = module
@@ -313,19 +318,27 @@ pub mod pallet {
 			contract_address: T::AccountId,
 			to: T::AccountId,
 			value: BalanceOf<T>,
-			op: u32,
+			user_data: Vec<u8>,
 			gas_limit: u32,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			ensure!(op <= 6, Error::<T>::InvalidOperation);
-
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+
+			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+
+			ensure!(
+				user_data.len() <=
+					<T as Config>::MaxUserDataLen::get()
+						.try_into()
+						.map_err(|_| Error::<T>::IntegerOverflow)?,
+				Error::<T>::UserDataIsTooLarge
+			);
 
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
@@ -339,8 +352,6 @@ pub mod pallet {
 				.checked_sub(1)
 				.ok_or(Error::<T>::IntegerOverflow)?;
 
-			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
-
 			let raw_blob = Code::<T>::get(&contract_address)
 				.ok_or(Error::<T>::ProgramBlobNotFound)?
 				.into_inner();
@@ -352,6 +363,7 @@ pub mod pallet {
 				[contract_address.clone(), who.clone(), to].to_vec(),
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+				user_data,
 				[].to_vec(),
 				BTreeMap::new(),
 				max_storage_size,
@@ -399,8 +411,7 @@ pub mod pallet {
 
 			sp_runtime::print("====== BEFORE CALL ======");
 
-			let result =
-				instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
+			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
 			let (result, not_enough_gas, trap) = match result {
 				Err(CallError::NotEnoughGas) => (None, true, false),
@@ -540,6 +551,15 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
+				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
+					match caller.instance.write_memory(pointer, &caller.user_data.user_data) {
+						Err(_) => 1000,
+						Ok(_) => 0,
+					}
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
 				.define_typed(
 					"get",
 					|caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
@@ -552,7 +572,7 @@ pub mod pallet {
 							);
 							match storage_key.try_append(&mut raw_storage_key) {
 								Ok(_) => (),
-								Err(_) => return 10,
+								Err(_) => return 1010,
 							};
 
 							let result = match caller
@@ -570,13 +590,13 @@ pub mod pallet {
 
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 11,
+									Err(_) => return 1011,
 									Ok(_) => return 0,
 								}
 							}
 							return 0;
 						} else {
-							return 12;
+							return 1012;
 						}
 					},
 				)
@@ -599,7 +619,7 @@ pub mod pallet {
 								);
 								match storage_key.try_append(&mut raw_storage_key) {
 									Ok(_) => (),
-									Err(_) => return 20,
+									Err(_) => return 1020,
 								}
 
 								let mut data = BoundedVec::with_bounded_capacity(
@@ -607,7 +627,7 @@ pub mod pallet {
 								);
 								match data.try_append(&mut raw_data) {
 									Ok(_) => (),
-									Err(_) => return 21,
+									Err(_) => return 1021,
 								}
 
 								caller.user_data.mutating_operations.push((
@@ -622,10 +642,10 @@ pub mod pallet {
 
 								return 0;
 							} else {
-								22
+								1022
 							}
 						} else {
-							23
+							1023
 						}
 					},
 				)
