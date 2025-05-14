@@ -47,6 +47,7 @@ tokio = { version = "1.40.0", default-features = false }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 # Node
+qf-node = { path="node", default-features = false }
 clap = { version = "4.5.10" }
 frame-benchmarking-cli = { path = "vendor/polkadot-sdk/substrate/utils/frame/benchmarking-cli", default-features = false }
 futures = { version = "0.3.30" }

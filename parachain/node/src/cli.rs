@@ -77,9 +77,44 @@ pub struct Cli {
 	#[arg(long)]
 	pub no_hardware_benchmarks: bool,
 
+	/// Fast chain arguments
+	#[arg(long = "fastchain", num_args = 0.., allow_hyphen_values = true, value_terminator = ";")]
+	pub fast_chain_args: Vec<String>,
+
 	/// Relay chain arguments
-	#[arg(raw = true)]
+	#[arg(long = "relaychain", num_args = 0.., allow_hyphen_values = true)]
 	pub relay_chain_args: Vec<String>,
+}
+
+#[derive(Debug, clap::Parser)]
+#[command(
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
+)]
+pub struct FastChainCli {
+	/// The actual relay chain cli object.
+	#[command(flatten)]
+	pub base: sc_cli::RunCmd,
+
+	/// The base path that should be used by the relay chain.
+	pub fast_base_path: Option<PathBuf>,
+
+	pub test: Option<String>,
+}
+
+impl FastChainCli {
+	pub fn new<'a>(
+		fast_config: &sc_service::Configuration,
+		fast_chain_args: impl Iterator<Item = &'a String>
+	) -> Self {
+		let base_path = fast_config.base_path.path().join("fastchain");
+		Self {
+			fast_base_path: Some(base_path),
+			base: clap::Parser::parse_from(fast_chain_args),
+			test: None,
+		}
+	}
 }
 
 #[derive(Debug)]
