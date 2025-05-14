@@ -596,6 +596,7 @@ pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
 	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
+	pub user_data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
 	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 	pub max_storage_size: usize,
@@ -607,9 +608,9 @@ pub struct State<T: PalletConfig> {
 	pub block_number: fn() -> u64,
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
-	pub get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-	pub insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-	pub delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
+	pub get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
+	pub insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+	pub delete: fn(T::AccountId, StorageKey<T>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -617,6 +618,7 @@ impl<T: PalletConfig> State<T> {
 		addresses: Vec<T::AccountId>,
 		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
+		user_data: Vec<u8>,
 		mutating_operations: Vec<MutatingStorageOperation<T>>,
 		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 		max_storage_size: usize,
@@ -628,14 +630,15 @@ impl<T: PalletConfig> State<T> {
 		block_number: fn() -> u64,
 		account_id: fn() -> u64,
 		caller: fn() -> u64,
-		get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-		insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-		delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
+		get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
+		insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+		delete: fn(T::AccountId, StorageKey<T>) -> u64,
 	) -> Self {
 		Self {
 			addresses,
 			balances,
 			log_message,
+			user_data,
 			mutating_operations,
 			raw_storage,
 			max_storage_size,

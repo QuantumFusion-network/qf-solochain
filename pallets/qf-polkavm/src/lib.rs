@@ -78,11 +78,7 @@ pub mod pallet {
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> = (
-		<T as frame_system::Config>::AccountId,
-		<T as frame_system::Config>::AccountId,
-		StorageKey<T>,
-	);
+	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -131,6 +127,9 @@ pub mod pallet {
 		/// depth](#associatedtype.CallStack). Look into the `integrity_test()` for some insights.
 		#[pallet::constant]
 		type MaxCodeLen: Get<u32>;
+
+		#[pallet::constant]
+		type MaxUserDataLen: Get<u32>;
 
 		#[pallet::constant]
 		type MaxGasLimit: Get<u32>;
@@ -228,7 +227,7 @@ pub mod pallet {
 		InvalidOperands,
 
 		// PolkaVM errors
-		ProgramBlobTooLarge,
+		ProgramBlobIsTooLarge,
 		ProgramBlobParsingFailed,
 		PolkaVMConfigurationFailed,
 		PolkaVMEngineCreationFailed,
@@ -245,6 +244,8 @@ pub mod pallet {
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
 		TransferFailed,
+
+		UserDataIsTooLarge,
 	}
 
 	/// The pallet's dispatchable functions ([`Call`]s).
@@ -273,7 +274,7 @@ pub mod pallet {
 			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
 			raw_blob
 				.try_append(&mut program_blob)
-				.map_err(|_| Error::<T>::ProgramBlobTooLarge)?;
+				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
 
 			let module = Self::prepare(raw_blob[..].into())?;
 			let exports = module
@@ -317,19 +318,27 @@ pub mod pallet {
 			contract_address: T::AccountId,
 			to: T::AccountId,
 			value: BalanceOf<T>,
-			op: u32,
+			user_data: Vec<u8>,
 			gas_limit: u32,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			ensure!(op <= 5, Error::<T>::InvalidOperation);
-
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+
+			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+
+			ensure!(
+				user_data.len() <=
+					<T as Config>::MaxUserDataLen::get()
+						.try_into()
+						.map_err(|_| Error::<T>::IntegerOverflow)?,
+				Error::<T>::UserDataIsTooLarge
+			);
 
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
@@ -343,8 +352,6 @@ pub mod pallet {
 				.checked_sub(1)
 				.ok_or(Error::<T>::IntegerOverflow)?;
 
-			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
-
 			let raw_blob = Code::<T>::get(&contract_address)
 				.ok_or(Error::<T>::ProgramBlobNotFound)?
 				.into_inner();
@@ -356,6 +363,7 @@ pub mod pallet {
 				[contract_address.clone(), who.clone(), to].to_vec(),
 				[value].to_vec(),
 				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+				user_data,
 				[].to_vec(),
 				BTreeMap::new(),
 				max_storage_size,
@@ -379,40 +387,31 @@ pub mod pallet {
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
-				|contract_address: T::AccountId,
-				 account_address: T::AccountId,
-				 key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, account_address, key))
-						.map(|d| d.to_vec())
+				|contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, key)).map(|d| d.to_vec())
 				},
 				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
 				 key: StorageKey<T>,
 				 max_storage_size: usize,
 				 mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, caller_address, key), buffer);
+						CodeStorage::<T>::insert((contract_address, key), buffer);
 						0
 					} else {
 						1
 					}
 				},
-				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
-				 key: StorageKey<T>|
-				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, caller_address, key));
+				|contract_address: T::AccountId, key: StorageKey<T>| -> u64 {
+					CodeStorage::<T>::remove((contract_address, key));
 					0
 				},
 			);
 
 			sp_runtime::print("====== BEFORE CALL ======");
 
-			let result =
-				instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
+			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
 			let (result, not_enough_gas, trap) = match result {
 				Err(CallError::NotEnoughGas) => (None, true, false),
@@ -552,6 +551,15 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
+				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
+					match caller.instance.write_memory(pointer, &caller.user_data.user_data) {
+						Err(_) => 1000,
+						Ok(_) => 0,
+					}
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
 				.define_typed(
 					"get",
 					|caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
@@ -564,79 +572,31 @@ pub mod pallet {
 							);
 							match storage_key.try_append(&mut raw_storage_key) {
 								Ok(_) => (),
-								Err(_) => return 1,
+								Err(_) => return 1010,
 							};
 
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
-								storage_key.clone(),
-							)) {
+							let result = match caller
+								.user_data
+								.raw_storage
+								.get(&(caller.user_data.addresses[0].clone(), storage_key.clone()))
+							{
 								Some(Some(r)) => Some(r.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
-									caller.user_data.addresses[1].clone(),
 									storage_key,
 								),
 							};
 
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
+									Err(_) => return 1011,
 									Ok(_) => return 0,
 								}
 							}
 							return 0;
 						} else {
-							return 1;
-						}
-					},
-				)
-				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
-
-			linker
-				.define_typed(
-					"read",
-					|caller: Caller<T>,
-					 address_idx: u32,
-					 storage_key_pointer: u32,
-					 pointer: u32|
-					 -> u64 {
-						if let Ok(mut raw_storage_key) = caller
-							.instance
-							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
-						{
-							let mut storage_key = BoundedVec::with_bounded_capacity(
-								caller.user_data.max_storage_key_size as usize,
-							);
-							match storage_key.try_append(&mut raw_storage_key) {
-								Ok(_) => (),
-								Err(_) => return 1,
-							};
-
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[address_idx as usize].clone(),
-								storage_key.clone(),
-							)) {
-								Some(Some(r)) => Some(r.to_vec()),
-								Some(None) => None,
-								None => (caller.user_data.get)(
-									caller.user_data.addresses[0].clone(),
-									caller.user_data.addresses[address_idx as usize].clone(),
-									storage_key,
-								),
-							};
-							if let Some(chunk) = result {
-								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
-									Ok(_) => return 0,
-								}
-							}
-							return 0;
-						} else {
-							return 1;
+							return 1012;
 						}
 					},
 				)
@@ -659,7 +619,7 @@ pub mod pallet {
 								);
 								match storage_key.try_append(&mut raw_storage_key) {
 									Ok(_) => (),
-									Err(_) => return 1,
+									Err(_) => return 1020,
 								}
 
 								let mut data = BoundedVec::with_bounded_capacity(
@@ -667,33 +627,25 @@ pub mod pallet {
 								);
 								match data.try_append(&mut raw_data) {
 									Ok(_) => (),
-									Err(_) => return 1,
+									Err(_) => return 1021,
 								}
 
 								caller.user_data.mutating_operations.push((
 									MutatingStorageOperationType::Set,
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.addresses[1].clone(),
-										storage_key.clone(),
-									),
+									(caller.user_data.addresses[0].clone(), storage_key.clone()),
 									Some(data.clone()),
 								));
 								caller.user_data.raw_storage.insert(
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.addresses[1].clone(),
-										storage_key,
-									),
+									(caller.user_data.addresses[0].clone(), storage_key),
 									Some(data),
 								);
 
 								return 0;
 							} else {
-								1
+								1022
 							}
 						} else {
-							1
+							1023
 						}
 					},
 				)
@@ -710,30 +662,22 @@ pub mod pallet {
 						);
 						match storage_key.try_append(&mut raw_storage_key) {
 							Ok(_) => (),
-							Err(_) => return 1,
+							Err(_) => return 31,
 						};
 
 						caller.user_data.mutating_operations.push((
 							MutatingStorageOperationType::Delete,
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
-								storage_key.clone(),
-							),
+							(caller.user_data.addresses[0].clone(), storage_key.clone()),
 							None,
 						));
-						caller.user_data.raw_storage.insert(
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
-								storage_key,
-							),
-							None,
-						);
+						caller
+							.user_data
+							.raw_storage
+							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
 
 						return 0;
 					} else {
-						1
+						32
 					}
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
