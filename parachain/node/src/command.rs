@@ -276,21 +276,17 @@ pub fn run() -> Result<()> {
 			}
 		},
 		None => {
-			let runner = cli.create_runner(&cli.run.normalize())?;
 
 			// Extract necessary arguments before spawning the thread
 			let fast_chain_args = cli.fast_chain_args.clone();
-			info!("{:?}", cli.fast_chain_args);
-			info!("{:?}", cli.relay_chain_args);
+			let fast_chain_present: bool = !fast_chain_args.is_empty();
+			let relay_chain_present: bool = !cli.relay_chain_args.is_empty();
 			let fast_cli = FastChainCli::from_iter(&fast_chain_args);
 			let fast_runner = fast_cli.create_runner(&fast_cli.base)?;
-			let collator_options = cli.run.collator_options();
 
-			let _fast_thread = std::thread::spawn(move || {
-
-				// Create a runner without initializing a new logger
+			if fast_chain_present && !relay_chain_present {
 				let runner = fast_runner;
-
+				info!("Starting fast chain node...");
 				let _ = runner.run_node_until_exit(|config| async move {
 
 					let fast_cli = FastChainCli::new(
@@ -309,7 +305,50 @@ pub fn run() -> Result<()> {
 
 					fast_service.await
 				});
-			});
+				info!("Stop fast chain node...");
+				return Ok(());
+			} else if fast_chain_present {
+				let _fast_thread = std::thread::spawn(move || {
+
+					// Create a runner without initializing a new logger
+					info!("Starting fast chain thread...");
+					let runner = fast_runner;
+
+					let _ = runner.run_node_until_exit(|config| async move {
+
+						let fast_cli = FastChainCli::new(
+							&config,
+							[FastChainCli::executable_name()].iter().chain(fast_chain_args.iter()),
+						);
+						let tokio_handle = config.tokio_handle.clone();
+						let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
+							.map_err(|err| format!("Fast chain argument error: {}", err))?;
+						match fast_config.network.network_backend {
+							sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
+								sc_network::NetworkWorker<
+									qf_runtime::opaque::Block,
+									<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+								>,
+							>(fast_config).await
+							.map_err(sc_cli::Error::Service),
+							sc_network::config::NetworkBackendType::Litep2p =>
+								crate::fast_service::new_full::<sc_network::Litep2pNetworkBackend>(fast_config).await
+									.map_err(sc_cli::Error::Service),
+						}
+						// let fast_service = crate::fast_service::new_full::<
+						// sc_network::NetworkWorker<
+						// 	qf_runtime::opaque::Block,
+						// 	<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+						// >,
+						// >(fast_config);
+
+						// fast_service.await
+					});
+				});
+			};
+
+			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
 				let hwbench = (!cli.no_hardware_benchmarks)
