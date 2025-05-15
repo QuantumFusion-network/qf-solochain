@@ -314,6 +314,10 @@ mod runtime {
 	pub type CumulusXcm = cumulus_pallet_xcm;
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
+
+	// SPIN
+	#[runtime::pallet_index(40)]
+	pub type PalletSpinPolkadot = pallet_spin_polkadot;
 }
 
 #[docify::export(register_validate_block)]
