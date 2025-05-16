@@ -6,7 +6,7 @@ standard GRANDPA finality protocol and **PolkaVM** smart contracts [^2].
 
 ## Key Features
 
-### SPIN Block Production
+### SPIN Consensus Protocol
 - The slot-based **SPIN** mechanism hands off single-leader rights for a configurable number of slots/blocks (configured
 via [`DefaultSessionLength`](https://github.com/QuantumFusion-network/qf-solochain/blob/eb15c7f09221b375c46c54508144d46c45ee6e37/runtimes/qf-runtime/src/configs/mod.rs#L114)),
 reducing election overhead and ensuring swift block production. Validator election is handled by the staking pallet,
