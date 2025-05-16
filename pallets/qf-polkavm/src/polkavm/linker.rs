@@ -1,8 +1,8 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, CodeStorageKey, CodeStorageSlot, Config as PalletConfig, MutatingStorageOperation,
-	StorageKey,
+	BalanceOf, CodeStorageKey, CodeStorageSlot, CodeVersion, Config as PalletConfig,
+	MutatingStorageOperation, StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
@@ -599,6 +599,7 @@ pub struct State<T: PalletConfig> {
 	pub user_data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
 	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
+	pub code_version: CodeVersion,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
@@ -608,9 +609,9 @@ pub struct State<T: PalletConfig> {
 	pub block_number: fn() -> u64,
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
-	pub get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-	pub insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-	pub delete: fn(T::AccountId, StorageKey<T>) -> u64,
+	pub get: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
+	pub insert: fn(T::AccountId, version: CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
+	pub delete: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> u64,
 }
 
 impl<T: PalletConfig> State<T> {
@@ -621,6 +622,7 @@ impl<T: PalletConfig> State<T> {
 		user_data: Vec<u8>,
 		mutating_operations: Vec<MutatingStorageOperation<T>>,
 		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
+		code_version: CodeVersion,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
 		max_storage_slot_idx: u32,
@@ -630,9 +632,9 @@ impl<T: PalletConfig> State<T> {
 		block_number: fn() -> u64,
 		account_id: fn() -> u64,
 		caller: fn() -> u64,
-		get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-		insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-		delete: fn(T::AccountId, StorageKey<T>) -> u64,
+		get: fn(T::AccountId, CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
+		insert: fn(T::AccountId, CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
+		delete: fn(T::AccountId, CodeVersion, StorageKey<T>) -> u64,
 	) -> Self {
 		Self {
 			addresses,
@@ -641,6 +643,7 @@ impl<T: PalletConfig> State<T> {
 			user_data,
 			mutating_operations,
 			raw_storage,
+			code_version,
 			max_storage_size,
 			max_storage_key_size,
 			max_storage_slot_idx,

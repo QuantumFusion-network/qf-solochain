@@ -76,9 +76,11 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
+	pub(super) type CodeVersion = u64;
 	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
+	pub(super) type CodeStorageKey<T> =
+		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -93,7 +95,7 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub(super) struct BlobMetadata<T: Config> {
 		owner: T::AccountId,
-		version: u64,
+		version: CodeVersion,
 	}
 
 	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -129,6 +131,9 @@ pub mod pallet {
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
+		type MaxCodeVersion: Get<u64>;
+
+		#[pallet::constant]
 		type MaxUserDataLen: Get<u32>;
 
 		#[pallet::constant]
@@ -157,11 +162,12 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	pub(super) type Code<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, CodeVec<T>>;
+	pub(super) type Code<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeVersion)>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionResult<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), ExecResult>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion, T::AccountId), ExecResult>;
 
 	#[pallet::storage]
 	pub(super) type CodeMetadata<T: Config> =
@@ -169,7 +175,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeAddress<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion), T::AccountId>;
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
@@ -194,7 +200,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			/// The new value set.
+			version: CodeVersion,
 			result: Option<u64>,
 			not_enough_gas: bool,
 			trap: bool,
@@ -206,6 +212,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
+			version: CodeVersion,
 			// List of function in the smart contract.
 			exports: Vec<Vec<u8>>,
 		},
@@ -245,6 +252,7 @@ pub mod pallet {
 		/// free balance in the sender's account.
 		TransferFailed,
 
+		CodeVersionIsTooBig,
 		UserDataIsTooLarge,
 	}
 
@@ -291,17 +299,27 @@ pub mod pallet {
 			let old_version = blob_metadata.version;
 			blob_metadata.version =
 				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			ensure!(
+				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
+				Error::<T>::CodeVersionIsTooBig
+			);
 			let contract_address =
 				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
 			if old_version != 0 {
 				Code::<T>::remove(old_contract_address)
 			}
-			Code::<T>::insert(&contract_address, &raw_blob);
-			CodeAddress::<T>::insert(&who, &contract_address);
+			let version = blob_metadata.version;
+			Code::<T>::insert(&contract_address, (&raw_blob, &version));
+			CodeAddress::<T>::insert((&who, &version), &contract_address);
 			CodeMetadata::<T>::insert(&who, blob_metadata);
 
-			Self::deposit_event(Event::ProgramBlobUploaded { who, contract_address, exports });
+			Self::deposit_event(Event::ProgramBlobUploaded {
+				who,
+				contract_address,
+				version,
+				exports,
+			});
 
 			Ok(())
 		}
@@ -352,9 +370,9 @@ pub mod pallet {
 				.checked_sub(1)
 				.ok_or(Error::<T>::IntegerOverflow)?;
 
-			let raw_blob = Code::<T>::get(&contract_address)
-				.ok_or(Error::<T>::ProgramBlobNotFound)?
-				.into_inner();
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 			instance.set_gas(gas_limit.into());
@@ -366,6 +384,7 @@ pub mod pallet {
 				user_data,
 				[].to_vec(),
 				BTreeMap::new(),
+				version,
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
@@ -387,24 +406,28 @@ pub mod pallet {
 				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
 				|| -> u64 { 0 },
 				|| -> u64 { 1 },
-				|contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, key)).map(|d| d.to_vec())
+				|contract_address: T::AccountId,
+				 version: CodeVersion,
+				 key: StorageKey<T>|
+				 -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
 				},
 				|contract_address: T::AccountId,
+				 version: CodeVersion,
 				 key: StorageKey<T>,
 				 max_storage_size: usize,
 				 mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, key), buffer);
+						CodeStorage::<T>::insert((contract_address, version, key), buffer);
 						0
 					} else {
 						1
 					}
 				},
-				|contract_address: T::AccountId, key: StorageKey<T>| -> u64 {
-					CodeStorage::<T>::remove((contract_address, key));
+				|contract_address: T::AccountId, version: CodeVersion, key: StorageKey<T>| -> u64 {
+					CodeStorage::<T>::remove((contract_address, version, key));
 					0
 				},
 			);
@@ -433,7 +456,7 @@ pub mod pallet {
 			}
 
 			ExecutionResult::<T>::insert(
-				(&contract_address, &who),
+				(&contract_address, version, &who),
 				ExecResult {
 					result,
 					not_enough_gas,
@@ -447,6 +470,7 @@ pub mod pallet {
 			Self::deposit_event(Event::ExecutionResult {
 				who,
 				contract_address,
+				version,
 				result,
 				not_enough_gas,
 				trap,
@@ -575,15 +599,16 @@ pub mod pallet {
 								Err(_) => return 1010,
 							};
 
-							let result = match caller
-								.user_data
-								.raw_storage
-								.get(&(caller.user_data.addresses[0].clone(), storage_key.clone()))
-							{
+							let result = match caller.user_data.raw_storage.get(&(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.code_version,
+								storage_key.clone(),
+							)) {
 								Some(Some(r)) => Some(r.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
+									caller.user_data.code_version,
 									storage_key,
 								),
 							};
@@ -632,11 +657,19 @@ pub mod pallet {
 
 								caller.user_data.mutating_operations.push((
 									MutatingStorageOperationType::Set,
-									(caller.user_data.addresses[0].clone(), storage_key.clone()),
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.code_version,
+										storage_key.clone(),
+									),
 									Some(data.clone()),
 								));
 								caller.user_data.raw_storage.insert(
-									(caller.user_data.addresses[0].clone(), storage_key),
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.code_version,
+										storage_key,
+									),
 									Some(data),
 								);
 
@@ -667,13 +700,21 @@ pub mod pallet {
 
 						caller.user_data.mutating_operations.push((
 							MutatingStorageOperationType::Delete,
-							(caller.user_data.addresses[0].clone(), storage_key.clone()),
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.code_version,
+								storage_key.clone(),
+							),
 							None,
 						));
-						caller
-							.user_data
-							.raw_storage
-							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
+						caller.user_data.raw_storage.insert(
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.code_version,
+								storage_key,
+							),
+							None,
+						);
 
 						return 0;
 					} else {
