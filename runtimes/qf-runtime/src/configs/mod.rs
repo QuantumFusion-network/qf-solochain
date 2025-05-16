@@ -303,7 +303,7 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
 	pub const PolkaVmMaxCodeLen: u32 = 131072;
-	pub const PolkaVmMaxCodeVersion: u64 = 18446744073709551615;
+	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
 	pub const PolkaVmMaxUserDataLen: u32 = 2048;
 	pub const PolkaVmMaxGasLimit: u32 = 2097152;
 	pub const PolkaVmMaxStorageKeySize: u32 = 256;
