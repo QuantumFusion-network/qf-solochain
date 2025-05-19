@@ -5,6 +5,9 @@ use std::path::PathBuf;
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
+	/// Key management cli utilities
+	#[command(subcommand)]
+	Key(sc_cli::KeySubcommand),
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
 
@@ -101,19 +104,30 @@ pub struct FastChainCli {
 	pub fast_base_path: Option<PathBuf>,
 
 	pub test: Option<String>,
+
+	pub with_logger: Option<bool>,
 }
 
 impl FastChainCli {
 	pub fn new<'a>(
 		fast_config: &sc_service::Configuration,
-		fast_chain_args: impl Iterator<Item = &'a String>
+		fast_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
 		let base_path = fast_config.base_path.path().join("fastchain");
 		Self {
 			fast_base_path: Some(base_path),
 			base: clap::Parser::parse_from(fast_chain_args),
 			test: None,
+			with_logger: Some(false),
 		}
+	}
+
+	pub fn set_logger_flag(&mut self) {
+		self.with_logger = Some(true);
+	}
+
+	pub fn unset_logger_flag(&mut self) {
+		self.with_logger = Some(false);
 	}
 }
 

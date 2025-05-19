@@ -1,9 +1,9 @@
-use polkadot_sdk::*;
+use polkadot_sdk::{sp_tracing::tracing_subscriber::field::debug, *};
 
 use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use log::info;
+use log::{info, debug};
 use qf_parachain_runtime::Block;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -22,11 +22,22 @@ pub use sc_tracing::logging::LoggerBuilder;
 use sc_service::Configuration;
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
+	info!("Loading parachain spec: {id}");
 	Ok(match id {
 		"dev" => Box::new(chain_spec::development_chain_spec()),
 		"template-rococo" => Box::new(chain_spec::local_chain_spec()),
 		"" | "local" => Box::new(chain_spec::local_chain_spec()),
 		path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
+	})
+}
+
+fn load_fast_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
+	info!("Loading fastchain spec: {id}");
+	Ok(match id {
+		"dev" => Box::new(chain_spec::fast_development_chain_spec()),
+		"template-rococo" => Box::new(chain_spec::fast_local_chain_spec()),
+		"" | "local" => Box::new(chain_spec::fast_local_chain_spec()),
+		path => Box::new(chain_spec::FastChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 	})
 }
 
@@ -134,7 +145,7 @@ impl SubstrateCli for FastChainCli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		Cli::from_iter([FastChainCli::executable_name()].iter()).load_spec(id)
+		load_fast_spec(id)
 	}
 
 	fn create_runner_with_logger_hook<
@@ -154,6 +165,12 @@ impl SubstrateCli for FastChainCli {
 		let signals = tokio_runtime.block_on(async { Signals::capture() })?;
 
 		let config = command.create_configuration(self, tokio_runtime.handle().clone())?;
+
+		if self.with_logger.unwrap_or(false) {
+			command.init(&Self::support_url(), &Self::impl_version(), |logger_builder| {
+				logger_hook(logger_builder, &config)
+			})?;
+		}
 
 		Runner::new(config, tokio_runtime, signals)
 	}
@@ -175,6 +192,7 @@ pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
 
 	match &cli.subcommand {
+		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -281,29 +299,25 @@ pub fn run() -> Result<()> {
 			let fast_chain_args = cli.fast_chain_args.clone();
 			let fast_chain_present: bool = !fast_chain_args.is_empty();
 			let relay_chain_present: bool = !cli.relay_chain_args.is_empty();
-			let fast_cli = FastChainCli::from_iter(&fast_chain_args);
-			let fast_runner = fast_cli.create_runner(&fast_cli.base)?;
+			let mut fast_cli = FastChainCli::from_iter(&fast_chain_args);
 
 			if fast_chain_present && !relay_chain_present {
-				let runner = fast_runner;
+				fast_cli.set_logger_flag();
+				let runner = fast_cli.create_runner(&fast_cli.base)?;
 				info!("Starting fast chain node...");
 				let _ = runner.run_node_until_exit(|config| async move {
-
-					let fast_cli = FastChainCli::new(
-						&config,
-						[FastChainCli::executable_name()].iter().chain(fast_chain_args.iter()),
-					);
-					let tokio_handle = config.tokio_handle.clone();
-					let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
-						.map_err(|err| format!("Fast chain argument error: {}", err))?;
-					let fast_service = crate::fast_service::new_full::<
-					sc_network::NetworkWorker<
-						qf_runtime::opaque::Block,
-						<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
-					>,
-					>(fast_config);
-
-					fast_service.await
+					match config.network.network_backend {
+						sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
+							sc_network::NetworkWorker<
+								qf_runtime::opaque::Block,
+								<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
+							>,
+						>(config).await
+						.map_err(sc_cli::Error::Service),
+						sc_network::config::NetworkBackendType::Litep2p => crate::fast_service::new_full::<
+							sc_network::Litep2pNetworkBackend>(config).await
+							.map_err(sc_cli::Error::Service),
+					}
 				});
 				info!("Stop fast chain node...");
 				return Ok(());
@@ -312,7 +326,7 @@ pub fn run() -> Result<()> {
 
 					// Create a runner without initializing a new logger
 					info!("Starting fast chain thread...");
-					let runner = fast_runner;
+					let runner = fast_cli.create_runner(&fast_cli.base).expect("Can't create the runner");
 
 					let _ = runner.run_node_until_exit(|config| async move {
 
@@ -328,21 +342,14 @@ pub fn run() -> Result<()> {
 								sc_network::NetworkWorker<
 									qf_runtime::opaque::Block,
 									<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
-								>,
-							>(fast_config).await
-							.map_err(sc_cli::Error::Service),
+								>,>
+								(fast_config).await
+								.map_err(sc_cli::Error::Service),
 							sc_network::config::NetworkBackendType::Litep2p =>
-								crate::fast_service::new_full::<sc_network::Litep2pNetworkBackend>(fast_config).await
-									.map_err(sc_cli::Error::Service),
+								crate::fast_service::new_full::<sc_network::Litep2pNetworkBackend>
+								(fast_config).await
+								.map_err(sc_cli::Error::Service),
 						}
-						// let fast_service = crate::fast_service::new_full::<
-						// sc_network::NetworkWorker<
-						// 	qf_runtime::opaque::Block,
-						// 	<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
-						// >,
-						// >(fast_config);
-
-						// fast_service.await
 					});
 				});
 			};

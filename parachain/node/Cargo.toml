@@ -26,6 +26,10 @@ polkadot-sdk = { workspace = true, features = ["node"] }
 qf-parachain-runtime = { workspace = true }
 qf-runtime = { workspace = true }
 qf-node = { workspace = true, default-features = false }
+scale-info = { features = [
+	"derive",
+	"serde",
+], workspace = true }
 
 fern = { version = "*" }
 log4rs ={ version = "*" }
@@ -64,6 +68,7 @@ sp-keyring = { workspace = true, default-features = true }
 sp-api = { workspace = true, default-features = true }
 sp-blockchain = { workspace = true, default-features = true }
 sp-block-builder = { workspace = true, default-features = true }
+pallet-staking = { workspace = true, default-features = true }
 
 # Substrate
 prometheus-endpoint = { workspace = true, default-features = true }
