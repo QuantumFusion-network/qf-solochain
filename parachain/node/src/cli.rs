@@ -1,5 +1,32 @@
 use polkadot_sdk::*;
 use std::path::PathBuf;
+use sc_cli::{BuildSpecCmd, SharedParams, CliConfiguration};
+
+const SPEC_AFTER_HELP: &str = color_print::cstr!(
+	r#"<bold><underline>Build spec example:</></>
+   <bold>qf-parachain-node build-spec --fastchain > plain-fastchain-chainspec.json</>
+           Export a fast-chainspec for a local testnet in json format.
+   <bold>qf-parachain-node build-spec > plain-parachain-chainspec.json</>
+           Export a parachain-chainspec for a local testnet in json format.
+ "#
+);
+
+#[derive(Debug, Clone, clap::Parser)]
+#[command(
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
+)]
+#[clap(after_help = SPEC_AFTER_HELP)]
+pub struct CustomBuildSpecCmd {
+
+	#[command(flatten)]
+    pub base: BuildSpecCmd,
+
+	/// Build the spec for fastchain
+	#[arg(long)]
+	pub fastchain: bool,
+}
 
 /// Sub-commands supported by the collator.
 #[allow(clippy::large_enum_variant)]
@@ -9,7 +36,7 @@ pub enum Subcommand {
 	#[command(subcommand)]
 	Key(sc_cli::KeySubcommand),
 	/// Build a chain specification.
-	BuildSpec(sc_cli::BuildSpecCmd),
+	BuildSpec(CustomBuildSpecCmd),
 
 	/// Validate blocks.
 	CheckBlock(sc_cli::CheckBlockCmd),

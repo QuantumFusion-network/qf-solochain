@@ -194,8 +194,18 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::BuildSpec(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
+			let runner = cli.create_runner(&cmd.base)?;
+			runner.sync_run(|config| {
+				// Handle the fastchain flag
+				if cmd.fastchain {
+					// Load the fast chain spec
+					let chain_spec = load_fast_spec(&cmd.base.shared_params().chain.clone().unwrap_or_default())?;
+					cmd.base.run(chain_spec, config.network)
+				} else {
+					// Use regular chain spec
+					cmd.base.run(config.chain_spec, config.network)
+				}
+			})
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
