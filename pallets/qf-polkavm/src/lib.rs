@@ -46,6 +46,9 @@ pub use pallet::*;
 
 mod polkavm;
 
+#[cfg(test)]
+mod mock;
+
 pub mod weights;
 pub use weights::*;
 
