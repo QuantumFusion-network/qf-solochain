@@ -40,11 +40,6 @@ mod runtime {
 	pub type QfPolkaVM = pallet::Pallet<Test>;
 }
 
-// #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
-// impl frame_system::Config for Test {
-// 	type Block = Block;
-// }
-
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
