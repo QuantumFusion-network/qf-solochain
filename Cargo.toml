@@ -65,12 +65,14 @@ sc-cli = { path = "vendor/polkadot-sdk/substrate/client/cli", default-features =
 sc-client-api = { path = "vendor/polkadot-sdk/substrate/client/api", default-features = false }
 sc-consensus = { path = "vendor/polkadot-sdk/substrate/client/consensus/common", default-features = false }
 sc-consensus-grandpa = { path = "vendor/polkadot-sdk/substrate/client/consensus/grandpa", default-features = false }
+sc-consensus-grandpa-rpc = { path = "vendor/polkadot-sdk/substrate/client/consensus/grandpa/rpc", default-features = false }
 sc-consensus-slots = { path = "vendor/polkadot-sdk/substrate/client/consensus/slots", default-features = false }
 sc-executor = { path = "vendor/polkadot-sdk/substrate/client/executor", default-features = false }
 sc-keystore = { path = "vendor/polkadot-sdk/substrate/client/keystore", default-features = false }
 sc-network = { path = "vendor/polkadot-sdk/substrate/client/network", default-features = false }
 sc-network-test = { path = "vendor/polkadot-sdk/substrate/client/network/test", default-features = false }
 sc-offchain = { path = "vendor/polkadot-sdk/substrate/client/offchain", default-features = false }
+sc-rpc = { path = "vendor/polkadot-sdk/substrate/client/rpc", default-features = false }
 sc-rpc-api = { path = "vendor/polkadot-sdk/substrate/client/rpc-api", default-features = false }
 sc-serde-json = { path = "vendor/polkadot-sdk/substrate/client/serde_json", default-features = false }
 sc-service = { path = "vendor/polkadot-sdk/substrate/client/service", default-features = false }
