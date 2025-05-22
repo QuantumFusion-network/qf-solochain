@@ -7,7 +7,6 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub type Balance = u128;
 
-pub const UNIT: Balance = 1_000_000_000_000_000_000;
 pub const MILLI_UNIT: Balance = 1_000_000_000_000_000;
 
 #[frame_support::runtime]
@@ -40,7 +39,7 @@ mod runtime {
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
+	type AccountId = Balance;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
 	type AccountData = pallet_balances::AccountData<u64>;
