@@ -595,7 +595,6 @@ where
 pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
 	pub balances: Vec<BalanceOf<T>>,
-	pub log_message: Vec<u8>,
 	pub user_data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
 	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
@@ -603,6 +602,7 @@ pub struct State<T: PalletConfig> {
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
+	pub max_log_len: usize,
 	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
 	pub balance: fn(T::AccountId) -> u64,
@@ -612,52 +612,6 @@ pub struct State<T: PalletConfig> {
 	pub get: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
 	pub insert: fn(T::AccountId, version: CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
 	pub delete: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> u64,
-}
-
-impl<T: PalletConfig> State<T> {
-	pub fn new(
-		addresses: Vec<T::AccountId>,
-		balances: Vec<BalanceOf<T>>,
-		log_message: Vec<u8>,
-		user_data: Vec<u8>,
-		mutating_operations: Vec<MutatingStorageOperation<T>>,
-		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
-		code_version: CodeVersion,
-		max_storage_size: usize,
-		max_storage_key_size: u32,
-		max_storage_slot_idx: u32,
-		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
-		print: fn(Vec<u8>) -> u64,
-		balance: fn(T::AccountId) -> u64,
-		block_number: fn() -> u64,
-		account_id: fn() -> u64,
-		caller: fn() -> u64,
-		get: fn(T::AccountId, CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
-		insert: fn(T::AccountId, CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
-		delete: fn(T::AccountId, CodeVersion, StorageKey<T>) -> u64,
-	) -> Self {
-		Self {
-			addresses,
-			balances,
-			log_message,
-			user_data,
-			mutating_operations,
-			raw_storage,
-			code_version,
-			max_storage_size,
-			max_storage_key_size,
-			max_storage_slot_idx,
-			transfer,
-			print,
-			balance,
-			block_number,
-			account_id,
-			caller,
-			get,
-			insert,
-			delete,
-		}
-	}
 }
 
 #[non_exhaustive]

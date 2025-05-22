@@ -9175,6 +9175,8 @@ dependencies = [
  "image",
  "libc",
  "log",
+ "num-derive",
+ "num-traits",
  "parity-scale-codec",
  "paste",
  "polkavm-assembler 0.21.0",
