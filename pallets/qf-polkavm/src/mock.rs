@@ -1,9 +1,7 @@
 use crate as pallet;
 
-use frame_support::derive_impl;
-use frame_support::parameter_types;
-use sp_runtime::BuildStorage;
-use sp_runtime::traits::IdentityLookup;
+use frame_support::{derive_impl, parameter_types};
+use sp_runtime::{BuildStorage, traits::IdentityLookup};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -42,16 +40,15 @@ mod runtime {
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-    type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Block = Block;
-    type AccountData = pallet_balances::AccountData<u64>;
+	type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Block = Block;
+	type AccountData = pallet_balances::AccountData<u64>;
 }
-
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
-    type AccountStore = System;
+	type AccountStore = System;
 }
 
 parameter_types! {
