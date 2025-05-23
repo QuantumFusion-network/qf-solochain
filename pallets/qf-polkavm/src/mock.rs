@@ -5,6 +5,7 @@ use sp_runtime::{BuildStorage, traits::IdentityLookup};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub type AccountId = u128;
 pub type Balance = u128;
 
 pub const MILLI_UNIT: Balance = 1_000_000_000_000_000;
@@ -39,7 +40,7 @@ mod runtime {
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type AccountId = Balance;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
 	type AccountData = pallet_balances::AccountData<u64>;
