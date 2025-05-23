@@ -312,9 +312,9 @@ pub fn run() -> Result<()> {
 			let mut fast_cli = FastChainCli::from_iter(&fast_chain_args);
 
 			if fast_chain_present && !relay_chain_present {
+				// Set the logger init flag. Disabled by default
 				fast_cli.set_logger_flag();
 				let runner = fast_cli.create_runner(&fast_cli.base)?;
-				info!("Starting fast chain node...");
 				let _ = runner.run_node_until_exit(|config| async move {
 					match config.network.network_backend {
 						sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
@@ -329,43 +329,35 @@ pub fn run() -> Result<()> {
 							.map_err(sc_cli::Error::Service),
 					}
 				});
-				info!("Stop fast chain node...");
 				return Ok(());
-			} else if fast_chain_present {
+			}
+
+			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
+
+			if fast_chain_present {
 				let _fast_thread = std::thread::spawn(move || {
 
 					// Create a runner without initializing a new logger
-					info!("Starting fast chain thread...");
 					let runner = fast_cli.create_runner(&fast_cli.base).expect("Can't create the runner");
 
 					let _ = runner.run_node_until_exit(|config| async move {
-
-						let fast_cli = FastChainCli::new(
-							&config,
-							[FastChainCli::executable_name()].iter().chain(fast_chain_args.iter()),
-						);
-						let tokio_handle = config.tokio_handle.clone();
-						let fast_config = SubstrateCli::create_configuration(&fast_cli, &fast_cli, tokio_handle)
-							.map_err(|err| format!("Fast chain argument error: {}", err))?;
-						match fast_config.network.network_backend {
+						match config.network.network_backend {
 							sc_network::config::NetworkBackendType::Libp2p => crate::fast_service::new_full::<
 								sc_network::NetworkWorker<
 									qf_runtime::opaque::Block,
 									<qf_runtime::opaque::Block as sp_runtime::traits::Block>::Hash,
 								>,>
-								(fast_config).await
+								(config).await
 								.map_err(sc_cli::Error::Service),
 							sc_network::config::NetworkBackendType::Litep2p =>
 								crate::fast_service::new_full::<sc_network::Litep2pNetworkBackend>
-								(fast_config).await
+								(config).await
 								.map_err(sc_cli::Error::Service),
 						}
 					});
 				});
 			};
-
-			let runner = cli.create_runner(&cli.run.normalize())?;
-			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
 				let hwbench = (!cli.no_hardware_benchmarks)
@@ -384,9 +376,7 @@ pub fn run() -> Result<()> {
 					.map(|e| e.para_id)
 					.ok_or("Could not find parachain ID in chain-spec.")?;
 				let fargs = cli.fast_chain_args.clone();
-				info!("Fast chain args: {:?}", fargs);
 				let args = cli.relay_chain_args.clone();
-				info!("Relay chain args: {:?}", args);
 				let polkadot_cli = RelayChainCli::new(
 					&config,
 					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
