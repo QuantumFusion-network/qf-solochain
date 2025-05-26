@@ -97,20 +97,20 @@ pub mod pallet {
 	pub(super) type MutatingStorageOperation<T> =
 		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
 	pub(super) struct BlobMetadata<T: Config> {
-		owner: T::AccountId,
-		version: CodeVersion,
+		pub owner: T::AccountId,
+		pub version: CodeVersion,
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	pub(super) struct ExecResult {
-		result: Option<u64>,
-		not_enough_gas: bool,
-		trap: bool,
-		gas_before: u32,
-		gas_after: i64,
+		pub result: Option<u64>,
+		pub not_enough_gas: bool,
+		pub trap: bool,
+		pub gas_before: u32,
+		pub gas_after: i64,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
