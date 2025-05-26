@@ -1,6 +1,8 @@
-use crate::{BlobMetadata, CodeAddress, CodeMetadata, ExecResult, ExecutionResult, Error, Event, StorageKey, Config, CodeStorage, CodeStorageSlot, mock::*};
-use frame_support::{assert_noop, assert_ok};
-use frame_support::BoundedVec;
+use crate::{
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, Config, Error, Event,
+	ExecResult, ExecutionResult, StorageKey, mock::*,
+};
+use frame_support::{BoundedVec, assert_noop, assert_ok};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
@@ -41,7 +43,10 @@ fn upload_valid_blob_should_work() {
 		assert_eq!(CodeMetadata::<Test>::get(ALICE), None);
 		upload();
 		assert_eq!(CodeAddress::<Test>::get((ALICE, VERSION)), Some(CONTRACT_ADDRESS));
-		assert_eq!(CodeMetadata::<Test>::get(ALICE), Some(BlobMetadata { owner: ALICE, version: VERSION}));
+		assert_eq!(
+			CodeMetadata::<Test>::get(ALICE),
+			Some(BlobMetadata { owner: ALICE, version: VERSION })
+		);
 		System::assert_last_event(
 			Event::ProgramBlobUploaded {
 				who: ALICE,
@@ -80,7 +85,7 @@ fn block_number_should_work() {
 			}),
 		);
 		System::assert_last_event(
-			Event::ExecutionResult{
+			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
 				version: VERSION,
@@ -101,10 +106,7 @@ fn inc_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			None,
-		);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None,);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -130,7 +132,7 @@ fn inc_should_work() {
 			Some(value::<Test>(1)),
 		);
 		System::assert_last_event(
-			Event::ExecutionResult{
+			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
 				version: VERSION,
@@ -167,7 +169,7 @@ fn inc_should_work() {
 			Some(value::<Test>(2)),
 		);
 		System::assert_last_event(
-			Event::ExecutionResult{
+			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
 				version: VERSION,
@@ -194,21 +196,23 @@ fn key<T: Config>() -> StorageKey<T> {
 		.try_into()
 		.expect("u32 can be converted to usize; qed");
 	let mut buffer = BoundedVec::with_bounded_capacity(max_storage_key_size);
-	let mut raw_key = vec![ 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
-        102, 111, 111,
-    ];
-	buffer.try_append(&mut raw_key).expect("raw_key size is same as buffer size; qed");
+	let mut raw_key = vec![
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		102, 111, 111,
+	];
+	buffer
+		.try_append(&mut raw_key)
+		.expect("raw_key size is same as buffer size; qed");
 
 	buffer
 }
@@ -218,11 +222,13 @@ fn value<T: Config>(first_byte: u8) -> CodeStorageSlot<T> {
 		.try_into()
 		.expect("u32 can be converted to usize; qed");
 	let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-	let mut raw_value = Vec::with_capacity(max_storage_size); 
+	let mut raw_value = Vec::with_capacity(max_storage_size);
 	let mut last_bytes = vec![0; max_storage_size - 1];
 	raw_value.push(first_byte);
 	raw_value.append(&mut last_bytes);
-	buffer.try_append(&mut raw_value).expect("raw_value size is same as buffer size; qed");
+	buffer
+		.try_append(&mut raw_value)
+		.expect("raw_value size is same as buffer size; qed");
 
 	buffer
 }
