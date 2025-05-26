@@ -31,7 +31,7 @@ fn upload_very_big_blob_should_not_work() {
 		let max_code_len: usize = <Test as Config>::MaxCodeLen::get()
 			.try_into()
 			.expect("u32 can be converted to usize; qed");
-		let very_big_blob = (0..max_code_len+1).map(|_| 0).collect();	
+		let very_big_blob = (0..max_code_len + 1).map(|_| 0).collect();
 		assert_noop!(
 			QfPolkaVM::upload(RuntimeOrigin::signed(ALICE), very_big_blob),
 			Error::<Test>::ProgramBlobIsTooLarge
