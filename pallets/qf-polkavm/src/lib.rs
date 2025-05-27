@@ -236,8 +236,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		IntegerOverflow,
 		ProgramBlobNotFound,
-		InvalidOperation,
-		InvalidOperands,
 
 		// PolkaVM errors
 		ProgramBlobIsTooLarge,
