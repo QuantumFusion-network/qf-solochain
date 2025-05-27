@@ -200,6 +200,90 @@ fn inc_should_work() {
 	})
 }
 
+#[test]
+fn delete_should_work() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		upload();
+
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None,);
+
+		assert_ok!(QfPolkaVM::execute(
+			RuntimeOrigin::signed(BOB),
+			CONTRACT_ADDRESS,
+			BOB,
+			1,
+			[5].to_vec(),
+			20000,
+			1
+		));
+		assert_eq!(
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			Some(ExecResult {
+				result: Some(0),
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 2093,
+			}),
+		);
+		assert_eq!(
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
+			Some(value::<Test>(1)),
+		);
+		System::assert_last_event(
+			Event::ExecutionResult {
+				who: BOB,
+				contract_address: CONTRACT_ADDRESS,
+				version: VERSION,
+				result: Some(0),
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 2093,
+			}
+			.into(),
+		);
+
+		assert_ok!(QfPolkaVM::execute(
+			RuntimeOrigin::signed(BOB),
+			CONTRACT_ADDRESS,
+			BOB,
+			1,
+			[6].to_vec(),
+			20000,
+			1
+		));
+		assert_eq!(
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			Some(ExecResult {
+				result: Some(0),
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 18135,
+			}),
+		);
+		assert_eq!(
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
+			None,
+		);
+		System::assert_last_event(
+			Event::ExecutionResult {
+				who: BOB,
+				contract_address: CONTRACT_ADDRESS,
+				version: VERSION,
+				result: Some(0),
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 18135,
+			}
+			.into(),
+		);
+	})
+}
+
 fn upload() {
 	assert_ok!(QfPolkaVM::upload(
 		RuntimeOrigin::signed(ALICE),
