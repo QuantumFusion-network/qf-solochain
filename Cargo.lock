@@ -9175,6 +9175,7 @@ dependencies = [
  "image",
  "libc",
  "log",
+ "pallet-balances",
  "parity-scale-codec",
  "paste",
  "polkavm-assembler 0.21.0",
