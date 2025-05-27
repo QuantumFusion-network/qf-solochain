@@ -1,13 +1,25 @@
+// TODO:
+//
+// 1. Add tests to check host functions:
+// - balance
+// - balance_of
+// - transfer
+//
+// 2. Add tests to catch errors:
+// - PolkaVMNotEnoughGas
+// - GasLimitIsTooHigh 
+// - GasPriceIsTooLow
+
 use crate::{
 	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, Config, Error, Event,
-	ExecResult, ExecutionResult, StorageKey, mock::*,
+	ExecResult, ExecutionResult, StorageKey, CodeVersion, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
 const CONTRACT_ADDRESS: AccountId = 52079882031220287051226575722413486460;
-const VERSION: u64 = 1;
+const VERSION: CodeVersion = 1;
 
 #[test]
 fn upload_invalid_blob_should_not_work() {
@@ -31,7 +43,7 @@ fn upload_very_big_blob_should_not_work() {
 		let max_code_len: usize = <Test as Config>::MaxCodeLen::get()
 			.try_into()
 			.expect("u32 can be converted to usize; qed");
-		let very_big_blob = (0..max_code_len + 1).map(|_| 0).collect();
+		let very_big_blob = vec![0; max_code_len + 1];
 		assert_noop!(
 			QfPolkaVM::upload(RuntimeOrigin::signed(ALICE), very_big_blob),
 			Error::<Test>::ProgramBlobIsTooLarge
@@ -200,20 +212,12 @@ fn key<T: Config>() -> StorageKey<T> {
 		.try_into()
 		.expect("u32 can be converted to usize; qed");
 	let mut buffer = BoundedVec::with_bounded_capacity(max_storage_key_size);
-	let mut raw_key = vec![
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-		102, 111, 111,
-	];
+	let mut raw_key = Vec::with_capacity(max_storage_key_size);
+	let space = 32;
+	let mut foo: Vec<_> = "foo".bytes().collect();
+	let mut first_bytes: Vec<_> = vec![space; max_storage_key_size - foo.len()];
+	raw_key.append(&mut first_bytes);
+	raw_key.append(&mut foo);
 	buffer
 		.try_append(&mut raw_key)
 		.expect("raw_key size is same as buffer size; qed");
