@@ -7,12 +7,12 @@
 //
 // 2. Add tests to catch errors:
 // - PolkaVMNotEnoughGas
-// - GasLimitIsTooHigh 
+// - GasLimitIsTooHigh
 // - GasPriceIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, Config, Error, Event,
-	ExecResult, ExecutionResult, StorageKey, CodeVersion, mock::*,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
+	Error, Event, ExecResult, ExecutionResult, StorageKey, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok};
 
@@ -264,10 +264,7 @@ fn delete_should_work() {
 				gas_after: 18135,
 			}),
 		);
-		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			None,
-		);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
