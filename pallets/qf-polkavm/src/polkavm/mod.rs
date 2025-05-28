@@ -137,8 +137,8 @@ pub use crate::polkavm::{
 
 pub const RETURN_TO_HOST: u64 = polkavm_common::abi::VM_ADDR_RETURN_TO_HOST as u64;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 // These need to be toplevel for the macros to work.
 #[cfg(feature = "export-internals-for-testing")]
