@@ -9,6 +9,7 @@
 // - PolkaVMNotEnoughGas
 // - GasLimitIsTooHigh
 // - GasPriceIsTooLow
+// - StorageDepositLimitIsTooLow
 
 use crate::{
 	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
