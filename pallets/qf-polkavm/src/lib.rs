@@ -302,9 +302,6 @@ pub mod pallet {
 				Some(meta) => meta,
 				None => BlobMetadata { owner: who.clone(), version: 0 },
 			};
-			let old_contract_address =
-				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
-			let old_version = blob_metadata.version;
 			blob_metadata.version =
 				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
 			ensure!(
@@ -339,10 +336,10 @@ pub mod pallet {
 		pub fn execute(
 			origin: OriginFor<T>,
 			contract_address: T::AccountId,
-			gas_limit: u32,
-			gas_price: u64,
-			storage_deposit_limit: u64,
 			data: Vec<u8>,
+			gas_limit: u32,
+			storage_deposit_limit: u64,
+			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
