@@ -1,8 +1,8 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, CodeStorageKey, CodeStorageSlot, CodeVersion, Config as PalletConfig,
-	MutatingStorageOperation, StorageKey,
+	CodeStorageKey, CodeStorageSlot, CodeVersion, Config as PalletConfig, MutatingStorageOperation,
+	StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
@@ -594,16 +594,15 @@ where
 
 pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
-	pub balances: Vec<BalanceOf<T>>,
 	pub log_message: Vec<u8>,
-	pub user_data: Vec<u8>,
+	pub data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
 	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 	pub code_version: CodeVersion,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
-	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+	pub transfer: fn(T::AccountId, T::AccountId, u32) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
 	pub balance: fn(T::AccountId) -> u64,
 	pub block_number: fn() -> u64,
@@ -617,16 +616,15 @@ pub struct State<T: PalletConfig> {
 impl<T: PalletConfig> State<T> {
 	pub fn new(
 		addresses: Vec<T::AccountId>,
-		balances: Vec<BalanceOf<T>>,
 		log_message: Vec<u8>,
-		user_data: Vec<u8>,
+		data: Vec<u8>,
 		mutating_operations: Vec<MutatingStorageOperation<T>>,
 		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
 		code_version: CodeVersion,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
 		max_storage_slot_idx: u32,
-		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+		transfer: fn(T::AccountId, T::AccountId, u32) -> u64,
 		print: fn(Vec<u8>) -> u64,
 		balance: fn(T::AccountId) -> u64,
 		block_number: fn() -> u64,
@@ -638,9 +636,8 @@ impl<T: PalletConfig> State<T> {
 	) -> Self {
 		Self {
 			addresses,
-			balances,
 			log_message,
-			user_data,
+			data,
 			mutating_operations,
 			raw_storage,
 			code_version,
