@@ -84,10 +84,9 @@ fn block_number_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[3].to_vec(),
 			2000,
+			1,
 			1
 		));
 		assert_eq!(
@@ -127,10 +126,9 @@ fn inc_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
 			20000,
+			1,
 			1
 		));
 		assert_eq!(
@@ -164,10 +162,9 @@ fn inc_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
 			20000,
+			1,
 			1
 		));
 		assert_eq!(
@@ -211,10 +208,9 @@ fn delete_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
 			20000,
+			1,
 			1
 		));
 		assert_eq!(
@@ -248,10 +244,9 @@ fn delete_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[6].to_vec(),
 			20000,
+			1,
 			1
 		));
 		assert_eq!(
