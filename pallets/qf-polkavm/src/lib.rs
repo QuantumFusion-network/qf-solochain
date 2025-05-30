@@ -83,7 +83,7 @@ pub mod pallet {
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeVersion = u64;
-	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type CodeStorageValue<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> =
 		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
@@ -95,7 +95,7 @@ pub mod pallet {
 	}
 
 	pub(super) type MutatingStorageOperation<T> =
-		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageValue<T>>);
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
@@ -185,7 +185,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
-		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageValue<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
