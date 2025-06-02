@@ -86,7 +86,7 @@ fn block_number_should_work() {
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[3].to_vec(),
-			2000,
+			2000.into(),
 			1,
 			1
 		));
@@ -128,7 +128,7 @@ fn inc_should_work() {
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
-			20000,
+			20000.into(),
 			1,
 			1
 		));
@@ -164,7 +164,7 @@ fn inc_should_work() {
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
-			20000,
+			20000.into(),
 			1,
 			1
 		));
@@ -210,7 +210,7 @@ fn delete_should_work() {
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
-			20000,
+			20000.into(),
 			1,
 			1
 		));
@@ -246,7 +246,7 @@ fn delete_should_work() {
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[6].to_vec(),
-			20000,
+			20000.into(),
 			1,
 			1
 		));
