@@ -464,13 +464,7 @@ pub mod pallet {
 
 			ExecutionResult::<T>::insert(
 				(&contract_address, version, &who),
-				ExecResult {
-					result,
-					not_enough_gas,
-					trap,
-					gas_before,
-					gas_after: instance.gas(),
-				},
+				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
 			);
 
 			// Emit an event.
