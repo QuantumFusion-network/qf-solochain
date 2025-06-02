@@ -83,7 +83,7 @@ pub mod pallet {
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeVersion = u64;
-	pub(super) type CodeStorageValue<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type CodeStorageValue<T> = StorageValue<T>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> =
 		(<T as frame_system::Config>::AccountId, StorageKey<T>);
@@ -111,6 +111,12 @@ pub mod pallet {
 		pub trap: bool,
 		pub gas_before: u32,
 		pub gas_after: i64,
+	}
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	pub(super) struct StorageValue<T: Config> {
+		pub data: BoundedVec<u8, <T as Config>::StorageSize>,
+		pub owner: T::AccountId, 
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
