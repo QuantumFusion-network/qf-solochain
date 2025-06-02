@@ -109,7 +109,7 @@ pub mod pallet {
 		pub result: Option<u64>,
 		pub not_enough_gas: bool,
 		pub trap: bool,
-		pub gas_before: u32,
+		pub gas_before: i64,
 		pub gas_after: i64,
 	}
 
@@ -143,7 +143,7 @@ pub mod pallet {
 		type MaxUserDataLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxGasLimit: Get<u32>;
+		type MaxGasLimit: Get<u64>;
 
 		#[pallet::constant]
 		type MaxStorageSlots: Get<u32>;
@@ -213,7 +213,7 @@ pub mod pallet {
 			result: Option<u64>,
 			not_enough_gas: bool,
 			trap: bool,
-			gas_before: u32,
+			gas_before: i64,
 			gas_after: i64,
 		},
 		ProgramBlobUploaded {
@@ -337,7 +337,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			contract_address: T::AccountId,
 			data: Vec<u8>,
-			gas_limit: u32,
+			gas_limit: Weight,
 			storage_deposit_limit: u64,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
@@ -347,7 +347,9 @@ pub mod pallet {
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let ref_time: u64 = gas_limit.ref_time();
+			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let gas_before = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
@@ -381,7 +383,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_limit.into());
+			instance.set_gas(gas_before);
 
 			let mut state = State::new(
 				[contract_address.clone(), who.clone()].to_vec(),
@@ -466,7 +468,7 @@ pub mod pallet {
 					result,
 					not_enough_gas,
 					trap,
-					gas_before: gas_limit,
+					gas_before,
 					gas_after: instance.gas(),
 				},
 			);
@@ -479,7 +481,7 @@ pub mod pallet {
 				result,
 				not_enough_gas,
 				trap,
-				gas_before: gas_limit,
+				gas_before,
 				gas_after: instance.gas(),
 			});
 
@@ -487,7 +489,7 @@ pub mod pallet {
 				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
 
 			Ok(PostDispatchInfo {
-				actual_weight: Some(Weight::from_all(u64::from(gas_limit) - normalized_gas_after)),
+				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
 				pays_fee: Pays::Yes,
 			})
 		}
