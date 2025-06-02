@@ -309,7 +309,7 @@ parameter_types! {
 	pub const PolkaVmMaxStorageKeySize: u32 = 256;
 	pub const PolkaVmMaxStorageSlots: u32 = 4;
 	pub const PolkaVmMinGasPrice: u64 = 1;
-	pub const PolkaVmMinStorageDepositLimit: u64 = 1;
+	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
 	pub const PolkaVmStorageSize: u32 = 2048;
 	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
 }
