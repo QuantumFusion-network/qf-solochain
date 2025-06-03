@@ -59,6 +59,7 @@ parameter_types! {
 	pub const PolkaVmMaxStorageKeySize: u32 = 256;
 	pub const PolkaVmMaxStorageSlots: u32 = 4;
 	pub const PolkaVmMinGasPrice: u64 = 1;
+	pub const PolkaVmMinStorageDepositLimit: u64 = 1;
 	pub const PolkaVmStorageSize: u32 = 2048;
 	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
 }
@@ -72,6 +73,7 @@ impl pallet::Config for Test {
 	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
 	type MaxStorageSlots = PolkaVmMaxStorageSlots;
 	type MinGasPrice = PolkaVmMinGasPrice;
+	type MinStorageDepositLimit = PolkaVmMinStorageDepositLimit;
 	type StorageSize = PolkaVmStorageSize;
 	type StorageSlotPrice = PolkaVmStorageSlotPrice;
 	type Currency = Balances;

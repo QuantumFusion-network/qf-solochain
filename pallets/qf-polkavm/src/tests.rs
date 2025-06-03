@@ -9,6 +9,7 @@
 // - PolkaVMNotEnoughGas
 // - GasLimitIsTooHigh
 // - GasPriceIsTooLow
+// - StorageDepositLimitIsTooLow
 
 use crate::{
 	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
@@ -84,10 +85,9 @@ fn block_number_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[3].to_vec(),
-			2000,
+			2000.into(),
+			1,
 			1
 		));
 		assert_eq!(
@@ -127,10 +127,9 @@ fn inc_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
-			20000,
+			20000.into(),
+			1,
 			1
 		));
 		assert_eq!(
@@ -164,10 +163,9 @@ fn inc_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
-			20000,
+			20000.into(),
+			1,
 			1
 		));
 		assert_eq!(
@@ -211,10 +209,9 @@ fn delete_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[5].to_vec(),
-			20000,
+			20000.into(),
+			1,
 			1
 		));
 		assert_eq!(
@@ -248,10 +245,9 @@ fn delete_should_work() {
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
-			BOB,
-			1,
 			[6].to_vec(),
-			20000,
+			20000.into(),
+			1,
 			1
 		));
 		assert_eq!(
