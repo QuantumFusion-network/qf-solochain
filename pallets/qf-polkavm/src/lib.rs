@@ -46,6 +46,12 @@ pub use pallet::*;
 
 mod polkavm;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 pub mod weights;
 pub use weights::*;
 
@@ -93,20 +99,20 @@ pub mod pallet {
 	pub(super) type MutatingStorageOperation<T> =
 		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
 	pub(super) struct BlobMetadata<T: Config> {
-		owner: T::AccountId,
-		version: CodeVersion,
+		pub owner: T::AccountId,
+		pub version: CodeVersion,
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	pub(super) struct ExecResult {
-		result: Option<u64>,
-		not_enough_gas: bool,
-		trap: bool,
-		gas_before: u32,
-		gas_after: i64,
+		pub result: Option<u64>,
+		pub not_enough_gas: bool,
+		pub trap: bool,
+		pub gas_before: u32,
+		pub gas_after: i64,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -139,7 +145,7 @@ pub mod pallet {
 		type MaxUserDataLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxGasLimit: Get<u32>;
+		type MaxGasLimit: Get<u64>;
 
 		#[pallet::constant]
 		type MaxStorageSlots: Get<u32>;
@@ -152,6 +158,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MinGasPrice: Get<u64>;
+
+		#[pallet::constant]
+		type MinStorageDepositLimit: Get<u64>;
 
 		#[pallet::constant]
 		type StorageSize: Get<u32>;
@@ -235,8 +244,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		IntegerOverflow,
 		ProgramBlobNotFound,
-		InvalidOperation,
-		InvalidOperands,
 
 		// PolkaVM errors
 		ProgramBlobIsTooLarge,
@@ -252,6 +259,7 @@ pub mod pallet {
 		PolkaVMTrap,
 		GasLimitIsTooHigh,
 		GasPriceIsTooLow,
+		StorageDepositLimitIsTooLow,
 
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
@@ -299,9 +307,6 @@ pub mod pallet {
 				Some(meta) => meta,
 				None => BlobMetadata { owner: who.clone(), version: 0 },
 			};
-			let old_contract_address =
-				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
-			let old_version = blob_metadata.version;
 			blob_metadata.version =
 				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
 			ensure!(
@@ -311,9 +316,6 @@ pub mod pallet {
 			let contract_address =
 				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
-			if old_version != 0 {
-				Code::<T>::remove(old_contract_address)
-			}
 			let version = blob_metadata.version;
 			Code::<T>::insert(&contract_address, (&raw_blob, &version));
 			CodeAddress::<T>::insert((&who, &version), &contract_address);
@@ -339,10 +341,9 @@ pub mod pallet {
 		pub fn execute(
 			origin: OriginFor<T>,
 			contract_address: T::AccountId,
-			to: T::AccountId,
-			value: BalanceOf<T>,
-			user_data: Vec<u8>,
-			gas_limit: u32,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
@@ -351,12 +352,19 @@ pub mod pallet {
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let ref_time: u64 = gas_limit.ref_time();
+			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
 			ensure!(
-				user_data.len() <=
+				storage_deposit_limit >= <T as Config>::MinStorageDepositLimit::get(),
+				Error::<T>::StorageDepositLimitIsTooLow
+			);
+
+			ensure!(
+				data.len() <=
 					<T as Config>::MaxUserDataLen::get()
 						.try_into()
 						.map_err(|_| Error::<T>::IntegerOverflow)?,
@@ -384,12 +392,11 @@ pub mod pallet {
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_limit.into());
+			instance.set_gas(gas_before.into());
 
 			let mut state = State {
-				addresses: [contract_address.clone(), who.clone(), to].to_vec(),
-				balances: [value].to_vec(),
-				user_data,
+				addresses: [contract_address.clone(), who.clone()].to_vec(),
+				data,
 				mutating_operations: [].to_vec(),
 				raw_storage: BTreeMap::new(),
 				code_version: version,
@@ -397,10 +404,10 @@ pub mod pallet {
 				max_storage_key_size,
 				max_storage_slot_idx,
 				max_log_len,
-				transfer: |from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
+				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
 						if let Err(_) =
-							T::Currency::transfer(&from, &to, value, Preservation::Preserve)
+							T::Currency::transfer(&from, &to, value.into(), Preservation::Preserve)
 						{
 							return 1;
 						}
@@ -475,13 +482,7 @@ pub mod pallet {
 
 			ExecutionResult::<T>::insert(
 				(&contract_address, version, &who),
-				ExecResult {
-					result,
-					not_enough_gas,
-					trap,
-					gas_before: gas_limit,
-					gas_after: instance.gas(),
-				},
+				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
 			);
 
 			// Emit an event.
@@ -492,7 +493,7 @@ pub mod pallet {
 				result,
 				not_enough_gas,
 				trap,
-				gas_before: gas_limit,
+				gas_before,
 				gas_after: instance.gas(),
 			});
 
@@ -500,9 +501,7 @@ pub mod pallet {
 				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
 
 			Ok(PostDispatchInfo {
-				actual_weight: Some(Weight::from_all(
-					(u64::from(gas_limit) - normalized_gas_after) * gas_price,
-				)),
+				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
 				pays_fee: Pays::Yes,
 			})
 		}
@@ -548,36 +547,21 @@ pub mod pallet {
 			let mut linker: Linker<T> = Linker::<T>::new();
 
 			linker
-				.define_typed(
-					"transfer",
-					|caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
-						let from = match caller.user_data.addresses.get(0) {
-							Some(from) => from.clone(),
-							None =>
-								return HostFunctionError::IndexOutOfBounds
-									.to_u64()
-									.expect("a number"),
-						};
+				.define_typed("transfer", |caller: Caller<T>, balance: u32| -> u64 {
+					let from = match caller.user_data.addresses.get(0) {
+						Some(from) => from.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
 
-						let to = match caller.user_data.addresses.get(address_idx as usize) {
-							Some(to) => to.clone(),
-							None =>
-								return HostFunctionError::IndexOutOfBounds
-									.to_u64()
-									.expect("a number"),
-						};
+					let to = match caller.user_data.addresses.get(1) {
+						Some(to) => to.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
 
-						let amount = match caller.user_data.balances.get(balance_idx as usize) {
-							Some(amount) => amount.clone(),
-							None =>
-								return HostFunctionError::IndexOutOfBounds
-									.to_u64()
-									.expect("a number"),
-						};
-
-						(caller.user_data.transfer)(from, to, amount)
-					},
-				)
+					(caller.user_data.transfer)(from, to, balance)
+				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
@@ -588,7 +572,7 @@ pub mod pallet {
 
 			linker
 				.define_typed("balance_of", |caller: Caller<T>| -> u64 {
-					(caller.user_data.balance)(caller.user_data.addresses[2].clone())
+					(caller.user_data.balance)(caller.user_data.addresses[1].clone())
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -670,7 +654,7 @@ pub mod pallet {
 
 			linker
 				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
-					match caller.instance.write_memory(pointer, &caller.user_data.user_data) {
+					match caller.instance.write_memory(pointer, &caller.user_data.data) {
 						Err(_) =>
 							HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
 						Ok(_) => 0,
