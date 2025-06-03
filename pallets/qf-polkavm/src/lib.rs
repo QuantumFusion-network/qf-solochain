@@ -109,7 +109,7 @@ pub mod pallet {
 		pub result: Option<u64>,
 		pub not_enough_gas: bool,
 		pub trap: bool,
-		pub gas_before: i64,
+		pub gas_before: u32,
 		pub gas_after: i64,
 	}
 
@@ -213,7 +213,7 @@ pub mod pallet {
 			result: Option<u64>,
 			not_enough_gas: bool,
 			trap: bool,
-			gas_before: i64,
+			gas_before: u32,
 			gas_after: i64,
 		},
 		ProgramBlobUploaded {
@@ -349,7 +349,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 			let ref_time: u64 = gas_limit.ref_time();
 			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
-			let gas_before = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
@@ -383,7 +383,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_before);
+			instance.set_gas(gas_before.into());
 
 			let mut state = State::new(
 				[contract_address.clone(), who.clone()].to_vec(),
