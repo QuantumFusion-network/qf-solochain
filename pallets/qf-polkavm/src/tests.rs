@@ -122,7 +122,7 @@ fn inc_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None,);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -204,7 +204,7 @@ fn delete_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None,);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
