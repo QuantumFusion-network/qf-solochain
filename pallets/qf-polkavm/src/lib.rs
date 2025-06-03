@@ -553,23 +553,26 @@ pub mod pallet {
 					|caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
 						let from = match caller.user_data.addresses.get(0) {
 							Some(from) => from.clone(),
-							None => return HostFunctionError::IndexOutOfBounds
-								.to_u64()
-								.expect("a number")
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
 						};
 
 						let to = match caller.user_data.addresses.get(address_idx as usize) {
 							Some(to) => to.clone(),
-							None => return HostFunctionError::IndexOutOfBounds
-								.to_u64()
-								.expect("a number")
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
 						};
 
 						let amount = match caller.user_data.balances.get(balance_idx as usize) {
 							Some(amount) => amount.clone(),
-							None => return HostFunctionError::IndexOutOfBounds
-								.to_u64()
-								.expect("a number")
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
 						};
 
 						(caller.user_data.transfer)(from, to, amount)
@@ -634,9 +637,8 @@ pub mod pallet {
 				.define_typed("get_address_len", |caller: Caller<T>, address_idx: u32| -> u64 {
 					let address = match caller.user_data.addresses.get(address_idx as usize) {
 						Some(address) => address.clone(),
-						None => return HostFunctionError::IndexOutOfBounds
-							.to_u64()
-							.expect("a number")
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
 					};
 					let raw_data: Vec<u8> = address.encode();
 
@@ -645,26 +647,32 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
-				.define_typed("get_address", |caller: Caller<T>, address_idx: u32, write_pointer: u32| -> u64 {
-					let address = match caller.user_data.addresses.get(address_idx as usize) {
-						Some(address) => address.clone(),
-						None => return HostFunctionError::IndexOutOfBounds
-							.to_u64()
-							.expect("a number")
-					};
-					let raw_data: Vec<u8> = address.encode();
+				.define_typed(
+					"get_address",
+					|caller: Caller<T>, address_idx: u32, write_pointer: u32| -> u64 {
+						let address = match caller.user_data.addresses.get(address_idx as usize) {
+							Some(address) => address.clone(),
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
+						};
+						let raw_data: Vec<u8> = address.encode();
 
-					match caller.instance.write_memory(write_pointer, &raw_data) {
-						Err(_) => HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
-						Ok(_) => 0,
-					}
-				})
+						match caller.instance.write_memory(write_pointer, &raw_data) {
+							Err(_) =>
+								HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
+							Ok(_) => 0,
+						}
+					},
+				)
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
 				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
 					match caller.instance.write_memory(pointer, &caller.user_data.user_data) {
-						Err(_) => HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
+						Err(_) =>
+							HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
 						Ok(_) => 0,
 					}
 				})
