@@ -83,7 +83,6 @@ pub mod pallet {
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeVersion = u64;
-	pub(super) type CodeStorageValue<T> = StorageValue<T>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> =
 		(<T as frame_system::Config>::AccountId, StorageKey<T>);
@@ -95,7 +94,7 @@ pub mod pallet {
 	}
 
 	pub(super) type MutatingStorageOperation<T> =
-		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageValue<T>>);
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<StorageValue<T>>);
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
@@ -113,7 +112,8 @@ pub mod pallet {
 		pub gas_after: i64,
 	}
 
-	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	#[derive(Debug, Clone, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	#[scale_info(skip_type_params(T))]
 	pub(super) struct StorageValue<T: Config> {
 		pub data: BoundedVec<u8, <T as Config>::StorageSize>,
 		pub owner: T::AccountId, 
@@ -191,7 +191,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
-		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageValue<T>>;
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, StorageValue<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -419,16 +419,17 @@ pub mod pallet {
 				|contract_address: T::AccountId,
 				 key: StorageKey<T>|
 				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, key)).map(|d| d.to_vec())
+					CodeStorage::<T>::get((contract_address, key)).map(|d| d.data.to_vec())
 				},
 				|contract_address: T::AccountId,
+				caller: T::AccountId,
 				 key: StorageKey<T>,
 				 max_storage_size: usize,
 				 mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, key), buffer);
+						CodeStorage::<T>::insert((contract_address, key), StorageValue { data: buffer, owner: caller });
 						0
 					} else {
 						1
@@ -611,7 +612,7 @@ pub mod pallet {
 								caller.user_data.addresses[0].clone(),
 								storage_key.clone(),
 							)) {
-								Some(Some(r)) => Some(r.to_vec()),
+								Some(Some(r)) => Some(r.data.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
@@ -667,14 +668,14 @@ pub mod pallet {
 										caller.user_data.addresses[0].clone(),
 										storage_key.clone(),
 									),
-									Some(data.clone()),
+									Some(StorageValue { data: data.clone(), owner: caller.user_data.addresses[1].clone() }),
 								));
 								caller.user_data.raw_storage.insert(
 									(
 										caller.user_data.addresses[0].clone(),
 										storage_key,
 									),
-									Some(data),
+									Some(StorageValue{ data, owner: caller.user_data.addresses[1].clone() }),
 								);
 
 								return 0;

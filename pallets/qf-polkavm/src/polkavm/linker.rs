@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, CodeStorageKey, CodeStorageValue, CodeVersion, Config as PalletConfig,
+	BalanceOf, CodeStorageKey, StorageValue, CodeVersion, Config as PalletConfig,
 	MutatingStorageOperation, StorageKey,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
@@ -598,7 +598,7 @@ pub struct State<T: PalletConfig> {
 	pub log_message: Vec<u8>,
 	pub user_data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
-	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageValue<T>>>,
+	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<StorageValue<T>>>,
 	pub code_version: CodeVersion,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
@@ -610,7 +610,7 @@ pub struct State<T: PalletConfig> {
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
 	pub get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-	pub insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+	pub insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
 	pub delete: fn(T::AccountId, StorageKey<T>) -> u64,
 }
 
@@ -621,7 +621,7 @@ impl<T: PalletConfig> State<T> {
 		log_message: Vec<u8>,
 		user_data: Vec<u8>,
 		mutating_operations: Vec<MutatingStorageOperation<T>>,
-		raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageValue<T>>>,
+		raw_storage: BTreeMap<CodeStorageKey<T>, Option<StorageValue<T>>>,
 		code_version: CodeVersion,
 		max_storage_size: usize,
 		max_storage_key_size: u32,
@@ -633,7 +633,7 @@ impl<T: PalletConfig> State<T> {
 		account_id: fn() -> u64,
 		caller: fn() -> u64,
 		get: fn(T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-		insert: fn(T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
+		insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
 		delete: fn(T::AccountId, StorageKey<T>) -> u64,
 	) -> Self {
 		Self {
