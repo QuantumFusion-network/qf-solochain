@@ -421,24 +421,6 @@ pub mod pallet {
 				 -> Option<Vec<u8>> {
 					CodeStorage::<T>::get((contract_address, key)).map(|d| d.data.to_vec())
 				},
-				|contract_address: T::AccountId,
-				caller: T::AccountId,
-				 key: StorageKey<T>,
-				 max_storage_size: usize,
-				 mut data: Vec<u8>|
-				 -> u64 {
-					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, key), StorageValue { data: buffer, owner: caller });
-						0
-					} else {
-						1
-					}
-				},
-				|contract_address: T::AccountId, key: StorageKey<T>| -> u64 {
-					CodeStorage::<T>::remove((contract_address, key));
-					0
-				},
 			);
 
 			sp_runtime::print("====== BEFORE CALL ======");
