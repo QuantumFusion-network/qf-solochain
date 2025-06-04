@@ -61,6 +61,12 @@ polkadot-sdk = { workspace = true, default-features = false, features = [
 # Cumulus
 cumulus-pallet-parachain-system = { workspace = true }
 
+# SPIN
+bp-header-chain = { workspace = true, default-features = false }
+bp-polkadot-core = { workspace = true, default-features = false }
+bp-runtime = { workspace = true, default-features = false }
+pallet-spin-polkadot = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
