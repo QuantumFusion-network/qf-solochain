@@ -1,8 +1,8 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, CodeStorageKey, StorageValue, CodeVersion, Config as PalletConfig,
-	MutatingStorageOperation, StorageKey,
+	BalanceOf, CodeStorageKey, CodeVersion, Config as PalletConfig, MutatingStorageOperation,
+	StorageKey, StorageValue,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
 		program::ProgramSymbol,
