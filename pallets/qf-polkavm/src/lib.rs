@@ -70,6 +70,8 @@ pub mod pallet {
 		},
 	};
 	use frame_system::pallet_prelude::*;
+	use num_derive::{FromPrimitive, ToPrimitive};
+	use num_traits::ToPrimitive;
 	use scale_info::{TypeInfo, prelude::vec::Vec};
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
@@ -150,6 +152,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxStorageKeySize: Get<u32>;
+
+		#[pallet::constant]
+		type MaxLogLen: Get<u32>;
 
 		#[pallet::constant]
 		type MinGasPrice: Get<u64>;
@@ -378,6 +383,10 @@ pub mod pallet {
 				.checked_sub(1)
 				.ok_or(Error::<T>::IntegerOverflow)?;
 
+			let max_log_len = <T as Config>::MaxLogLen::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
@@ -385,17 +394,17 @@ pub mod pallet {
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 			instance.set_gas(gas_before.into());
 
-			let mut state = State::new(
-				[contract_address.clone(), who.clone()].to_vec(),
-				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+			let mut state = State {
+				addresses: [contract_address.clone(), who.clone()].to_vec(),
 				data,
-				[].to_vec(),
-				BTreeMap::new(),
-				version,
+				mutating_operations: [].to_vec(),
+				raw_storage: BTreeMap::new(),
+				code_version: version,
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
-				|from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
+				max_log_len,
+				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
 						if let Err(_) =
 							T::Currency::transfer(&from, &to, value.into(), Preservation::Preserve)
@@ -405,25 +414,31 @@ pub mod pallet {
 					}
 					0
 				},
-				|m: Vec<u8>| -> u64 {
-					sp_runtime::print(&*m);
+				print: |m: Vec<u8>| -> u64 {
+					let msg = alloc::string::String::from_utf8_lossy(&m);
+					let msg_log = alloc::format!("polkavm: {msg}");
+					sp_runtime::print(msg_log.as_str());
 					return 0;
 				},
-				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
-				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
-				|| -> u64 { 0 },
-				|| -> u64 { 1 },
-				|contract_address: T::AccountId,
-				 version: CodeVersion,
-				 key: StorageKey<T>|
+				balance: |address: T::AccountId| -> u64 {
+					T::Currency::balance(&address).saturated_into()
+				},
+				block_number: || -> u64 {
+					frame_system::Pallet::<T>::block_number().saturated_into()
+				},
+				account_id: || -> u64 { 0 },
+				caller: || -> u64 { 1 },
+				get: |contract_address: T::AccountId,
+				      version: CodeVersion,
+				      key: StorageKey<T>|
 				 -> Option<Vec<u8>> {
 					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
 				},
-				|contract_address: T::AccountId,
-				 version: CodeVersion,
-				 key: StorageKey<T>,
-				 max_storage_size: usize,
-				 mut data: Vec<u8>|
+				insert: |contract_address: T::AccountId,
+				         version: CodeVersion,
+				         key: StorageKey<T>,
+				         max_storage_size: usize,
+				         mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
@@ -433,11 +448,14 @@ pub mod pallet {
 						1
 					}
 				},
-				|contract_address: T::AccountId, version: CodeVersion, key: StorageKey<T>| -> u64 {
+				delete: |contract_address: T::AccountId,
+				         version: CodeVersion,
+				         key: StorageKey<T>|
+				 -> u64 {
 					CodeStorage::<T>::remove((contract_address, version, key));
 					0
 				},
-			);
+			};
 
 			sp_runtime::print("====== BEFORE CALL ======");
 
@@ -517,16 +535,32 @@ pub mod pallet {
 		}
 
 		fn instantiate(module: PolkaVMModule) -> Result<Instance<T>, DispatchError> {
+			#[derive(Debug, FromPrimitive, ToPrimitive)]
+			enum HostFunctionError {
+				MaxLogLenExceeded = 1005,
+				FailedToReadLogBuffer = 1006,
+				IndexOutOfBounds = 1007,
+				FailedToWriteVmMemory = 1008,
+			}
+
 			// High-level API.
 			let mut linker: Linker<T> = Linker::<T>::new();
 
 			linker
 				.define_typed("transfer", |caller: Caller<T>, balance: u32| -> u64 {
-					(caller.user_data.transfer)(
-						caller.user_data.addresses[0].clone(),
-						caller.user_data.addresses[1].clone(),
-						balance,
-					)
+					let from = match caller.user_data.addresses.get(0) {
+						Some(from) => from.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+
+					let to = match caller.user_data.addresses.get(1) {
+						Some(to) => to.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+
+					(caller.user_data.transfer)(from, to, balance)
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -543,8 +577,21 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
-				.define_typed("print", |caller: Caller<T>| -> u64 {
-					(caller.user_data.print)(caller.user_data.log_message.clone())
+				.define_typed("print", |caller: Caller<T>, msg_pointer: u32, len: u32| -> u64 {
+					let user_data = caller.user_data;
+					if len as usize > user_data.max_log_len {
+						return HostFunctionError::MaxLogLenExceeded.to_u64().expect("a number");
+					}
+
+					let raw_data = match caller.instance.read_memory(msg_pointer, len) {
+						Ok(raw_data) => raw_data,
+						Err(_) =>
+							return HostFunctionError::FailedToReadLogBuffer
+								.to_u64()
+								.expect("a number"),
+					};
+
+					(user_data.print)(raw_data)
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -571,9 +618,45 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
+				.define_typed("get_address_len", |caller: Caller<T>, address_idx: u32| -> u64 {
+					let address = match caller.user_data.addresses.get(address_idx as usize) {
+						Some(address) => address.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+					let raw_data: Vec<u8> = address.encode();
+
+					raw_data.len() as u64
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed(
+					"get_address",
+					|caller: Caller<T>, address_idx: u32, write_pointer: u32| -> u64 {
+						let address = match caller.user_data.addresses.get(address_idx as usize) {
+							Some(address) => address.clone(),
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
+						};
+						let raw_data: Vec<u8> = address.encode();
+
+						match caller.instance.write_memory(write_pointer, &raw_data) {
+							Err(_) =>
+								HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
+							Ok(_) => 0,
+						}
+					},
+				)
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
 				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
 					match caller.instance.write_memory(pointer, &caller.user_data.data) {
-						Err(_) => 1000,
+						Err(_) =>
+							HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
 						Ok(_) => 0,
 					}
 				})
