@@ -433,9 +433,7 @@ pub mod pallet {
 				},
 				account_id: || -> u64 { 0 },
 				caller: || -> u64 { 1 },
-				get: |contract_address: T::AccountId,
-				      key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
+				get: |contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
 					CodeStorage::<T>::get((contract_address, key)).map(|d| d.data.to_vec())
 				},
 			};
