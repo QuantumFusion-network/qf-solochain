@@ -54,3 +54,7 @@ jobs:
       - name: Check code
         run: |
           cargo check --locked --all
+
+      - name: Tests
+        run: |
+          cargo test -p pallet-qf-polkavm

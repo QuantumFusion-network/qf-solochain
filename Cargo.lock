@@ -9175,6 +9175,8 @@ dependencies = [
  "image",
  "libc",
  "log",
+ "num-derive",
+ "num-traits",
  "pallet-balances",
  "parity-scale-codec",
  "paste",
