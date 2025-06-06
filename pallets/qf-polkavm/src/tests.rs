@@ -12,8 +12,8 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeVersion, Config,
-	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeVersion, Config, Error, Event,
+	ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok};
 
