@@ -58,6 +58,7 @@ pub use weights::*;
 use codec::Codec;
 
 use frame_support::pallet_prelude::*;
+use sp_std::prelude::*;
 
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
@@ -507,6 +508,27 @@ pub mod pallet {
 				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
 				pays_fee: Pays::Yes,
 			})
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn bare_execute(
+			origin: T::AccountId,
+			contract_address: T::AccountId,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult {
+			log::debug!(target: "runtime::qf-polkavm", "bare_execute called");
+
+			ExecResult {
+				result: None,
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 0,
+				gas_after: 0,
+			}
 		}
 	}
 
