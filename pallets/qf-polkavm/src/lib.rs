@@ -518,13 +518,17 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn bare_upload(origin: T::AccountId, program_blob: Vec<u8>) -> UploadResult<T::AccountId> {
-			log::debug!(target: "runtime::qf-polkavm", "bare_upload called");
+		pub fn bare_upload(
+			origin: T::AccountId,
+			program_blob: Vec<u8>,
+		) -> UploadResult<T::AccountId> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
 
-			UploadResult {
-				contract_address: origin.clone(),
-				version: 0,
-			}
+			UploadResult { contract_address: origin.clone(), version: 0 }
 		}
 
 		pub fn bare_execute(
@@ -535,7 +539,15 @@ pub mod pallet {
 			storage_deposit_limit: u64,
 			gas_price: u64,
 		) -> ExecResult {
-			log::debug!(target: "runtime::qf-polkavm", "bare_execute called");
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
+				origin,
+				contract_address,
+				data.len(),
+				gas_limit,
+				storage_deposit_limit,
+				gas_price,
+			);
 
 			ExecResult {
 				result: None,
