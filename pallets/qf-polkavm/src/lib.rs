@@ -111,7 +111,7 @@ pub mod pallet {
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
-	pub(super) struct ExecResult {
+	pub struct ExecResult {
 		pub result: Option<u64>,
 		pub not_enough_gas: bool,
 		pub trap: bool,
