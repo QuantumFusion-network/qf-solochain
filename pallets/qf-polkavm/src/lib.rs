@@ -55,6 +55,10 @@ mod tests;
 pub mod weights;
 pub use weights::*;
 
+use codec::Codec;
+
+use frame_support::pallet_prelude::*;
+
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
 pub mod pallet {
@@ -63,7 +67,6 @@ pub mod pallet {
 	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{
 		dispatch::PostDispatchInfo,
-		pallet_prelude::*,
 		traits::{
 			fungible::{Inspect, Mutate},
 			tokens::Preservation,
@@ -838,5 +841,21 @@ pub mod pallet {
 			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
 				.expect("infinite length input; no invalid inputs for type; qed")
 		}
+	}
+}
+
+sp_api::decl_runtime_apis! {
+	pub trait QfPolkavmApi<AccountId, Balance> where
+		AccountId: Codec,
+		Balance: Codec,
+	{
+		fn execute(
+			origin: AccountId,
+			contract_address: AccountId,
+			data: Vec<u8>,
+			gas_limit: Option<Weight>,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult;
 	}
 }
