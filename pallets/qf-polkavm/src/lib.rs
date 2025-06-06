@@ -111,6 +111,12 @@ pub mod pallet {
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	pub struct UploadResult<AccountId> {
+		pub contract_address: AccountId,
+		pub version: CodeVersion,
+	}
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	pub struct ExecResult {
 		pub result: Option<u64>,
 		pub not_enough_gas: bool,
@@ -871,6 +877,8 @@ sp_api::decl_runtime_apis! {
 		AccountId: Codec,
 		Balance: Codec,
 	{
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
+
 		fn execute(
 			origin: AccountId,
 			contract_address: AccountId,
