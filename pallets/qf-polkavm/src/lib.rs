@@ -518,6 +518,15 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		pub fn bare_upload(origin: T::AccountId, program_blob: Vec<u8>) -> UploadResult<T::AccountId> {
+			log::debug!(target: "runtime::qf-polkavm", "bare_upload called");
+
+			UploadResult {
+				contract_address: origin.clone(),
+				version: 0,
+			}
+		}
+
 		pub fn bare_execute(
 			origin: T::AccountId,
 			contract_address: T::AccountId,
