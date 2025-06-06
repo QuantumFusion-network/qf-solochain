@@ -168,6 +168,9 @@ pub mod pallet {
 		type MinStorageDepositLimit: Get<u64>;
 
 		#[pallet::constant]
+		type StorageDeposit: Get<u128>;
+
+		#[pallet::constant]
 		type StorageSize: Get<u32>;
 
 		#[pallet::constant]
@@ -199,6 +202,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
 		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, StorageValue<T>>;
+
+	#[pallet::storage]
+	pub(super) type CodeStorageDeposit<T: Config> =
+		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, CodeStorageKey<T>), u128>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -392,6 +399,10 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
+			let storage_deposit = <T as Config>::StorageDeposit::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
@@ -408,6 +419,8 @@ pub mod pallet {
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
+				storage_deposit,
+				storage_deposit_limit: storage_deposit_limit.into(),
 				max_log_len,
 				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
@@ -690,6 +703,9 @@ pub mod pallet {
 				.define_typed(
 					"set",
 					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+						if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit {
+							return 1050
+						}
 						if let Ok(mut raw_storage_key) = caller
 							.instance
 							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
@@ -729,6 +745,8 @@ pub mod pallet {
 										owner: caller.user_data.addresses[1].clone(),
 									}),
 								);
+
+								caller.user_data.storage_deposit_limit = caller.user_data.storage_deposit_limit - caller.user_data.storage_deposit;
 
 								return 0;
 							} else {

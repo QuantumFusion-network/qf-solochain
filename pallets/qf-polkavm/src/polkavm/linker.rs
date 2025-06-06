@@ -601,6 +601,8 @@ pub struct State<T: PalletConfig> {
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
+	pub storage_deposit: u128,
+	pub storage_deposit_limit: u128,
 	pub max_log_len: usize,
 	pub transfer: fn(T::AccountId, T::AccountId, u32) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
