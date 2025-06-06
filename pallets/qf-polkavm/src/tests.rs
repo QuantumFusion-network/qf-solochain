@@ -12,8 +12,8 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
-	Error, Event, ExecResult, ExecutionResult, StorageKey, mock::*,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeVersion, Config,
+	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok};
 
@@ -122,7 +122,7 @@ fn inc_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -143,8 +143,8 @@ fn inc_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(1)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 1)),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -179,8 +179,8 @@ fn inc_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(2)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 2)),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -204,7 +204,7 @@ fn delete_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -225,8 +225,8 @@ fn delete_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(1)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 1)),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -260,7 +260,7 @@ fn delete_should_work() {
 				gas_after: 18135,
 			}),
 		);
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -302,7 +302,7 @@ fn key<T: Config>() -> StorageKey<T> {
 	buffer
 }
 
-fn value<T: Config>(first_byte: u8) -> CodeStorageSlot<T> {
+fn value<T: Config>(owner: T::AccountId, first_byte: u8) -> StorageValue<T> {
 	let max_storage_size = <Test as Config>::StorageSize::get()
 		.try_into()
 		.expect("u32 can be converted to usize; qed");
@@ -315,5 +315,5 @@ fn value<T: Config>(first_byte: u8) -> CodeStorageSlot<T> {
 		.try_append(&mut raw_value)
 		.expect("raw_value size is same as buffer size; qed");
 
-	buffer
+	StorageValue { data: buffer, owner }
 }
