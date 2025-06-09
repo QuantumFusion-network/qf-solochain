@@ -703,7 +703,8 @@ pub mod pallet {
 				.define_typed(
 					"set",
 					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
-						if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit {
+						if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit
+						{
 							return 1050
 						}
 						if let Ok(mut raw_storage_key) = caller
@@ -746,7 +747,9 @@ pub mod pallet {
 									}),
 								);
 
-								caller.user_data.storage_deposit_limit = caller.user_data.storage_deposit_limit - caller.user_data.storage_deposit;
+								caller.user_data.storage_deposit_limit =
+									caller.user_data.storage_deposit_limit -
+										caller.user_data.storage_deposit;
 
 								return 0;
 							} else {

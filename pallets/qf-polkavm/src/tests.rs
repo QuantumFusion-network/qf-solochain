@@ -130,7 +130,9 @@ fn increment_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -166,7 +168,9 @@ fn increment_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -212,7 +216,9 @@ fn delete_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -248,7 +254,9 @@ fn delete_should_work() {
 			CONTRACT_ADDRESS,
 			[6].to_vec(),
 			20000.into(),
-			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
