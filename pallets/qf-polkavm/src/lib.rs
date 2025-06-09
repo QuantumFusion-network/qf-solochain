@@ -76,7 +76,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use num_derive::{FromPrimitive, ToPrimitive};
 	use num_traits::ToPrimitive;
-	use scale_info::{TypeInfo, prelude::vec::Vec};
+	use scale_info::TypeInfo;
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
 	use polkavm::{
