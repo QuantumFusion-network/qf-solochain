@@ -20,6 +20,7 @@ use frame_support::{BoundedVec, assert_noop, assert_ok};
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
 const CONTRACT_ADDRESS: AccountId = 52079882031220287051226575722413486460;
+const STORAGE_DEPOSIT_LIMIT: u128 = 2 * MILLI_UNIT;
 const VERSION: CodeVersion = 1;
 
 #[test]
@@ -117,7 +118,7 @@ fn block_number_should_work() {
 }
 
 #[test]
-fn inc_should_work() {
+fn increment_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 		upload();
@@ -129,7 +130,7 @@ fn inc_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -165,7 +166,7 @@ fn inc_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -211,7 +212,7 @@ fn delete_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -247,7 +248,7 @@ fn delete_should_work() {
 			CONTRACT_ADDRESS,
 			[6].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT.try_into().expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
