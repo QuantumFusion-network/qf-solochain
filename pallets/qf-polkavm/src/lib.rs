@@ -423,7 +423,6 @@ pub mod pallet {
 				storage_deposit,
 				storage_deposit_limit: storage_deposit_limit.into(),
 				max_log_len,
-				not_enough_storage_deposit: false,
 				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
 						if let Err(_) =
@@ -751,7 +750,6 @@ pub mod pallet {
 									if caller.user_data.storage_deposit_limit <
 										caller.user_data.storage_deposit
 									{
-										caller.user_data.not_enough_storage_deposit = true;
 										return 1050
 									} else {
 										caller.user_data.storage_deposit_limit = caller
