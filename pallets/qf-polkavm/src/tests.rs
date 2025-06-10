@@ -219,15 +219,10 @@ fn increment_with_low_storage_deposit_limit_should_not_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1
-				.try_into()
-				.expect("can convert storage deposit limit to u64; qed"),
+			1.try_into().expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
-		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
-			None,
-		);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None,);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
