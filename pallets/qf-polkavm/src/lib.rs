@@ -204,8 +204,12 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, StorageValue<T>>;
 
 	#[pallet::storage]
-	pub(super) type CodeStorageDeposit<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, CodeStorageKey<T>), BalanceOf<T>>;
+	pub(super) type CodeStorageDeposit<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		(T::AccountId, T::AccountId, CodeStorageKey<T>),
+		BalanceOf<T>,
+	>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -457,13 +461,14 @@ pub mod pallet {
 
 			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
-			let (result, not_enough_gas, trap, not_enough_storage_deposit) = match (result, state.not_enough_storage_deposit) {
-				(Err(CallError::NotEnoughGas), _) => (None, true, false, false),
-				(Err(CallError::Trap), false) => (None, false, true, false),
-				(Err(CallError::Trap), true) => (None, false, false, true),
-				(Err(_), _) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				(Ok(res), _) => (Some(res), false, false, false),
-			};
+			let (result, not_enough_gas, trap, not_enough_storage_deposit) =
+				match (result, state.not_enough_storage_deposit) {
+					(Err(CallError::NotEnoughGas), _) => (None, true, false, false),
+					(Err(CallError::Trap), false) => (None, false, true, false),
+					(Err(CallError::Trap), true) => (None, false, false, true),
+					(Err(_), _) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
+					(Ok(res), _) => (Some(res), false, false, false),
+				};
 
 			sp_runtime::print("====== AFTER CALL ======");
 
@@ -728,13 +733,18 @@ pub mod pallet {
 								}
 
 								let mut slot_owner_is_changed = true;
-								if let Some(Some(value)) = caller.user_data.raw_storage.get(&(caller.user_data.addresses[0].clone(), storage_key.clone())) {
+								if let Some(Some(value)) = caller.user_data.raw_storage.get(&(
+									caller.user_data.addresses[0].clone(),
+									storage_key.clone(),
+								)) {
 									if caller.user_data.addresses[1] == value.owner {
 										slot_owner_is_changed = false;
 									}
 								}
 								if slot_owner_is_changed {
-									if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit {
+									if caller.user_data.storage_deposit_limit <
+										caller.user_data.storage_deposit
+									{
 										caller.user_data.not_enough_storage_deposit = true;
 										return 1050
 									} else {
