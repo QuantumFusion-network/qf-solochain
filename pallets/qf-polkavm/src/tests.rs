@@ -207,6 +207,45 @@ fn increment_should_work() {
 }
 
 #[test]
+fn increment_with_low_storage_deposit_limit_should_not_work() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		upload();
+
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+
+		assert_ok!(QfPolkaVM::execute(
+			RuntimeOrigin::signed(BOB),
+			CONTRACT_ADDRESS,
+			[5].to_vec(),
+			20000.into(),
+			1
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
+			1
+		));
+		assert_eq!(
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			None,
+		);
+		System::assert_last_event(
+			Event::ExecutionResult {
+				who: BOB,
+				contract_address: CONTRACT_ADDRESS,
+				version: VERSION,
+				result: None,
+				not_enough_gas: false,
+				not_enough_storage_deposit: true,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 2093,
+			}
+			.into(),
+		);
+	})
+}
+
+#[test]
 fn delete_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);

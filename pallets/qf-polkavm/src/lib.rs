@@ -208,7 +208,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		(T::AccountId, T::AccountId, CodeStorageKey<T>),
-		BalanceOf<T>,
+		u128,
 	>;
 
 	/// Events that functions in this pallet can emit.
@@ -462,22 +462,26 @@ pub mod pallet {
 			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
 			let (result, not_enough_gas, trap, not_enough_storage_deposit) =
-				match (result, state.not_enough_storage_deposit) {
-					(Err(CallError::NotEnoughGas), _) => (None, true, false, false),
-					(Err(CallError::Trap), false) => (None, false, true, false),
-					(Err(CallError::Trap), true) => (None, false, false, true),
-					(Err(_), _) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-					(Ok(res), _) => (Some(res), false, false, false),
+				match result {
+					Err(CallError::NotEnoughGas) => (None, true, false, false),
+					Err(CallError::Trap) => (None, false, true, false),
+					Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
+					Ok(1050) => (None, false, false, true),
+					Ok(res) => (Some(res), false, false, false),
 				};
 
 			sp_runtime::print("====== AFTER CALL ======");
 
-			if !not_enough_gas && !trap {
+			if !not_enough_gas && !trap && !not_enough_storage_deposit {
 				state.mutating_operations.iter().for_each(|op| match op {
-					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Delete, key, _) => {
+						CodeStorage::<T>::remove(key);
+						CodeStorageDeposit::<T>::remove((who.clone(), contract_address.clone(), key));
+					},
 					(MutatingStorageOperationType::Set, key, value) =>
 						if let Some(data) = value {
-							CodeStorage::<T>::insert(key, data)
+							CodeStorage::<T>::insert(key, data);
+							CodeStorageDeposit::<T>::insert((who.clone(), contract_address.clone(), key), storage_deposit);
 						},
 				})
 			}
@@ -748,9 +752,10 @@ pub mod pallet {
 										caller.user_data.not_enough_storage_deposit = true;
 										return 1050
 									} else {
-										caller.user_data.storage_deposit_limit =
-											caller.user_data.storage_deposit_limit -
-												caller.user_data.storage_deposit;
+										caller.user_data.storage_deposit_limit = caller
+											.user_data
+											.storage_deposit_limit
+											.saturating_sub(caller.user_data.storage_deposit);
 									}
 								}
 								let mut data = BoundedVec::with_bounded_capacity(
@@ -812,9 +817,10 @@ pub mod pallet {
 							.raw_storage
 							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
 
-						caller.user_data.storage_deposit_limit =
-							caller.user_data.storage_deposit_limit +
-								caller.user_data.storage_deposit;
+						caller.user_data.storage_deposit_limit = caller
+							.user_data
+							.storage_deposit_limit
+							.saturating_add(caller.user_data.storage_deposit);
 
 						return 0;
 					} else {
