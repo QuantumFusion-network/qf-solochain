@@ -1,0 +1,27 @@
+name: Srtool build for qf-parachain-runtime
+
+on: pull_request
+
+jobs:
+  srtool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.8.0
+        with:
+          chain: qf-parachain
+          runtime_dir: runtimes/parachain
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > parachain-srtool-digest.json
+          cat parachain-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+      - name: Archive Runtime
+        uses: actions/upload-artifact@v2
+        with:
+          name: qf-parachain-runtime-${{ github.sha }}
+          path: |
+            ${{ steps.srtool_build.outputs.wasm }}
+            qf-parachain-runtime-srtool-digest.json
