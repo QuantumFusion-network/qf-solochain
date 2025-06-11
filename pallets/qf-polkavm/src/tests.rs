@@ -12,14 +12,15 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
-	Error, Event, ExecResult, ExecutionResult, StorageKey, mock::*,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageDeposit, CodeVersion, Config, Error, Event,
+	ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
 const CONTRACT_ADDRESS: AccountId = 52079882031220287051226575722413486460;
+const STORAGE_DEPOSIT_LIMIT: u128 = 2 * MILLI_UNIT;
 const VERSION: CodeVersion = 1;
 
 #[test]
@@ -107,6 +108,7 @@ fn block_number_should_work() {
 				version: VERSION,
 				result: Some(43),
 				not_enough_gas: false,
+				not_enough_storage_deposit: false,
 				trap: false,
 				gas_before: 2000,
 				gas_after: 354,
@@ -117,19 +119,22 @@ fn block_number_should_work() {
 }
 
 #[test]
-fn inc_should_work() {
+fn increment_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -143,8 +148,12 @@ fn inc_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(1)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 1)),
+		);
+		assert_eq!(
+			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
+			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -153,6 +162,7 @@ fn inc_should_work() {
 				version: VERSION,
 				result: Some(0),
 				not_enough_gas: false,
+				not_enough_storage_deposit: false,
 				trap: false,
 				gas_before: 20000,
 				gas_after: 2093,
@@ -165,7 +175,9 @@ fn inc_should_work() {
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -179,8 +191,12 @@ fn inc_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(2)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 2)),
+		);
+		assert_eq!(
+			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
+			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -189,9 +205,45 @@ fn inc_should_work() {
 				version: VERSION,
 				result: Some(0),
 				not_enough_gas: false,
+				not_enough_storage_deposit: false,
 				trap: false,
 				gas_before: 20000,
 				gas_after: 16354,
+			}
+			.into(),
+		);
+	})
+}
+
+#[test]
+fn increment_with_low_storage_deposit_limit_should_not_work() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		upload();
+
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+
+		assert_ok!(QfPolkaVM::execute(
+			RuntimeOrigin::signed(BOB),
+			CONTRACT_ADDRESS,
+			[5].to_vec(),
+			20000.into(),
+			1.try_into().expect("can convert storage deposit limit to u64; qed"),
+			1
+		));
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		System::assert_last_event(
+			Event::ExecutionResult {
+				who: BOB,
+				contract_address: CONTRACT_ADDRESS,
+				version: VERSION,
+				result: None,
+				not_enough_gas: false,
+				not_enough_storage_deposit: true,
+				trap: false,
+				gas_before: 20000,
+				gas_after: 2093,
 			}
 			.into(),
 		);
@@ -204,14 +256,17 @@ fn delete_should_work() {
 		System::set_block_number(1);
 		upload();
 
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
 			CONTRACT_ADDRESS,
 			[5].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -225,8 +280,12 @@ fn delete_should_work() {
 			}),
 		);
 		assert_eq!(
-			CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())),
-			Some(value::<Test>(1)),
+			CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())),
+			Some(value::<Test>(BOB, 1)),
+		);
+		assert_eq!(
+			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
+			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -235,6 +294,7 @@ fn delete_should_work() {
 				version: VERSION,
 				result: Some(0),
 				not_enough_gas: false,
+				not_enough_storage_deposit: false,
 				trap: false,
 				gas_before: 20000,
 				gas_after: 2093,
@@ -247,7 +307,9 @@ fn delete_should_work() {
 			CONTRACT_ADDRESS,
 			[6].to_vec(),
 			20000.into(),
-			1,
+			STORAGE_DEPOSIT_LIMIT
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
 			1
 		));
 		assert_eq!(
@@ -260,7 +322,8 @@ fn delete_should_work() {
 				gas_after: 18135,
 			}),
 		);
-		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, VERSION, key::<Test>())), None);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -268,6 +331,7 @@ fn delete_should_work() {
 				version: VERSION,
 				result: Some(0),
 				not_enough_gas: false,
+				not_enough_storage_deposit: false,
 				trap: false,
 				gas_before: 20000,
 				gas_after: 18135,
@@ -302,7 +366,7 @@ fn key<T: Config>() -> StorageKey<T> {
 	buffer
 }
 
-fn value<T: Config>(first_byte: u8) -> CodeStorageSlot<T> {
+fn value<T: Config>(owner: T::AccountId, first_byte: u8) -> StorageValue<T> {
 	let max_storage_size = <Test as Config>::StorageSize::get()
 		.try_into()
 		.expect("u32 can be converted to usize; qed");
@@ -315,5 +379,5 @@ fn value<T: Config>(first_byte: u8) -> CodeStorageSlot<T> {
 		.try_append(&mut raw_value)
 		.expect("raw_value size is same as buffer size; qed");
 
-	buffer
+	StorageValue { data: buffer, owner }
 }

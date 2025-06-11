@@ -85,10 +85,8 @@ pub mod pallet {
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeVersion = u64;
-	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> =
-		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
+	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -97,7 +95,7 @@ pub mod pallet {
 	}
 
 	pub(super) type MutatingStorageOperation<T> =
-		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<StorageValue<T>>);
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
@@ -113,6 +111,13 @@ pub mod pallet {
 		pub trap: bool,
 		pub gas_before: u32,
 		pub gas_after: i64,
+	}
+
+	#[derive(Debug, Clone, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	#[scale_info(skip_type_params(T))]
+	pub(super) struct StorageValue<T: Config> {
+		pub data: BoundedVec<u8, <T as Config>::StorageSize>,
+		pub owner: T::AccountId,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -163,6 +168,9 @@ pub mod pallet {
 		type MinStorageDepositLimit: Get<u64>;
 
 		#[pallet::constant]
+		type StorageDeposit: Get<u128>;
+
+		#[pallet::constant]
 		type StorageSize: Get<u32>;
 
 		#[pallet::constant]
@@ -193,7 +201,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
-		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, StorageValue<T>>;
+
+	#[pallet::storage]
+	pub(super) type CodeStorageDeposit<T: Config> =
+		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), u128>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -217,6 +229,7 @@ pub mod pallet {
 			version: CodeVersion,
 			result: Option<u64>,
 			not_enough_gas: bool,
+			not_enough_storage_deposit: bool,
 			trap: bool,
 			gas_before: u32,
 			gas_after: i64,
@@ -387,6 +400,10 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
+			let storage_deposit = <T as Config>::StorageDeposit::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
@@ -403,6 +420,8 @@ pub mod pallet {
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
+				storage_deposit,
+				storage_deposit_limit: storage_deposit_limit.into(),
 				max_log_len,
 				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
@@ -428,32 +447,8 @@ pub mod pallet {
 				},
 				account_id: || -> u64 { 0 },
 				caller: || -> u64 { 1 },
-				get: |contract_address: T::AccountId,
-				      version: CodeVersion,
-				      key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
-				},
-				insert: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>,
-				         max_storage_size: usize,
-				         mut data: Vec<u8>|
-				 -> u64 {
-					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, version, key), buffer);
-						0
-					} else {
-						1
-					}
-				},
-				delete: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>|
-				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, version, key));
-					0
+				get: |contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, key)).map(|d| d.data.to_vec())
 				},
 			};
 
@@ -461,21 +456,33 @@ pub mod pallet {
 
 			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
-			let (result, not_enough_gas, trap) = match result {
-				Err(CallError::NotEnoughGas) => (None, true, false),
-				Err(CallError::Trap) => (None, false, true),
+			let (result, not_enough_gas, trap, not_enough_storage_deposit) = match result {
+				Err(CallError::NotEnoughGas) => (None, true, false, false),
+				Err(CallError::Trap) => (None, false, true, false),
 				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				Ok(res) => (Some(res), false, false),
+				Ok(1050) => (None, false, false, true),
+				Ok(res) => (Some(res), false, false, false),
 			};
 
 			sp_runtime::print("====== AFTER CALL ======");
 
-			if !not_enough_gas && !trap {
+			if !not_enough_gas && !trap && !not_enough_storage_deposit {
 				state.mutating_operations.iter().for_each(|op| match op {
-					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Delete, key, _) => {
+						CodeStorage::<T>::remove(key);
+						CodeStorageDeposit::<T>::remove((
+							who.clone(),
+							contract_address.clone(),
+							key.1.clone(),
+						));
+					},
 					(MutatingStorageOperationType::Set, key, value) =>
 						if let Some(data) = value {
-							CodeStorage::<T>::insert(key, data)
+							CodeStorage::<T>::insert(key, data);
+							CodeStorageDeposit::<T>::insert(
+								(who.clone(), contract_address.clone(), key.1.clone()),
+								storage_deposit,
+							);
 						},
 				})
 			}
@@ -495,6 +502,7 @@ pub mod pallet {
 				trap,
 				gas_before,
 				gas_after: instance.gas(),
+				not_enough_storage_deposit,
 			});
 
 			let normalized_gas_after =
@@ -678,16 +686,15 @@ pub mod pallet {
 								Err(_) => return 1010,
 							};
 
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key.clone(),
-							)) {
-								Some(Some(r)) => Some(r.to_vec()),
+							let result = match caller
+								.user_data
+								.raw_storage
+								.get(&(caller.user_data.addresses[0].clone(), storage_key.clone()))
+							{
+								Some(Some(r)) => Some(r.data.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
-									caller.user_data.code_version,
 									storage_key,
 								),
 							};
@@ -710,6 +717,10 @@ pub mod pallet {
 				.define_typed(
 					"set",
 					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+						if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit
+						{
+							return 1050
+						}
 						if let Ok(mut raw_storage_key) = caller
 							.instance
 							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
@@ -726,6 +737,27 @@ pub mod pallet {
 									Err(_) => return 1020,
 								}
 
+								let mut slot_owner_is_changed = true;
+								if let Some(Some(value)) = caller.user_data.raw_storage.get(&(
+									caller.user_data.addresses[0].clone(),
+									storage_key.clone(),
+								)) {
+									if caller.user_data.addresses[1] == value.owner {
+										slot_owner_is_changed = false;
+									}
+								}
+								if slot_owner_is_changed {
+									if caller.user_data.storage_deposit_limit <
+										caller.user_data.storage_deposit
+									{
+										return 1050
+									} else {
+										caller.user_data.storage_deposit_limit = caller
+											.user_data
+											.storage_deposit_limit
+											.saturating_sub(caller.user_data.storage_deposit);
+									}
+								}
 								let mut data = BoundedVec::with_bounded_capacity(
 									caller.user_data.max_storage_size as usize,
 								);
@@ -736,20 +768,18 @@ pub mod pallet {
 
 								caller.user_data.mutating_operations.push((
 									MutatingStorageOperationType::Set,
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.code_version,
-										storage_key.clone(),
-									),
-									Some(data.clone()),
+									(caller.user_data.addresses[0].clone(), storage_key.clone()),
+									Some(StorageValue {
+										data: data.clone(),
+										owner: caller.user_data.addresses[1].clone(),
+									}),
 								));
 								caller.user_data.raw_storage.insert(
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.code_version,
-										storage_key,
-									),
-									Some(data),
+									(caller.user_data.addresses[0].clone(), storage_key),
+									Some(StorageValue {
+										data,
+										owner: caller.user_data.addresses[1].clone(),
+									}),
 								);
 
 								return 0;
@@ -779,21 +809,18 @@ pub mod pallet {
 
 						caller.user_data.mutating_operations.push((
 							MutatingStorageOperationType::Delete,
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key.clone(),
-							),
+							(caller.user_data.addresses[0].clone(), storage_key.clone()),
 							None,
 						));
-						caller.user_data.raw_storage.insert(
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key,
-							),
-							None,
-						);
+						caller
+							.user_data
+							.raw_storage
+							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
+
+						caller.user_data.storage_deposit_limit = caller
+							.user_data
+							.storage_deposit_limit
+							.saturating_add(caller.user_data.storage_deposit);
 
 						return 0;
 					} else {
