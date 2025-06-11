@@ -205,7 +205,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeStorageDeposit<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, CodeStorageKey<T>), u128>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), u128>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -473,14 +473,14 @@ pub mod pallet {
 						CodeStorageDeposit::<T>::remove((
 							who.clone(),
 							contract_address.clone(),
-							key,
+							key.1.clone(),
 						));
 					},
 					(MutatingStorageOperationType::Set, key, value) =>
 						if let Some(data) = value {
 							CodeStorage::<T>::insert(key, data);
 							CodeStorageDeposit::<T>::insert(
-								(who.clone(), contract_address.clone(), key),
+								(who.clone(), contract_address.clone(), key.1.clone()),
 								storage_deposit,
 							);
 						},
