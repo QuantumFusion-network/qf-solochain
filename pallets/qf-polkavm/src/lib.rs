@@ -894,12 +894,19 @@ pub mod pallet {
 }
 
 sp_api::decl_runtime_apis! {
+	/// The API used to dry-run smart contract interactions.
 	pub trait QfPolkavmApi<AccountId, Balance> where
 		AccountId: Codec,
 		Balance: Codec,
 	{
+		/// Upload new smart contract.
+		///
+		/// See [`crate::Pallet::bare_upload`].
 		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
 
+		/// Execute a given smart contract from a specified account.
+		///
+		/// See [`crate::Pallet::bare_execute`].
 		fn execute(
 			origin: AccountId,
 			contract_address: AccountId,
