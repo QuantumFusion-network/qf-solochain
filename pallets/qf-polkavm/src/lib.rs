@@ -55,6 +55,11 @@ mod tests;
 pub mod weights;
 pub use weights::*;
 
+use codec::Codec;
+
+use frame_support::pallet_prelude::*;
+use sp_std::prelude::*;
+
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
 pub mod pallet {
@@ -63,7 +68,6 @@ pub mod pallet {
 	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{
 		dispatch::PostDispatchInfo,
-		pallet_prelude::*,
 		traits::{
 			fungible::{Inspect, Mutate},
 			tokens::Preservation,
@@ -72,7 +76,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use num_derive::{FromPrimitive, ToPrimitive};
 	use num_traits::ToPrimitive;
-	use scale_info::{TypeInfo, prelude::vec::Vec};
+	use scale_info::TypeInfo;
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
 	use polkavm::{
@@ -107,7 +111,13 @@ pub mod pallet {
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
-	pub(super) struct ExecResult {
+	pub struct UploadResult<AccountId> {
+		pub contract_address: AccountId,
+		pub version: CodeVersion,
+	}
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	pub struct ExecResult {
 		pub result: Option<u64>,
 		pub not_enough_gas: bool,
 		pub trap: bool,
@@ -507,6 +517,48 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> Pallet<T> {
+		pub fn bare_upload(
+			origin: T::AccountId,
+			program_blob: Vec<u8>,
+		) -> UploadResult<T::AccountId> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
+
+			UploadResult { contract_address: origin.clone(), version: 0 }
+		}
+
+		pub fn bare_execute(
+			origin: T::AccountId,
+			contract_address: T::AccountId,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
+				origin,
+				contract_address,
+				data.len(),
+				gas_limit,
+				storage_deposit_limit,
+				gas_price,
+			);
+
+			ExecResult {
+				result: None,
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 0,
+				gas_after: 0,
+			}
+		}
+	}
+
 	trait ModuleLoader {
 		type T: Config;
 
@@ -838,5 +890,30 @@ pub mod pallet {
 			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
 				.expect("infinite length input; no invalid inputs for type; qed")
 		}
+	}
+}
+
+sp_api::decl_runtime_apis! {
+	/// The API used to dry-run smart contract interactions.
+	pub trait QfPolkavmApi<AccountId, Balance> where
+		AccountId: Codec,
+		Balance: Codec,
+	{
+		/// Upload new smart contract.
+		///
+		/// See [`crate::Pallet::bare_upload`].
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
+
+		/// Execute a given smart contract from a specified account.
+		///
+		/// See [`crate::Pallet::bare_execute`].
+		fn execute(
+			origin: AccountId,
+			contract_address: AccountId,
+			data: Vec<u8>,
+			gas_limit: Option<Weight>,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult;
 	}
 }
