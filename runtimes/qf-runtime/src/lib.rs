@@ -238,10 +238,4 @@ mod runtime {
 
 	#[runtime::pallet_index(11)]
 	pub type Session = pallet_session;
-
-	#[runtime::pallet_index(13)]
-	pub type Preimage = pallet_preimage;
-
-	#[runtime::pallet_index(14)]
-	pub type Parameters = pallet_parameters;
 }
