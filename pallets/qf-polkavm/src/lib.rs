@@ -65,16 +65,18 @@ pub mod pallet {
 		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
 		traits::{
-			fungible::{Inspect, Mutate, MutateHold, InspectHold},
-			tokens::{Preservation, Precision},
+			fungible::{Inspect, InspectHold, Mutate, MutateHold},
+			tokens::{Precision, Preservation},
 		},
 	};
 	use frame_system::pallet_prelude::*;
 	use num_derive::{FromPrimitive, ToPrimitive};
 	use num_traits::ToPrimitive;
 	use scale_info::{TypeInfo, prelude::vec::Vec};
-	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
-	use sp_runtime::Saturating;
+	use sp_runtime::{
+		Saturating,
+		traits::{Hash, SaturatedConversion, TrailingZeroInput},
+	};
 
 	use polkavm::{
 		CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
@@ -130,7 +132,7 @@ pub mod pallet {
 		StorageDepositReserve,
 		/// Deposit for creating an address mapping in [`AddressSuffix`].
 		AddressMapping,
-	} 
+	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
 	// (`Call`s) in this pallet.
@@ -405,7 +407,11 @@ pub mod pallet {
 			);
 
 			ensure!(
-				T::Currency::can_hold(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit_limit),
+				T::Currency::can_hold(
+					&HoldReason::StorageDepositReserve.into(),
+					&who,
+					storage_deposit_limit
+				),
 				Error::<T>::StorageDepositNotEnoughFunds
 			);
 
@@ -493,11 +499,20 @@ pub mod pallet {
 				for op in &state.mutating_operations {
 					match op {
 						(MutatingStorageOperationType::Delete, _, _) => {
-							T::Currency::release(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit, Precision::BestEffort)?;
+							T::Currency::release(
+								&HoldReason::StorageDepositReserve.into(),
+								&who,
+								storage_deposit,
+								Precision::BestEffort,
+							)?;
 						},
 						(MutatingStorageOperationType::Set, _, value) =>
 							if let Some(_) = value {
-								T::Currency::hold(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit)?;
+								T::Currency::hold(
+									&HoldReason::StorageDepositReserve.into(),
+									&who,
+									storage_deposit,
+								)?;
 							},
 					}
 				}
@@ -787,10 +802,10 @@ pub mod pallet {
 									{
 										return 1050
 									} else {
-										caller.user_data.storage_deposit_limit = caller
-											.user_data
-											.storage_deposit_limit
-											.saturating_sub(caller.user_data.storage_deposit.into());
+										caller.user_data.storage_deposit_limit =
+											caller.user_data.storage_deposit_limit.saturating_sub(
+												caller.user_data.storage_deposit.into(),
+											);
 									}
 								}
 								let mut data = BoundedVec::with_bounded_capacity(

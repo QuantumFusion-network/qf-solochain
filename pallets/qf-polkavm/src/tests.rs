@@ -12,11 +12,10 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageDeposit, CodeVersion, Config, Error, Event,
-	ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageDeposit, CodeVersion, Config,
+	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
-use frame_support::{BoundedVec, assert_noop, assert_ok};
-use frame_support::traits::fungible::Mutate;
+use frame_support::{BoundedVec, assert_noop, assert_ok, traits::fungible::Mutate};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
@@ -82,7 +81,12 @@ fn upload_valid_blob_should_work() {
 fn block_number_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(43);
-		let _ = <Test as Config>::Currency::set_balance(&BOB, (2 * STORAGE_DEPOSIT_LIMIT).try_into().expect("can convert storage deposit limit to u64; qed"));
+		let _ = <Test as Config>::Currency::set_balance(
+			&BOB,
+			(2 * STORAGE_DEPOSIT_LIMIT)
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
+		);
 		upload();
 
 		assert_ok!(QfPolkaVM::execute(
@@ -124,7 +128,12 @@ fn block_number_should_work() {
 fn increment_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		let _ = <Test as Config>::Currency::set_balance(&BOB, (2 * STORAGE_DEPOSIT_LIMIT).try_into().expect("can convert storage deposit limit to u64; qed"));
+		let _ = <Test as Config>::Currency::set_balance(
+			&BOB,
+			(2 * STORAGE_DEPOSIT_LIMIT)
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
+		);
 		upload();
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
@@ -156,7 +165,11 @@ fn increment_should_work() {
 		);
 		assert_eq!(
 			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
-			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
+			Some(
+				<Test as Config>::StorageDeposit::get()
+					.try_into()
+					.expect("can convert storage deposit to u128; qed")
+			),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -199,7 +212,11 @@ fn increment_should_work() {
 		);
 		assert_eq!(
 			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
-			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
+			Some(
+				<Test as Config>::StorageDeposit::get()
+					.try_into()
+					.expect("can convert storage deposit to u128; qed")
+			),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
@@ -222,7 +239,12 @@ fn increment_should_work() {
 fn increment_with_low_storage_deposit_limit_should_not_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		let _ = <Test as Config>::Currency::set_balance(&BOB, (2 * STORAGE_DEPOSIT_LIMIT).try_into().expect("can convert storage deposit limit to u64; qed"));
+		let _ = <Test as Config>::Currency::set_balance(
+			&BOB,
+			(2 * STORAGE_DEPOSIT_LIMIT)
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
+		);
 		upload();
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
@@ -258,7 +280,12 @@ fn increment_with_low_storage_deposit_limit_should_not_work() {
 fn delete_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		let _ = <Test as Config>::Currency::set_balance(&BOB, (2 * STORAGE_DEPOSIT_LIMIT).try_into().expect("can convert storage deposit limit to u64; qed"));
+		let _ = <Test as Config>::Currency::set_balance(
+			&BOB,
+			(2 * STORAGE_DEPOSIT_LIMIT)
+				.try_into()
+				.expect("can convert storage deposit limit to u64; qed"),
+		);
 		upload();
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
@@ -290,7 +317,11 @@ fn delete_should_work() {
 		);
 		assert_eq!(
 			CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())),
-			Some(<Test as Config>::StorageDeposit::get().try_into().expect("can convert storage deposit to u128; qed")),
+			Some(
+				<Test as Config>::StorageDeposit::get()
+					.try_into()
+					.expect("can convert storage deposit to u128; qed")
+			),
 		);
 		System::assert_last_event(
 			Event::ExecutionResult {
