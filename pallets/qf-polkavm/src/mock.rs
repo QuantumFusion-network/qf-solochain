@@ -1,6 +1,6 @@
 use crate as pallet;
 
-use frame_support::{derive_impl, pallet_prelude::inject_runtime_type, parameter_types};
+use frame_support::{derive_impl, parameter_types};
 use sp_runtime::{BuildStorage, traits::IdentityLookup};
 
 type Block = frame_system::mocking::MockBlock<Test>;
