@@ -125,6 +125,7 @@ sp-keystore = { path = "vendor/polkadot-sdk/substrate/primitives/keystore", defa
 sp-offchain = { path = "vendor/polkadot-sdk/substrate/primitives/offchain", default-features = false }
 sp-session = { path = "vendor/polkadot-sdk/substrate/primitives/session", default-features = false }
 sp-staking = { path = "vendor/polkadot-sdk/substrate/primitives/staking", default-features = false }
+sp-std = { path = "vendor/polkadot-sdk/substrate/primitives/std", default-features = false }
 sp-storage = { path = "vendor/polkadot-sdk/substrate/primitives/storage", default-features = false }
 sp-transaction-pool = { path = "vendor/polkadot-sdk/substrate/primitives/transaction-pool", default-features = false }
 substrate-wasm-builder = { path = "vendor/polkadot-sdk/substrate/utils/wasm-builder", default-features = false }

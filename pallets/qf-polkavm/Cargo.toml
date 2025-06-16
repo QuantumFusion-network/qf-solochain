@@ -26,7 +26,9 @@ scale-info = { features = [
 frame-benchmarking = { optional = true, workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+sp-api.workspace = true
 sp-runtime.workspace = true
+sp-std.workspace = true
 
 # polkavm
 log = { workspace = true }
@@ -69,9 +71,11 @@ std = [
 	"frame-system/std",
 	"ruzstd/std",              # polkavm
 	"scale-info/std",
+	"sp-api/std",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
+	"sp-std/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
