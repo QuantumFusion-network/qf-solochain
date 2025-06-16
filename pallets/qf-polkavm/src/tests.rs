@@ -86,9 +86,7 @@ fn block_number_should_work() {
 		System::set_block_number(43);
 		let _ = <Test as Config>::Currency::set_balance(
 			&BOB,
-			(2 * STORAGE_DEPOSIT_LIMIT)
-				.try_into()
-				.expect("can convert storage deposit limit to u64; qed"),
+			storage_deposit(),
 		);
 		upload();
 
@@ -133,9 +131,7 @@ fn increment_should_work() {
 		System::set_block_number(1);
 		let _ = <Test as Config>::Currency::set_balance(
 			&BOB,
-			(2 * STORAGE_DEPOSIT_LIMIT)
-				.try_into()
-				.expect("can convert storage deposit limit to u64; qed"),
+			storage_deposit() * 4,
 		);
 		upload();
 
@@ -242,14 +238,39 @@ fn increment_should_work() {
 }
 
 #[test]
+fn increment_with_low_storage_deposit_should_not_work() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let _ = <Test as Config>::Currency::set_balance(
+			&BOB,
+			0,
+		);
+		upload();
+
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
+
+		assert_noop!(QfPolkaVM::execute(
+			RuntimeOrigin::signed(BOB),
+			CONTRACT_ADDRESS,
+			[5].to_vec(),
+			20000.into(),
+			1.try_into().expect("can convert storage deposit limit to u64; qed"),
+			1
+		), Error::<Test>::StorageDepositNotEnoughFunds);
+		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
+	})
+}
+
+#[test]
 fn increment_with_low_storage_deposit_limit_should_not_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 		let _ = <Test as Config>::Currency::set_balance(
 			&BOB,
-			(2 * STORAGE_DEPOSIT_LIMIT)
-				.try_into()
-				.expect("can convert storage deposit limit to u64; qed"),
+			storage_deposit(),
 		);
 		upload();
 
@@ -290,9 +311,7 @@ fn delete_should_work() {
 		System::set_block_number(1);
 		let _ = <Test as Config>::Currency::set_balance(
 			&BOB,
-			(2 * STORAGE_DEPOSIT_LIMIT)
-				.try_into()
-				.expect("can convert storage deposit limit to u64; qed"),
+			storage_deposit() * 4,
 		);
 		upload();
 
