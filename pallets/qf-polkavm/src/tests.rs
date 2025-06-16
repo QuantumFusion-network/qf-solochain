@@ -15,8 +15,10 @@ use crate::{
 	BlobMetadata, CodeAddress, CodeMetadata, CodeSlot, CodeStorage, CodeStorageDeposit, Config,
 	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
-use frame_support::{BoundedVec, assert_noop, assert_ok, traits::fungible::Mutate};
-use frame_support::traits::fungible::InspectHold;
+use frame_support::{
+	BoundedVec, assert_noop, assert_ok,
+	traits::fungible::{InspectHold, Mutate},
+};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
@@ -428,7 +430,5 @@ fn value<T: Config>(owner: T::AccountId, first_byte: u8) -> StorageValue<T> {
 }
 
 fn storage_deposit() -> u64 {
-	MILLI_UNIT	
-		.try_into() 
-		.expect("can convert to u64; qed")
+	MILLI_UNIT.try_into().expect("can convert to u64; qed")
 }
