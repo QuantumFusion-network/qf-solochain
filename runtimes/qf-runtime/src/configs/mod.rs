@@ -26,8 +26,10 @@
 // Substrate and Polkadot dependencies
 use frame_election_provider_support::{SequentialPhragmen, bounds::ElectionBoundsBuilder, onchain};
 use frame_support::{
-	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, Nothing, VariantCountOf},
+	derive_impl,
+	dynamic_params::{dynamic_pallet_params, dynamic_params},
+	parameter_types,
+	traits::{fungible::HoldConsideration,EnsureOriginWithArg, ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, LinearStoragePrice, Nothing, VariantCountOf},
 	weights::{
 		IdentityFee, Weight,
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -46,7 +48,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{MILLI_UNIT, SESSION_LENGTH};
+use crate::{MICRO_UNIT, MILLI_UNIT, SESSION_LENGTH};
 
 // Local module imports
 use super::{
@@ -302,6 +304,28 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
+    pub const PreimageHoldReason: RuntimeHoldReason =
+        RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type Consideration = HoldConsideration<
+        AccountId,
+        Balances,
+        PreimageHoldReason,
+        LinearStoragePrice<
+            dynamic_params::storage::BaseDeposit,
+            dynamic_params::storage::ByteDeposit,
+            Balance,
+        >,   
+    >;   
+}
+
+parameter_types! {
 	pub const PolkaVmMaxCodeLen: u32 = 131072;
 	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
 	pub const PolkaVmMaxUserDataLen: u32 = 2048;
@@ -331,6 +355,7 @@ impl pallet_qf_polkavm::Config for Runtime {
 	type StorageSize = PolkaVmStorageSize;
 	type StorageSlotPrice = PolkaVmStorageSlotPrice;
 	type Currency = Balances;
+	type RuntimeHoldReason = RuntimeHoldReason;
 	type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 
@@ -351,4 +376,52 @@ impl pallet_faucet::Config for Runtime {
 	type FaucetAmount = FaucetAmount;
 	type LockPeriod = LockPeriod;
 	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
+}
+
+pub struct DynamicParametersManagerOrigin;
+impl EnsureOriginWithArg<RuntimeOrigin, RuntimeParametersKey> for DynamicParametersManagerOrigin {
+    type Success = ();
+
+    fn try_origin(
+        origin: RuntimeOrigin,
+        key: &RuntimeParametersKey,
+    ) -> Result<Self::Success, RuntimeOrigin> {
+        match key {
+            RuntimeParametersKey::Storage(_) => { 
+                frame_system::ensure_root(origin.clone()).map_err(|_| origin)?;
+                return Ok(())
+            },   
+        }    
+    }    
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin(_key: &RuntimeParametersKey) -> Result<RuntimeOrigin, ()> {
+        Ok(RuntimeOrigin::root())
+    }    
+}
+
+impl pallet_parameters::Config for Runtime {
+    type RuntimeParameters = RuntimeParameters;
+    type RuntimeEvent = RuntimeEvent;
+    type AdminOrigin = DynamicParametersManagerOrigin;
+    type WeightInfo = ();
+}
+
+/// Dynamic parameters that can be changed at runtime through the
+/// `pallet_parameters::set_parameter`.
+#[dynamic_params(RuntimeParameters, pallet_parameters::Parameters::<Runtime>)]
+pub mod dynamic_params {
+    use super::*;
+
+    #[dynamic_pallet_params]
+    #[codec(index = 0)]
+    pub mod storage {
+        /// Configures the base deposit of storing some data.
+        #[codec(index = 0)]
+        pub static BaseDeposit: Balance = 1 * MILLI_UNIT;
+
+        /// Configures the per-byte deposit of storing some data.
+        #[codec(index = 1)]
+        pub static ByteDeposit: Balance = 10 * MICRO_UNIT;
+    }    
 }

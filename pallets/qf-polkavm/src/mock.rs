@@ -2,6 +2,7 @@ use crate as pallet;
 
 use frame_support::{derive_impl, parameter_types};
 use sp_runtime::{BuildStorage, traits::IdentityLookup};
+use frame_support::pallet_prelude::inject_runtime_type;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -60,8 +61,8 @@ parameter_types! {
 	pub const PolkaVmMaxStorageSlots: u32 = 4;
 	pub const PolkaVmMaxLogLen: u32 = 1024;
 	pub const PolkaVmMinGasPrice: u64 = 1;
-	pub const PolkaVmMinStorageDepositLimit: u64 = 1;
-	pub const PolkaVmStorageDeposit: u128 = 1 * MILLI_UNIT;
+	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
+	pub const PolkaVmStorageDeposit: u64 = 1_000_000_000_000_000;
 	pub const PolkaVmStorageSize: u32 = 2048;
 	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
 }
@@ -81,6 +82,7 @@ impl pallet::Config for Test {
 	type StorageSize = PolkaVmStorageSize;
 	type StorageSlotPrice = PolkaVmStorageSlotPrice;
 	type Currency = Balances;
+	type RuntimeHoldReason = RuntimeHoldReason;
 	type WeightInfo = ();
 }
 

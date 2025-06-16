@@ -65,8 +65,8 @@ pub mod pallet {
 		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
 		traits::{
-			fungible::{Inspect, Mutate},
-			tokens::Preservation,
+			fungible::{Inspect, Mutate, MutateHold, InspectHold},
+			tokens::{Preservation, Precision},
 		},
 	};
 	use frame_system::pallet_prelude::*;
@@ -74,6 +74,7 @@ pub mod pallet {
 	use num_traits::ToPrimitive;
 	use scale_info::{TypeInfo, prelude::vec::Vec};
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
+	use sp_runtime::Saturating;
 
 	use polkavm::{
 		CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
@@ -120,6 +121,17 @@ pub mod pallet {
 		pub owner: T::AccountId,
 	}
 
+	/// A reason for the pallet contracts placing a hold on funds.
+	#[pallet::composite_enum]
+	pub enum HoldReason {
+		/// The Pallet has reserved it for storing code on-chain.
+		CodeUploadDepositReserve,
+		/// The Pallet has reserved it for storage deposit.
+		StorageDepositReserve,
+		/// Deposit for creating an address mapping in [`AddressSuffix`].
+		AddressMapping,
+	} 
+
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
 	// (`Call`s) in this pallet.
 	#[pallet::pallet]
@@ -165,10 +177,10 @@ pub mod pallet {
 		type MinGasPrice: Get<u64>;
 
 		#[pallet::constant]
-		type MinStorageDepositLimit: Get<u64>;
+		type MinStorageDepositLimit: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type StorageDeposit: Get<u128>;
+		type StorageDeposit: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type StorageSize: Get<u32>;
@@ -177,7 +189,12 @@ pub mod pallet {
 		type StorageSlotPrice: Get<u128>;
 
 		/// The fungible
-		type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
+		type Currency: Inspect<Self::AccountId>
+			+ Mutate<Self::AccountId>
+			+ MutateHold<Self::AccountId, Reason = Self::RuntimeHoldReason>;
+
+		/// Overarching hold reason.
+		type RuntimeHoldReason: From<HoldReason>;
 
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
@@ -205,7 +222,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeStorageDeposit<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), u128>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), BalanceOf<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -273,6 +290,9 @@ pub mod pallet {
 		GasLimitIsTooHigh,
 		GasPriceIsTooLow,
 		StorageDepositLimitIsTooLow,
+
+		/// Origin doesn't have enough balance to pay the required storage deposits.
+		StorageDepositNotEnoughFunds,
 
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
@@ -356,7 +376,7 @@ pub mod pallet {
 			contract_address: T::AccountId,
 			data: Vec<u8>,
 			gas_limit: Weight,
-			storage_deposit_limit: u64,
+			storage_deposit_limit: BalanceOf<T>,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
@@ -384,6 +404,11 @@ pub mod pallet {
 				Error::<T>::UserDataIsTooLarge
 			);
 
+			ensure!(
+				T::Currency::can_hold(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit_limit),
+				Error::<T>::StorageDepositNotEnoughFunds
+			);
+
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
@@ -400,9 +425,7 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
-			let storage_deposit = <T as Config>::StorageDeposit::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
+			let storage_deposit = <T as Config>::StorageDeposit::get();
 
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
@@ -467,6 +490,18 @@ pub mod pallet {
 			sp_runtime::print("====== AFTER CALL ======");
 
 			if !not_enough_gas && !trap && !not_enough_storage_deposit {
+				for op in &state.mutating_operations {
+					match op {
+						(MutatingStorageOperationType::Delete, _, _) => {
+							T::Currency::release(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit, Precision::BestEffort)?;
+						},
+						(MutatingStorageOperationType::Set, _, value) =>
+							if let Some(_) = value {
+								T::Currency::hold(&HoldReason::StorageDepositReserve.into(), &who, storage_deposit)?;
+							},
+					}
+				}
+
 				state.mutating_operations.iter().for_each(|op| match op {
 					(MutatingStorageOperationType::Delete, key, _) => {
 						CodeStorage::<T>::remove(key);
@@ -755,7 +790,7 @@ pub mod pallet {
 										caller.user_data.storage_deposit_limit = caller
 											.user_data
 											.storage_deposit_limit
-											.saturating_sub(caller.user_data.storage_deposit);
+											.saturating_sub(caller.user_data.storage_deposit.into());
 									}
 								}
 								let mut data = BoundedVec::with_bounded_capacity(
@@ -820,7 +855,7 @@ pub mod pallet {
 						caller.user_data.storage_deposit_limit = caller
 							.user_data
 							.storage_deposit_limit
-							.saturating_add(caller.user_data.storage_deposit);
+							.saturating_add(caller.user_data.storage_deposit.into());
 
 						return 0;
 					} else {
