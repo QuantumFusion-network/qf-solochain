@@ -87,7 +87,7 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
-	pub(super) type CodeVersion = u64;
+	pub(super) type CodeSlot = u64;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
 
@@ -104,7 +104,7 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub(super) struct BlobMetadata<T: Config> {
 		pub owner: T::AccountId,
-		pub version: CodeVersion,
+		pub slot: CodeSlot,
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
@@ -158,7 +158,7 @@ pub mod pallet {
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxCodeVersion: Get<u64>;
+		type MaxCodeSlot: Get<u64>;
 
 		#[pallet::constant]
 		type MaxUserDataLen: Get<u32>;
@@ -204,11 +204,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type Code<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeVersion)>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeSlot)>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionResult<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion, T::AccountId), ExecResult>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeSlot, T::AccountId), ExecResult>;
 
 	#[pallet::storage]
 	pub(super) type CodeMetadata<T: Config> =
@@ -216,7 +216,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeAddress<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion), T::AccountId>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeSlot), T::AccountId>;
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
@@ -245,7 +245,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			version: CodeVersion,
+			slot: CodeSlot,
 			result: Option<u64>,
 			not_enough_gas: bool,
 			not_enough_storage_deposit: bool,
@@ -258,7 +258,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			version: CodeVersion,
+			slot: CodeSlot,
 			// List of function in the smart contract.
 			exports: Vec<Vec<u8>>,
 		},
@@ -300,7 +300,7 @@ pub mod pallet {
 		/// free balance in the sender's account.
 		TransferFailed,
 
-		CodeVersionIsTooBig,
+		CodeSlotIsTooBig,
 		UserDataIsTooLarge,
 	}
 
@@ -340,26 +340,26 @@ pub mod pallet {
 
 			let mut blob_metadata = match CodeMetadata::<T>::get(&who) {
 				Some(meta) => meta,
-				None => BlobMetadata { owner: who.clone(), version: 0 },
+				None => BlobMetadata { owner: who.clone(), slot: 0 },
 			};
-			blob_metadata.version =
-				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			blob_metadata.slot =
+				blob_metadata.slot.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
 			ensure!(
-				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
-				Error::<T>::CodeVersionIsTooBig
+				blob_metadata.slot <= <T as Config>::MaxCodeSlot::get(),
+				Error::<T>::CodeSlotIsTooBig
 			);
 			let contract_address =
 				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
-			let version = blob_metadata.version;
-			Code::<T>::insert(&contract_address, (&raw_blob, &version));
-			CodeAddress::<T>::insert((&who, &version), &contract_address);
+			let slot = blob_metadata.slot;
+			Code::<T>::insert(&contract_address, (&raw_blob, &slot));
+			CodeAddress::<T>::insert((&who, &slot), &contract_address);
 			CodeMetadata::<T>::insert(&who, blob_metadata);
 
 			Self::deposit_event(Event::ProgramBlobUploaded {
 				who,
 				contract_address,
-				version,
+				slot,
 				exports,
 			});
 
@@ -433,8 +433,8 @@ pub mod pallet {
 
 			let storage_deposit = <T as Config>::StorageDeposit::get();
 
-			let (raw_blob, version) = Code::<T>::get(&contract_address)
-				.map(|(blob, version)| (blob.into_inner(), version))
+			let (raw_blob, slot) = Code::<T>::get(&contract_address)
+				.map(|(blob, slot)| (blob.into_inner(), slot))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
@@ -445,7 +445,7 @@ pub mod pallet {
 				data,
 				mutating_operations: [].to_vec(),
 				raw_storage: BTreeMap::new(),
-				code_version: version,
+				code_slot: slot,
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
@@ -538,7 +538,7 @@ pub mod pallet {
 			}
 
 			ExecutionResult::<T>::insert(
-				(&contract_address, version, &who),
+				(&contract_address, slot, &who),
 				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
 			);
 
@@ -546,7 +546,7 @@ pub mod pallet {
 			Self::deposit_event(Event::ExecutionResult {
 				who,
 				contract_address,
-				version,
+				slot,
 				result,
 				not_enough_gas,
 				trap,

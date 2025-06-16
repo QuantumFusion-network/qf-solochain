@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, CodeStorageKey, CodeVersion, Config as PalletConfig, MutatingStorageOperation,
+	BalanceOf, CodeStorageKey, CodeSlot, Config as PalletConfig, MutatingStorageOperation,
 	StorageKey, StorageValue,
 	polkavm::{
 		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
@@ -597,7 +597,7 @@ pub struct State<T: PalletConfig> {
 	pub data: Vec<u8>,
 	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
 	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<StorageValue<T>>>,
-	pub code_version: CodeVersion,
+	pub code_slot: CodeSlot,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,

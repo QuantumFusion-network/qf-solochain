@@ -12,7 +12,7 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageDeposit, CodeVersion, Config,
+	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageDeposit, CodeSlot, Config,
 	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok, traits::fungible::Mutate};
@@ -21,7 +21,7 @@ const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
 const CONTRACT_ADDRESS: AccountId = 52079882031220287051226575722413486460;
 const STORAGE_DEPOSIT_LIMIT: u128 = 2 * MILLI_UNIT;
-const VERSION: CodeVersion = 1;
+const SLOT: CodeSlot = 1;
 
 #[test]
 fn upload_invalid_blob_should_not_work() {
@@ -57,19 +57,19 @@ fn upload_very_big_blob_should_not_work() {
 fn upload_valid_blob_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		assert_eq!(CodeAddress::<Test>::get((ALICE, VERSION)), None);
+		assert_eq!(CodeAddress::<Test>::get((ALICE, SLOT)), None);
 		assert_eq!(CodeMetadata::<Test>::get(ALICE), None);
 		upload();
-		assert_eq!(CodeAddress::<Test>::get((ALICE, VERSION)), Some(CONTRACT_ADDRESS));
+		assert_eq!(CodeAddress::<Test>::get((ALICE, SLOT)), Some(CONTRACT_ADDRESS));
 		assert_eq!(
 			CodeMetadata::<Test>::get(ALICE),
-			Some(BlobMetadata { owner: ALICE, version: VERSION })
+			Some(BlobMetadata { owner: ALICE, slot: SLOT })
 		);
 		System::assert_last_event(
 			Event::ProgramBlobUploaded {
 				who: ALICE,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				exports: vec!["main".bytes().collect()],
 			}
 			.into(),
@@ -98,7 +98,7 @@ fn block_number_should_work() {
 			1
 		));
 		assert_eq!(
-			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, SLOT, BOB)),
 			Some(ExecResult {
 				result: Some(43),
 				not_enough_gas: false,
@@ -111,7 +111,7 @@ fn block_number_should_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: Some(43),
 				not_enough_gas: false,
 				not_enough_storage_deposit: false,
@@ -150,7 +150,7 @@ fn increment_should_work() {
 			1
 		));
 		assert_eq!(
-			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, SLOT, BOB)),
 			Some(ExecResult {
 				result: Some(0),
 				not_enough_gas: false,
@@ -175,7 +175,7 @@ fn increment_should_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: Some(0),
 				not_enough_gas: false,
 				not_enough_storage_deposit: false,
@@ -197,7 +197,7 @@ fn increment_should_work() {
 			1
 		));
 		assert_eq!(
-			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, SLOT, BOB)),
 			Some(ExecResult {
 				result: Some(0),
 				not_enough_gas: false,
@@ -222,7 +222,7 @@ fn increment_should_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: Some(0),
 				not_enough_gas: false,
 				not_enough_storage_deposit: false,
@@ -263,7 +263,7 @@ fn increment_with_low_storage_deposit_limit_should_not_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: None,
 				not_enough_gas: false,
 				not_enough_storage_deposit: true,
@@ -302,7 +302,7 @@ fn delete_should_work() {
 			1
 		));
 		assert_eq!(
-			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, SLOT, BOB)),
 			Some(ExecResult {
 				result: Some(0),
 				not_enough_gas: false,
@@ -327,7 +327,7 @@ fn delete_should_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: Some(0),
 				not_enough_gas: false,
 				not_enough_storage_deposit: false,
@@ -349,7 +349,7 @@ fn delete_should_work() {
 			1
 		));
 		assert_eq!(
-			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, VERSION, BOB)),
+			ExecutionResult::<Test>::get((CONTRACT_ADDRESS, SLOT, BOB)),
 			Some(ExecResult {
 				result: Some(0),
 				not_enough_gas: false,
@@ -364,7 +364,7 @@ fn delete_should_work() {
 			Event::ExecutionResult {
 				who: BOB,
 				contract_address: CONTRACT_ADDRESS,
-				version: VERSION,
+				slot: SLOT,
 				result: Some(0),
 				not_enough_gas: false,
 				not_enough_storage_deposit: false,
