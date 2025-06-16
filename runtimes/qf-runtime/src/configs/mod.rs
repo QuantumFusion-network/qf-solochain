@@ -26,12 +26,8 @@
 // Substrate and Polkadot dependencies
 use frame_election_provider_support::{SequentialPhragmen, bounds::ElectionBoundsBuilder, onchain};
 use frame_support::{
-	derive_impl,
-	parameter_types,
-	traits::{
-		ConstBool, ConstU8, ConstU32, ConstU64, ConstU128,
-		Nothing, VariantCountOf,
-	},
+	derive_impl, parameter_types,
+	traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, Nothing, VariantCountOf},
 	weights::{
 		IdentityFee, Weight,
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
