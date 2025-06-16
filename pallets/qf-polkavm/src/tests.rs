@@ -16,6 +16,7 @@ use crate::{
 	Error, Event, ExecResult, ExecutionResult, StorageKey, StorageValue, mock::*,
 };
 use frame_support::{BoundedVec, assert_noop, assert_ok, traits::fungible::Mutate};
+use frame_support::traits::fungible::InspectHold;
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;
@@ -138,6 +139,7 @@ fn increment_should_work() {
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -171,6 +173,7 @@ fn increment_should_work() {
 					.expect("can convert storage deposit to u128; qed")
 			),
 		);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), storage_deposit());
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -218,6 +221,7 @@ fn increment_should_work() {
 					.expect("can convert storage deposit to u128; qed")
 			),
 		);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 2 * storage_deposit());
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -248,6 +252,7 @@ fn increment_with_low_storage_deposit_limit_should_not_work() {
 		upload();
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -259,6 +264,7 @@ fn increment_with_low_storage_deposit_limit_should_not_work() {
 		));
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -290,6 +296,7 @@ fn delete_should_work() {
 
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
 
 		assert_ok!(QfPolkaVM::execute(
 			RuntimeOrigin::signed(BOB),
@@ -323,6 +330,7 @@ fn delete_should_work() {
 					.expect("can convert storage deposit to u128; qed")
 			),
 		);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), storage_deposit());
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -360,6 +368,7 @@ fn delete_should_work() {
 		);
 		assert_eq!(CodeStorage::<Test>::get((CONTRACT_ADDRESS, key::<Test>())), None);
 		assert_eq!(CodeStorageDeposit::<Test>::get((BOB, CONTRACT_ADDRESS, key::<Test>())), None);
+		assert_eq!(<Test as Config>::Currency::total_balance_on_hold(&BOB), 0);
 		System::assert_last_event(
 			Event::ExecutionResult {
 				who: BOB,
@@ -416,4 +425,10 @@ fn value<T: Config>(owner: T::AccountId, first_byte: u8) -> StorageValue<T> {
 		.expect("raw_value size is same as buffer size; qed");
 
 	StorageValue { data: buffer, owner }
+}
+
+fn storage_deposit() -> u64 {
+	MILLI_UNIT	
+		.try_into() 
+		.expect("can convert to u64; qed")
 }
