@@ -65,15 +65,18 @@ pub mod pallet {
 		dispatch::PostDispatchInfo,
 		pallet_prelude::*,
 		traits::{
-			fungible::{Inspect, Mutate},
-			tokens::Preservation,
+			fungible::{Inspect, InspectHold, Mutate, MutateHold},
+			tokens::{Precision, Preservation},
 		},
 	};
 	use frame_system::pallet_prelude::*;
 	use num_derive::{FromPrimitive, ToPrimitive};
 	use num_traits::ToPrimitive;
 	use scale_info::{TypeInfo, prelude::vec::Vec};
-	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
+	use sp_runtime::{
+		Saturating,
+		traits::{Hash, SaturatedConversion, TrailingZeroInput},
+	};
 
 	use polkavm::{
 		CallError, Caller, Config as PolkaVMConfig, Engine, GasMeteringKind, Instance, Linker,
@@ -84,11 +87,9 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
-	pub(super) type CodeVersion = u64;
-	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type CodeSlot = u64;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
-	pub(super) type CodeStorageKey<T> =
-		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
+	pub(super) type CodeStorageKey<T> = (<T as frame_system::Config>::AccountId, StorageKey<T>);
 
 	#[derive(Clone)]
 	pub(super) enum MutatingStorageOperationType {
@@ -97,13 +98,13 @@ pub mod pallet {
 	}
 
 	pub(super) type MutatingStorageOperation<T> =
-		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<StorageValue<T>>);
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	#[scale_info(skip_type_params(T))]
 	pub(super) struct BlobMetadata<T: Config> {
 		pub owner: T::AccountId,
-		pub version: CodeVersion,
+		pub slot: CodeSlot,
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
@@ -113,6 +114,24 @@ pub mod pallet {
 		pub trap: bool,
 		pub gas_before: u32,
 		pub gas_after: i64,
+	}
+
+	#[derive(Debug, Clone, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	#[scale_info(skip_type_params(T))]
+	pub(super) struct StorageValue<T: Config> {
+		pub data: BoundedVec<u8, <T as Config>::StorageSize>,
+		pub owner: T::AccountId,
+	}
+
+	/// A reason for the pallet contracts placing a hold on funds.
+	#[pallet::composite_enum]
+	pub enum HoldReason {
+		/// The Pallet has reserved it for storing code on-chain.
+		CodeUploadDepositReserve,
+		/// The Pallet has reserved it for storage deposit.
+		StorageDepositReserve,
+		/// Deposit for creating an address mapping in [`AddressSuffix`].
+		AddressMapping,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -139,7 +158,7 @@ pub mod pallet {
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxCodeVersion: Get<u64>;
+		type MaxCodeSlot: Get<u64>;
 
 		#[pallet::constant]
 		type MaxUserDataLen: Get<u32>;
@@ -160,7 +179,10 @@ pub mod pallet {
 		type MinGasPrice: Get<u64>;
 
 		#[pallet::constant]
-		type MinStorageDepositLimit: Get<u64>;
+		type MinStorageDepositLimit: Get<BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type StorageDeposit: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type StorageSize: Get<u32>;
@@ -169,7 +191,12 @@ pub mod pallet {
 		type StorageSlotPrice: Get<u128>;
 
 		/// The fungible
-		type Currency: Inspect<Self::AccountId> + Mutate<Self::AccountId>;
+		type Currency: Inspect<Self::AccountId>
+			+ Mutate<Self::AccountId>
+			+ MutateHold<Self::AccountId, Reason = Self::RuntimeHoldReason>;
+
+		/// Overarching hold reason.
+		type RuntimeHoldReason: From<HoldReason>;
 
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
@@ -177,11 +204,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type Code<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeVersion)>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeSlot)>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionResult<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion, T::AccountId), ExecResult>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeSlot, T::AccountId), ExecResult>;
 
 	#[pallet::storage]
 	pub(super) type CodeMetadata<T: Config> =
@@ -189,11 +216,15 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeAddress<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion), T::AccountId>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeSlot), T::AccountId>;
 
 	#[pallet::storage]
 	pub(super) type CodeStorage<T: Config> =
-		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, StorageValue<T>>;
+
+	#[pallet::storage]
+	pub(super) type CodeStorageDeposit<T: Config> =
+		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId, StorageKey<T>), BalanceOf<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -214,9 +245,10 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			version: CodeVersion,
+			slot: CodeSlot,
 			result: Option<u64>,
 			not_enough_gas: bool,
+			not_enough_storage_deposit: bool,
 			trap: bool,
 			gas_before: u32,
 			gas_after: i64,
@@ -226,7 +258,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			version: CodeVersion,
+			slot: CodeSlot,
 			// List of function in the smart contract.
 			exports: Vec<Vec<u8>>,
 		},
@@ -261,11 +293,14 @@ pub mod pallet {
 		GasPriceIsTooLow,
 		StorageDepositLimitIsTooLow,
 
+		/// Origin doesn't have enough balance to pay the required storage deposits.
+		StorageDepositNotEnoughFunds,
+
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
 		TransferFailed,
 
-		CodeVersionIsTooBig,
+		CodeSlotIsTooBig,
 		UserDataIsTooLarge,
 	}
 
@@ -305,26 +340,26 @@ pub mod pallet {
 
 			let mut blob_metadata = match CodeMetadata::<T>::get(&who) {
 				Some(meta) => meta,
-				None => BlobMetadata { owner: who.clone(), version: 0 },
+				None => BlobMetadata { owner: who.clone(), slot: 0 },
 			};
-			blob_metadata.version =
-				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			blob_metadata.slot =
+				blob_metadata.slot.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
 			ensure!(
-				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
-				Error::<T>::CodeVersionIsTooBig
+				blob_metadata.slot <= <T as Config>::MaxCodeSlot::get(),
+				Error::<T>::CodeSlotIsTooBig
 			);
 			let contract_address =
 				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
-			let version = blob_metadata.version;
-			Code::<T>::insert(&contract_address, (&raw_blob, &version));
-			CodeAddress::<T>::insert((&who, &version), &contract_address);
+			let slot = blob_metadata.slot;
+			Code::<T>::insert(&contract_address, (&raw_blob, &slot));
+			CodeAddress::<T>::insert((&who, &slot), &contract_address);
 			CodeMetadata::<T>::insert(&who, blob_metadata);
 
 			Self::deposit_event(Event::ProgramBlobUploaded {
 				who,
 				contract_address,
-				version,
+				slot,
 				exports,
 			});
 
@@ -343,7 +378,7 @@ pub mod pallet {
 			contract_address: T::AccountId,
 			data: Vec<u8>,
 			gas_limit: Weight,
-			storage_deposit_limit: u64,
+			storage_deposit_limit: BalanceOf<T>,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
@@ -371,6 +406,15 @@ pub mod pallet {
 				Error::<T>::UserDataIsTooLarge
 			);
 
+			ensure!(
+				T::Currency::can_hold(
+					&HoldReason::StorageDepositReserve.into(),
+					&who,
+					storage_deposit_limit
+				),
+				Error::<T>::StorageDepositNotEnoughFunds
+			);
+
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
@@ -387,8 +431,10 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
-			let (raw_blob, version) = Code::<T>::get(&contract_address)
-				.map(|(blob, version)| (blob.into_inner(), version))
+			let storage_deposit = <T as Config>::StorageDeposit::get();
+
+			let (raw_blob, slot) = Code::<T>::get(&contract_address)
+				.map(|(blob, slot)| (blob.into_inner(), slot))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
@@ -399,10 +445,12 @@ pub mod pallet {
 				data,
 				mutating_operations: [].to_vec(),
 				raw_storage: BTreeMap::new(),
-				code_version: version,
+				code_slot: slot,
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
+				storage_deposit,
+				storage_deposit_limit: storage_deposit_limit.into(),
 				max_log_len,
 				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
@@ -428,32 +476,8 @@ pub mod pallet {
 				},
 				account_id: || -> u64 { 0 },
 				caller: || -> u64 { 1 },
-				get: |contract_address: T::AccountId,
-				      version: CodeVersion,
-				      key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
-				},
-				insert: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>,
-				         max_storage_size: usize,
-				         mut data: Vec<u8>|
-				 -> u64 {
-					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, version, key), buffer);
-						0
-					} else {
-						1
-					}
-				},
-				delete: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>|
-				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, version, key));
-					0
+				get: |contract_address: T::AccountId, key: StorageKey<T>| -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, key)).map(|d| d.data.to_vec())
 				},
 			};
 
@@ -461,27 +485,60 @@ pub mod pallet {
 
 			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
-			let (result, not_enough_gas, trap) = match result {
-				Err(CallError::NotEnoughGas) => (None, true, false),
-				Err(CallError::Trap) => (None, false, true),
+			let (result, not_enough_gas, trap, not_enough_storage_deposit) = match result {
+				Err(CallError::NotEnoughGas) => (None, true, false, false),
+				Err(CallError::Trap) => (None, false, true, false),
 				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				Ok(res) => (Some(res), false, false),
+				Ok(1050) => (None, false, false, true),
+				Ok(res) => (Some(res), false, false, false),
 			};
 
 			sp_runtime::print("====== AFTER CALL ======");
 
-			if !not_enough_gas && !trap {
+			if !not_enough_gas && !trap && !not_enough_storage_deposit {
+				for op in &state.mutating_operations {
+					match op {
+						(MutatingStorageOperationType::Delete, _, _) => {
+							T::Currency::release(
+								&HoldReason::StorageDepositReserve.into(),
+								&who,
+								storage_deposit,
+								Precision::BestEffort,
+							)?;
+						},
+						(MutatingStorageOperationType::Set, _, value) =>
+							if let Some(_) = value {
+								T::Currency::hold(
+									&HoldReason::StorageDepositReserve.into(),
+									&who,
+									storage_deposit,
+								)?;
+							},
+					}
+				}
+
 				state.mutating_operations.iter().for_each(|op| match op {
-					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Delete, key, _) => {
+						CodeStorage::<T>::remove(key);
+						CodeStorageDeposit::<T>::remove((
+							who.clone(),
+							contract_address.clone(),
+							key.1.clone(),
+						));
+					},
 					(MutatingStorageOperationType::Set, key, value) =>
 						if let Some(data) = value {
-							CodeStorage::<T>::insert(key, data)
+							CodeStorage::<T>::insert(key, data);
+							CodeStorageDeposit::<T>::insert(
+								(who.clone(), contract_address.clone(), key.1.clone()),
+								storage_deposit,
+							);
 						},
 				})
 			}
 
 			ExecutionResult::<T>::insert(
-				(&contract_address, version, &who),
+				(&contract_address, slot, &who),
 				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
 			);
 
@@ -489,12 +546,13 @@ pub mod pallet {
 			Self::deposit_event(Event::ExecutionResult {
 				who,
 				contract_address,
-				version,
+				slot,
 				result,
 				not_enough_gas,
 				trap,
 				gas_before,
 				gas_after: instance.gas(),
+				not_enough_storage_deposit,
 			});
 
 			let normalized_gas_after =
@@ -678,16 +736,15 @@ pub mod pallet {
 								Err(_) => return 1010,
 							};
 
-							let result = match caller.user_data.raw_storage.get(&(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key.clone(),
-							)) {
-								Some(Some(r)) => Some(r.to_vec()),
+							let result = match caller
+								.user_data
+								.raw_storage
+								.get(&(caller.user_data.addresses[0].clone(), storage_key.clone()))
+							{
+								Some(Some(r)) => Some(r.data.to_vec()),
 								Some(None) => None,
 								None => (caller.user_data.get)(
 									caller.user_data.addresses[0].clone(),
-									caller.user_data.code_version,
 									storage_key,
 								),
 							};
@@ -710,6 +767,10 @@ pub mod pallet {
 				.define_typed(
 					"set",
 					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
+						if caller.user_data.storage_deposit_limit < caller.user_data.storage_deposit
+						{
+							return 1050
+						}
 						if let Ok(mut raw_storage_key) = caller
 							.instance
 							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
@@ -726,6 +787,27 @@ pub mod pallet {
 									Err(_) => return 1020,
 								}
 
+								let mut slot_owner_is_changed = true;
+								if let Some(Some(value)) = caller.user_data.raw_storage.get(&(
+									caller.user_data.addresses[0].clone(),
+									storage_key.clone(),
+								)) {
+									if caller.user_data.addresses[1] == value.owner {
+										slot_owner_is_changed = false;
+									}
+								}
+								if slot_owner_is_changed {
+									if caller.user_data.storage_deposit_limit <
+										caller.user_data.storage_deposit
+									{
+										return 1050
+									} else {
+										caller.user_data.storage_deposit_limit =
+											caller.user_data.storage_deposit_limit.saturating_sub(
+												caller.user_data.storage_deposit.into(),
+											);
+									}
+								}
 								let mut data = BoundedVec::with_bounded_capacity(
 									caller.user_data.max_storage_size as usize,
 								);
@@ -736,20 +818,18 @@ pub mod pallet {
 
 								caller.user_data.mutating_operations.push((
 									MutatingStorageOperationType::Set,
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.code_version,
-										storage_key.clone(),
-									),
-									Some(data.clone()),
+									(caller.user_data.addresses[0].clone(), storage_key.clone()),
+									Some(StorageValue {
+										data: data.clone(),
+										owner: caller.user_data.addresses[1].clone(),
+									}),
 								));
 								caller.user_data.raw_storage.insert(
-									(
-										caller.user_data.addresses[0].clone(),
-										caller.user_data.code_version,
-										storage_key,
-									),
-									Some(data),
+									(caller.user_data.addresses[0].clone(), storage_key),
+									Some(StorageValue {
+										data,
+										owner: caller.user_data.addresses[1].clone(),
+									}),
 								);
 
 								return 0;
@@ -779,21 +859,18 @@ pub mod pallet {
 
 						caller.user_data.mutating_operations.push((
 							MutatingStorageOperationType::Delete,
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key.clone(),
-							),
+							(caller.user_data.addresses[0].clone(), storage_key.clone()),
 							None,
 						));
-						caller.user_data.raw_storage.insert(
-							(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.code_version,
-								storage_key,
-							),
-							None,
-						);
+						caller
+							.user_data
+							.raw_storage
+							.insert((caller.user_data.addresses[0].clone(), storage_key), None);
+
+						caller.user_data.storage_deposit_limit = caller
+							.user_data
+							.storage_deposit_limit
+							.saturating_add(caller.user_data.storage_deposit.into());
 
 						return 0;
 					} else {

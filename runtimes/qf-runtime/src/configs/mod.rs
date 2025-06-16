@@ -303,7 +303,7 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
 	pub const PolkaVmMaxCodeLen: u32 = 131072;
-	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
+	pub const PolkaVmMaxCodeSlot: u64 = u64::MAX;
 	pub const PolkaVmMaxUserDataLen: u32 = 2048;
 	pub const PolkaVmMaxGasLimit: u64 = 2097152;
 	pub const PolkaVmMaxStorageKeySize: u32 = 256;
@@ -311,6 +311,7 @@ parameter_types! {
 	pub const PolkaVmMaxLogLen: u32 = 1024;
 	pub const PolkaVmMinGasPrice: u64 = 1;
 	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
+	pub const PolkaVmStorageDeposit: u128 = 1 * MILLI_UNIT;
 	pub const PolkaVmStorageSize: u32 = 2048;
 	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
 }
@@ -318,7 +319,7 @@ parameter_types! {
 impl pallet_qf_polkavm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MaxCodeLen = PolkaVmMaxCodeLen;
-	type MaxCodeVersion = PolkaVmMaxCodeVersion;
+	type MaxCodeSlot = PolkaVmMaxCodeSlot;
 	type MaxUserDataLen = PolkaVmMaxUserDataLen;
 	type MaxGasLimit = PolkaVmMaxGasLimit;
 	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
@@ -326,9 +327,11 @@ impl pallet_qf_polkavm::Config for Runtime {
 	type MaxLogLen = PolkaVmMaxLogLen;
 	type MinGasPrice = PolkaVmMinGasPrice;
 	type MinStorageDepositLimit = PolkaVmMinStorageDepositLimit;
+	type StorageDeposit = PolkaVmStorageDeposit;
 	type StorageSize = PolkaVmStorageSize;
 	type StorageSlotPrice = PolkaVmStorageSlotPrice;
 	type Currency = Balances;
+	type RuntimeHoldReason = RuntimeHoldReason;
 	type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
 }
 
