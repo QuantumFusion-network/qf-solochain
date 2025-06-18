@@ -359,6 +359,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
@@ -381,91 +385,10 @@ pub mod pallet {
 				Error::<T>::UserDataIsTooLarge
 			);
 
-			let max_storage_size = <T as Config>::StorageSize::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-
-			let max_storage_key_size = <T as Config>::MaxStorageKeySize::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-
-			let max_storage_slot_idx = <T as Config>::StorageSize::get()
-				.checked_sub(1)
-				.ok_or(Error::<T>::IntegerOverflow)?;
-
-			let max_log_len = <T as Config>::MaxLogLen::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-
-			let (raw_blob, version) = Code::<T>::get(&contract_address)
-				.map(|(blob, version)| (blob.into_inner(), version))
-				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+			let mut state = Self::init_state(who.clone(), contract_address.clone(), version, data)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
 			instance.set_gas(gas_before.into());
-
-			let mut state = State {
-				addresses: [contract_address.clone(), who.clone()].to_vec(),
-				data,
-				mutating_operations: [].to_vec(),
-				raw_storage: BTreeMap::new(),
-				code_version: version,
-				max_storage_size,
-				max_storage_key_size,
-				max_storage_slot_idx,
-				max_log_len,
-				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
-					if !value.is_zero() && from != to {
-						if let Err(_) =
-							T::Currency::transfer(&from, &to, value.into(), Preservation::Preserve)
-						{
-							return 1;
-						}
-					}
-					0
-				},
-				print: |m: Vec<u8>| -> u64 {
-					let msg = alloc::string::String::from_utf8_lossy(&m);
-					let msg_log = alloc::format!("polkavm: {msg}");
-					sp_runtime::print(msg_log.as_str());
-					return 0;
-				},
-				balance: |address: T::AccountId| -> u64 {
-					T::Currency::balance(&address).saturated_into()
-				},
-				block_number: || -> u64 {
-					frame_system::Pallet::<T>::block_number().saturated_into()
-				},
-				account_id: || -> u64 { 0 },
-				caller: || -> u64 { 1 },
-				get: |contract_address: T::AccountId,
-				      version: CodeVersion,
-				      key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
-				},
-				insert: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>,
-				         max_storage_size: usize,
-				         mut data: Vec<u8>|
-				 -> u64 {
-					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, version, key), buffer);
-						0
-					} else {
-						1
-					}
-				},
-				delete: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>|
-				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, version, key));
-					0
-				},
-			};
 
 			sp_runtime::print("====== BEFORE CALL ======");
 
@@ -479,6 +402,8 @@ pub mod pallet {
 			};
 
 			sp_runtime::print("====== AFTER CALL ======");
+
+			// let (result, not_enough_gas, trap) = Self::do_make()?;
 
 			if !not_enough_gas && !trap {
 				state.mutating_operations.iter().for_each(|op| match op {
@@ -556,6 +481,82 @@ pub mod pallet {
 				gas_before: 0,
 				gas_after: 0,
 			}
+		}
+
+		// fn do_make(
+		// 	who: T::AccountId,
+		// 	contract_address: T::AccountId,
+		// 	version: CodeVersion,
+		// 	data: Vec<u8>,
+		// ) -> Result<(u64, bool, bool), DispatchError> {
+
+		// }
+
+		fn init_state(
+			who: T::AccountId,
+			contract_address: T::AccountId,
+			version: CodeVersion,
+			data: Vec<u8>,
+		) -> Result<State<T>, DispatchError> {
+			let max_storage_size = <T as Config>::StorageSize::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let max_storage_key_size = <T as Config>::MaxStorageKeySize::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let max_storage_slot_idx = <T as Config>::StorageSize::get()
+				.checked_sub(1)
+				.ok_or(Error::<T>::IntegerOverflow)?;
+
+			let max_log_len = <T as Config>::MaxLogLen::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let state = State {
+				addresses: [contract_address.clone(), who.clone()].to_vec(),
+				data,
+				mutating_operations: [].to_vec(),
+				raw_storage: BTreeMap::new(),
+				code_version: version,
+				max_storage_size,
+				max_storage_key_size,
+				max_storage_slot_idx,
+				max_log_len,
+				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
+					if !value.is_zero() && from != to {
+						if let Err(_) =
+							T::Currency::transfer(&from, &to, value.into(), Preservation::Preserve)
+						{
+							return 1;
+						}
+					}
+					0
+				},
+				print: |m: Vec<u8>| -> u64 {
+					let msg = alloc::string::String::from_utf8_lossy(&m);
+					let msg_log = alloc::format!("polkavm: {msg}");
+					sp_runtime::print(msg_log.as_str());
+					return 0;
+				},
+				balance: |address: T::AccountId| -> u64 {
+					T::Currency::balance(&address).saturated_into()
+				},
+				block_number: || -> u64 {
+					frame_system::Pallet::<T>::block_number().saturated_into()
+				},
+				account_id: || -> u64 { 0 },
+				caller: || -> u64 { 1 },
+				get: |contract_address: T::AccountId,
+				      version: CodeVersion,
+				      key: StorageKey<T>|
+				 -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
+				},
+			};
+
+			return Ok(state)
 		}
 	}
 
