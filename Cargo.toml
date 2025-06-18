@@ -9,6 +9,8 @@ repository = "https://github.com/QuantumFusion-network"
 resolver = "2"
 
 members = [
+    "client/consensus-spin",
+    "client/consensus-spin/src/mock",
 	"client/*",
 	"node",
 	"pallets/qf-polkavm",
@@ -147,7 +149,11 @@ sp-runtime = { features = ["serde"], path = "vendor/polkadot-sdk/substrate/primi
 sp-version = { path = "vendor/polkadot-sdk/substrate/primitives/version", default-features = false }
 sp-version-proc-macro = { path = "vendor/polkadot-sdk/substrate/primitives/version/proc-macro", default-features = false }
 
-substrate-test-runtime-client = { path = "vendor/polkadot-sdk/substrate/test-utils/runtime/client", default-features = false }
+substrate-test-runtime-client = { path = "./client/consensus-spin/src/mock", default-features = false }
+substrate-test-client = { path = "./vendor/polkadot-sdk/substrate/test-utils/client", default-features = false }
+
+# local pallet templates
+pallet-minimal-template = { path = "./vendor/polkadot-sdk/templates/minimal/pallets/template", default-features = false }
 
 # polkavm
 image = { version = "0.24.7", default-features = false }
