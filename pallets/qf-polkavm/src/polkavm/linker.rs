@@ -609,8 +609,6 @@ pub struct State<T: PalletConfig> {
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
 	pub get: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
-	pub insert: fn(T::AccountId, version: CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
-	pub delete: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> u64,
 }
 
 #[non_exhaustive]
