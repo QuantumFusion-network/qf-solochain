@@ -2,13 +2,15 @@
 
 #![warn(missing_docs)]
 
-use polkadot_sdk::*;
+// Пытается взять command из вендора!
+// use polkadot_sdk::*;
 
 mod chain_spec;
 mod cli;
 mod command;
 mod rpc;
 mod service;
+mod fast_service;
 
 fn main() -> sc_cli::Result<()> {
 	command::run()
