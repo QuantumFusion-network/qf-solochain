@@ -419,14 +419,14 @@ pub mod pallet {
 		pub fn bare_upload(
 			origin: T::AccountId,
 			program_blob: Vec<u8>,
-		) -> UploadResult<T::AccountId> {
+		) -> Result<UploadResult<T::AccountId>, DispatchError> {
 			log::debug!(
 				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
 				origin,
 				program_blob.len()
 			);
 
-			UploadResult { contract_address: origin.clone(), version: 0 }
+			Ok(UploadResult { contract_address: origin.clone(), version: 0 })
 		}
 
 		pub fn bare_execute(

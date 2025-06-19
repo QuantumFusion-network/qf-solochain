@@ -311,7 +311,7 @@ impl_runtime_apis! {
 
 	impl pallet_qf_polkavm::QfPolkavmApi<Block, AccountId, Balance> for Runtime {
 		fn upload(origin: AccountId, program_blob: Vec<u8>) -> Result<pallet_qf_polkavm::UploadResult<AccountId>, DispatchError> {
-			Ok(QFPolkaVM::bare_upload(origin, program_blob))
+			QFPolkaVM::bare_upload(origin, program_blob)
 		}
 
 		fn execute(
