@@ -34,8 +34,7 @@ use qfp_consensus_spin::{SpinAuxData, sr25519::AuthorityId as SpinId};
 use sp_api::impl_runtime_apis;
 use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
-	ApplyExtrinsicResult,
-	DispatchError,
+	ApplyExtrinsicResult, DispatchError,
 	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionSource, TransactionValidity},
 };

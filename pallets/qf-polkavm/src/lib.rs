@@ -129,7 +129,7 @@ pub mod pallet {
 		result: Option<u64>,
 		gas_after: i64,
 		not_enough_gas: bool,
-		trap: bool
+		trap: bool,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -368,7 +368,8 @@ pub mod pallet {
 
 			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
 
-			let gas_before: u32 = gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+			let gas_before: u32 =
+				gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
@@ -376,7 +377,8 @@ pub mod pallet {
 
 			let mut state = Self::init_state(who.clone(), contract_address.clone(), version, data)?;
 
-			let InstanceCallResult { result, gas_after, not_enough_gas, trap } = Self::do_execute(&mut state, gas_before, raw_blob)?;
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } =
+				Self::do_execute(&mut state, gas_before, raw_blob)?;
 
 			if !not_enough_gas && !trap {
 				state.mutating_operations.iter().for_each(|op| match op {
@@ -405,8 +407,7 @@ pub mod pallet {
 				gas_after,
 			});
 
-			let normalized_gas_after =
-				if gas_after < 0 { 0u64 } else { gas_after as u64 };
+			let normalized_gas_after = if gas_after < 0 { 0u64 } else { gas_after as u64 };
 
 			Ok(PostDispatchInfo {
 				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
@@ -449,7 +450,8 @@ pub mod pallet {
 
 			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
 
-			let gas_before: u32 = gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+			let gas_before: u32 =
+				gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
@@ -457,15 +459,10 @@ pub mod pallet {
 
 			let mut state = Self::init_state(origin, contract_address.clone(), version, data)?;
 
-			let InstanceCallResult { result, gas_after, not_enough_gas, trap } = Self::do_execute(&mut state, gas_before, raw_blob)?;
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } =
+				Self::do_execute(&mut state, gas_before, raw_blob)?;
 
-			Ok(ExecResult {
-				result,
-				not_enough_gas,
-				trap,
-				gas_before,
-				gas_after,
-			})
+			Ok(ExecResult { result, not_enough_gas, trap, gas_before, gas_after })
 		}
 
 		fn check_execute_args(
