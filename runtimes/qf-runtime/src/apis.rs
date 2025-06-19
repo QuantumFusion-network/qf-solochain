@@ -35,6 +35,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
 use sp_runtime::{
 	ApplyExtrinsicResult,
+	DispatchError,
 	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionSource, TransactionValidity},
 };
@@ -309,8 +310,8 @@ impl_runtime_apis! {
 	}
 
 	impl pallet_qf_polkavm::QfPolkavmApi<Block, AccountId, Balance> for Runtime {
-		fn upload(origin: AccountId, program_blob: Vec<u8>) -> pallet_qf_polkavm::UploadResult<AccountId> {
-			QFPolkaVM::bare_upload(origin, program_blob)
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> Result<pallet_qf_polkavm::UploadResult<AccountId>, DispatchError> {
+			Ok(QFPolkaVM::bare_upload(origin, program_blob))
 		}
 
 		fn execute(
@@ -320,7 +321,7 @@ impl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: u64,
 			gas_price: u64,
-		) -> pallet_qf_polkavm::ExecResult {
+		) -> Result<pallet_qf_polkavm::ExecResult, DispatchError> {
 			let gas_limit = gas_limit.unwrap_or(super::configs::RuntimeBlockWeights::get().max_block);
 			QFPolkaVM::bare_execute(
 				origin,

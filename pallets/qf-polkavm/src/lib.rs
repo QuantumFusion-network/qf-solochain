@@ -436,7 +436,7 @@ pub mod pallet {
 			gas_limit: Weight,
 			storage_deposit_limit: u64,
 			gas_price: u64,
-		) -> ExecResult {
+		) -> Result<ExecResult, DispatchError> {
 			log::debug!(
 				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
 				origin,
@@ -447,13 +447,25 @@ pub mod pallet {
 				gas_price,
 			);
 
-			ExecResult {
-				result: None,
-				not_enough_gas: false,
-				trap: false,
-				gas_before: 0,
-				gas_after: 0,
-			}
+			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
+
+			let gas_before: u32 = gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+
+			let mut state = Self::init_state(origin, contract_address.clone(), version, data)?;
+
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } = Self::do_execute(&mut state, gas_before, raw_blob)?;
+
+			Ok(ExecResult {
+				result,
+				not_enough_gas,
+				trap,
+				gas_before,
+				gas_after,
+			})
 		}
 
 		fn check_execute_args(
@@ -921,7 +933,7 @@ sp_api::decl_runtime_apis! {
 		/// Upload new smart contract.
 		///
 		/// See [`crate::Pallet::bare_upload`].
-		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> Result<UploadResult<AccountId>, DispatchError>;
 
 		/// Execute a given smart contract from a specified account.
 		///
@@ -933,6 +945,6 @@ sp_api::decl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: u64,
 			gas_price: u64,
-		) -> ExecResult;
+		) -> Result<ExecResult, DispatchError>;
 	}
 }
