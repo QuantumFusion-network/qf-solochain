@@ -125,6 +125,13 @@ pub mod pallet {
 		pub gas_after: i64,
 	}
 
+	struct InstanceCallResult {
+		result: Option<u64>,
+		gas_after: i64,
+		not_enough_gas: bool,
+		trap: bool
+	}
+
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
 	// (`Call`s) in this pallet.
 	#[pallet::pallet]
@@ -359,17 +366,6 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			let (raw_blob, version) = Code::<T>::get(&contract_address)
-				.map(|(blob, version)| (blob.into_inner(), version))
-				.ok_or(Error::<T>::ProgramBlobNotFound)?;
-
-			let max_gas_limit = <T as Config>::MaxGasLimit::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			let ref_time: u64 = gas_limit.ref_time();
-			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
-			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
-
 			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
 			ensure!(
@@ -385,25 +381,20 @@ pub mod pallet {
 				Error::<T>::UserDataIsTooLarge
 			);
 
+			let max_gas_limit = <T as Config>::MaxGasLimit::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let ref_time: u64 = gas_limit.ref_time();
+			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+
 			let mut state = Self::init_state(who.clone(), contract_address.clone(), version, data)?;
-
-			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_before.into());
-
-			sp_runtime::print("====== BEFORE CALL ======");
-
-			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
-
-			let (result, not_enough_gas, trap) = match result {
-				Err(CallError::NotEnoughGas) => (None, true, false),
-				Err(CallError::Trap) => (None, false, true),
-				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				Ok(res) => (Some(res), false, false),
-			};
-
-			sp_runtime::print("====== AFTER CALL ======");
-
-			// let (result, not_enough_gas, trap) = Self::do_make()?;
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } = Self::do_execute(&mut state, gas_before, raw_blob)?;
 
 			if !not_enough_gas && !trap {
 				state.mutating_operations.iter().for_each(|op| match op {
@@ -417,7 +408,7 @@ pub mod pallet {
 
 			ExecutionResult::<T>::insert(
 				(&contract_address, version, &who),
-				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
+				ExecResult { result, not_enough_gas, trap, gas_before, gas_after },
 			);
 
 			// Emit an event.
@@ -429,11 +420,11 @@ pub mod pallet {
 				not_enough_gas,
 				trap,
 				gas_before,
-				gas_after: instance.gas(),
+				gas_after,
 			});
 
 			let normalized_gas_after =
-				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
+				if gas_after < 0 { 0u64 } else { gas_after as u64 };
 
 			Ok(PostDispatchInfo {
 				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
@@ -483,14 +474,29 @@ pub mod pallet {
 			}
 		}
 
-		// fn do_make(
-		// 	who: T::AccountId,
-		// 	contract_address: T::AccountId,
-		// 	version: CodeVersion,
-		// 	data: Vec<u8>,
-		// ) -> Result<(u64, bool, bool), DispatchError> {
+		fn do_execute(
+			state: &mut State<T>,
+			gas: u32,
+			blob: Vec<u8>,
+		) -> Result<InstanceCallResult, DispatchError> {
+			let mut instance = Self::instantiate(Self::prepare(blob)?)?;
+			instance.set_gas(gas.into());
 
-		// }
+			sp_runtime::print("====== BEFORE CALL ======");
+
+			let result = instance.call_typed_and_get_result::<u64, ()>(state, "main", ());
+
+			let (result, not_enough_gas, trap) = match result {
+				Err(CallError::NotEnoughGas) => (None, true, false),
+				Err(CallError::Trap) => (None, false, true),
+				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
+				Ok(res) => (Some(res), false, false),
+			};
+
+			sp_runtime::print("====== AFTER CALL ======");
+
+			Ok(InstanceCallResult { result, gas_after: instance.gas(), not_enough_gas, trap })
+		}
 
 		fn init_state(
 			who: T::AccountId,
