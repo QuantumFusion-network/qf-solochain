@@ -366,34 +366,16 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
 
-			ensure!(
-				storage_deposit_limit >= <T as Config>::MinStorageDepositLimit::get(),
-				Error::<T>::StorageDepositLimitIsTooLow
-			);
-
-			ensure!(
-				data.len() <=
-					<T as Config>::MaxUserDataLen::get()
-						.try_into()
-						.map_err(|_| Error::<T>::IntegerOverflow)?,
-				Error::<T>::UserDataIsTooLarge
-			);
-
-			let max_gas_limit = <T as Config>::MaxGasLimit::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-
-			let ref_time: u64 = gas_limit.ref_time();
-			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
-			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+			let gas_before: u32 = gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
 
 			let (raw_blob, version) = Code::<T>::get(&contract_address)
 				.map(|(blob, version)| (blob.into_inner(), version))
 				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut state = Self::init_state(who.clone(), contract_address.clone(), version, data)?;
+
 			let InstanceCallResult { result, gas_after, not_enough_gas, trap } = Self::do_execute(&mut state, gas_before, raw_blob)?;
 
 			if !not_enough_gas && !trap {
@@ -472,6 +454,36 @@ pub mod pallet {
 				gas_before: 0,
 				gas_after: 0,
 			}
+		}
+
+		fn check_execute_args(
+			data: &[u8],
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> Result<(), DispatchError> {
+			let max_gas_limit = <T as Config>::MaxGasLimit::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			ensure!(gas_limit.ref_time() <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+
+			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+
+			ensure!(
+				storage_deposit_limit >= <T as Config>::MinStorageDepositLimit::get(),
+				Error::<T>::StorageDepositLimitIsTooLow
+			);
+
+			ensure!(
+				data.len() <=
+					<T as Config>::MaxUserDataLen::get()
+						.try_into()
+						.map_err(|_| Error::<T>::IntegerOverflow)?,
+				Error::<T>::UserDataIsTooLarge
+			);
+
+			Ok(())
 		}
 
 		fn do_execute(
