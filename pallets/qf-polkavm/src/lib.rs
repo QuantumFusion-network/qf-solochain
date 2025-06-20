@@ -306,7 +306,8 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			let (UploadResult { contract_address, version }, exports) = Self::do_upload(who.clone(), program_blob)?;
+			let (UploadResult { contract_address, version }, exports) =
+				Self::do_upload(who.clone(), program_blob)?;
 
 			Self::deposit_event(Event::ProgramBlobUploaded {
 				who,
