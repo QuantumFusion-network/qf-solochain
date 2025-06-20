@@ -90,6 +90,7 @@ pub mod pallet {
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
 	pub(super) type CodeVersion = u64;
 	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	// pub(super) type Exports<T> = BoundedVec<BoundedVec<u8, <T as Config>::MaxExportItemLen, <T as Config>::MaxExportItemsNumber>;
 	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
 	pub(super) type CodeStorageKey<T> =
 		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
@@ -110,10 +111,14 @@ pub mod pallet {
 		pub version: CodeVersion,
 	}
 
+	// const MaxExportItemLen: u32 = 1024;
+	// const MaxExportItemsNumber: u32 = 1024;
+
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
 	pub struct UploadResult<AccountId> {
 		pub contract_address: AccountId,
 		pub version: CodeVersion,
+		// pub exports: BoundedVec<BoundedVec<u8, MaxExportItemLen>, MaxExportItemsNumber>
 	}
 
 	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
@@ -302,41 +307,11 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upload())]
-		pub fn upload(origin: OriginFor<T>, mut program_blob: Vec<u8>) -> DispatchResult {
+		pub fn upload(origin: OriginFor<T>, program_blob: Vec<u8>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			let max_len = <T as Config>::MaxCodeLen::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
-			raw_blob
-				.try_append(&mut program_blob)
-				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
-
-			let module = Self::prepare(raw_blob[..].into())?;
-			let exports = module
-				.exports()
-				.map(|export| export.symbol().clone().into_inner().to_vec())
-				.collect();
-
-			let mut blob_metadata = match CodeMetadata::<T>::get(&who) {
-				Some(meta) => meta,
-				None => BlobMetadata { owner: who.clone(), version: 0 },
-			};
-			blob_metadata.version =
-				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
-			ensure!(
-				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
-				Error::<T>::CodeVersionIsTooBig
-			);
-			let contract_address =
-				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
-
-			let version = blob_metadata.version;
-			Code::<T>::insert(&contract_address, (&raw_blob, &version));
-			CodeAddress::<T>::insert((&who, &version), &contract_address);
-			CodeMetadata::<T>::insert(&who, blob_metadata);
+			let (UploadResult { contract_address, version }, exports) = Self::do_upload(who.clone(), program_blob)?;
 
 			Self::deposit_event(Event::ProgramBlobUploaded {
 				who,
@@ -419,7 +394,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn bare_upload(
 			origin: T::AccountId,
-			program_blob: Vec<u8>,
+			mut program_blob: Vec<u8>,
 		) -> Result<UploadResult<T::AccountId>, DispatchError> {
 			log::debug!(
 				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
@@ -427,7 +402,43 @@ pub mod pallet {
 				program_blob.len()
 			);
 
-			Ok(UploadResult { contract_address: origin.clone(), version: 0 })
+			let (upload_result, _exports) = Self::do_upload(origin, program_blob)?;
+
+			// let max_len = <T as Config>::MaxCodeLen::get()
+			// 	.try_into()
+			// 	.map_err(|_| Error::<T>::IntegerOverflow)?;
+			// let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
+			// raw_blob
+			// 	.try_append(&mut program_blob)
+			// 	.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
+
+			// let module = Self::prepare(raw_blob[..].into())?;
+			// let exports = module
+			// 	.exports()
+			// 	.map(|export| export.symbol().clone().into_inner().to_vec())
+			// 	.collect();
+
+			// let mut blob_metadata = match CodeMetadata::<T>::get(&origin) {
+			// 	Some(meta) => meta,
+			// 	None => BlobMetadata { owner: origin.clone(), version: 0 },
+			// };
+			// blob_metadata.version =
+			// 	blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			// ensure!(
+			// 	blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
+			// 	Error::<T>::CodeVersionIsTooBig
+			// );
+			// let contract_address =
+			// 	Self::contract_address(&origin, &T::Hashing::hash_of(&blob_metadata));
+
+			// let version = blob_metadata.version;
+			// Code::<T>::insert(&contract_address, (&raw_blob, &version));
+			// CodeAddress::<T>::insert((&origin, &version), &contract_address);
+			// CodeMetadata::<T>::insert(&origin, blob_metadata);
+
+			// Ok(UploadResult { contract_address, version, exports })
+
+			Ok(upload_result)
 		}
 
 		pub fn bare_execute(
@@ -463,6 +474,51 @@ pub mod pallet {
 				Self::do_execute(&mut state, gas_before, raw_blob)?;
 
 			Ok(ExecResult { result, not_enough_gas, trap, gas_before, gas_after })
+		}
+
+		pub fn do_upload(
+			origin: T::AccountId,
+			mut program_blob: Vec<u8>,
+		) -> Result<(UploadResult<T::AccountId>, Vec<Vec<u8>>), DispatchError> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
+
+			let max_len = <T as Config>::MaxCodeLen::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
+			raw_blob
+				.try_append(&mut program_blob)
+				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
+
+			let module = Self::prepare(raw_blob[..].into())?;
+			let exports = module
+				.exports()
+				.map(|export| export.symbol().clone().into_inner().to_vec())
+				.collect();
+
+			let mut blob_metadata = match CodeMetadata::<T>::get(&origin) {
+				Some(meta) => meta,
+				None => BlobMetadata { owner: origin.clone(), version: 0 },
+			};
+			blob_metadata.version =
+				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			ensure!(
+				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
+				Error::<T>::CodeVersionIsTooBig
+			);
+			let contract_address =
+				Self::contract_address(&origin, &T::Hashing::hash_of(&blob_metadata));
+
+			let version = blob_metadata.version;
+			Code::<T>::insert(&contract_address, (&raw_blob, &version));
+			CodeAddress::<T>::insert((&origin, &version), &contract_address);
+			CodeMetadata::<T>::insert(&origin, blob_metadata);
+
+			Ok(UploadResult { contract_address, version }, exports)
 		}
 
 		fn check_execute_args(
