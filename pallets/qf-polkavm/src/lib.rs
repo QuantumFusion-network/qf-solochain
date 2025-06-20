@@ -125,6 +125,13 @@ pub mod pallet {
 		pub gas_after: i64,
 	}
 
+	struct InstanceCallResult {
+		result: Option<u64>,
+		gas_after: i64,
+		not_enough_gas: bool,
+		trap: bool,
+	}
+
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
 	// (`Call`s) in this pallet.
 	#[pallet::pallet]
@@ -295,41 +302,12 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::upload())]
-		pub fn upload(origin: OriginFor<T>, mut program_blob: Vec<u8>) -> DispatchResult {
+		pub fn upload(origin: OriginFor<T>, program_blob: Vec<u8>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			let max_len = <T as Config>::MaxCodeLen::get()
-				.try_into()
-				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
-			raw_blob
-				.try_append(&mut program_blob)
-				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
-
-			let module = Self::prepare(raw_blob[..].into())?;
-			let exports = module
-				.exports()
-				.map(|export| export.symbol().clone().into_inner().to_vec())
-				.collect();
-
-			let mut blob_metadata = match CodeMetadata::<T>::get(&who) {
-				Some(meta) => meta,
-				None => BlobMetadata { owner: who.clone(), version: 0 },
-			};
-			blob_metadata.version =
-				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
-			ensure!(
-				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
-				Error::<T>::CodeVersionIsTooBig
-			);
-			let contract_address =
-				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
-
-			let version = blob_metadata.version;
-			Code::<T>::insert(&contract_address, (&raw_blob, &version));
-			CodeAddress::<T>::insert((&who, &version), &contract_address);
-			CodeMetadata::<T>::insert(&who, blob_metadata);
+			let (UploadResult { contract_address, version }, exports) =
+				Self::do_upload(who.clone(), program_blob)?;
 
 			Self::deposit_event(Event::ProgramBlobUploaded {
 				who,
@@ -359,12 +337,163 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
+			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
+
+			let gas_before: u32 =
+				gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+
+			let mut state = Self::init_state(who.clone(), contract_address.clone(), version, data)?;
+
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } =
+				Self::do_execute(&mut state, gas_before, raw_blob)?;
+
+			if !not_enough_gas && !trap {
+				state.mutating_operations.iter().for_each(|op| match op {
+					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Set, key, value) =>
+						if let Some(data) = value {
+							CodeStorage::<T>::insert(key, data)
+						},
+				})
+			}
+
+			ExecutionResult::<T>::insert(
+				(&contract_address, version, &who),
+				ExecResult { result, not_enough_gas, trap, gas_before, gas_after },
+			);
+
+			// Emit an event.
+			Self::deposit_event(Event::ExecutionResult {
+				who,
+				contract_address,
+				version,
+				result,
+				not_enough_gas,
+				trap,
+				gas_before,
+				gas_after,
+			});
+
+			let normalized_gas_after = if gas_after < 0 { 0u64 } else { gas_after as u64 };
+
+			Ok(PostDispatchInfo {
+				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
+				pays_fee: Pays::Yes,
+			})
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn bare_upload(
+			origin: T::AccountId,
+			program_blob: Vec<u8>,
+		) -> Result<UploadResult<T::AccountId>, DispatchError> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
+
+			let (upload_result, _exports) = Self::do_upload(origin, program_blob)?;
+
+			Ok(upload_result)
+		}
+
+		pub fn bare_execute(
+			origin: T::AccountId,
+			contract_address: T::AccountId,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> Result<ExecResult, DispatchError> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
+				origin,
+				contract_address,
+				data.len(),
+				gas_limit,
+				storage_deposit_limit,
+				gas_price,
+			);
+
+			Self::check_execute_args(&data, gas_limit, storage_deposit_limit, gas_price)?;
+
+			let gas_before: u32 =
+				gas_limit.ref_time().try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
+
+			let mut state = Self::init_state(origin, contract_address.clone(), version, data)?;
+
+			let InstanceCallResult { result, gas_after, not_enough_gas, trap } =
+				Self::do_execute(&mut state, gas_before, raw_blob)?;
+
+			Ok(ExecResult { result, not_enough_gas, trap, gas_before, gas_after })
+		}
+
+		pub fn do_upload(
+			origin: T::AccountId,
+			mut program_blob: Vec<u8>,
+		) -> Result<(UploadResult<T::AccountId>, Vec<Vec<u8>>), DispatchError> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
+
+			let max_len = <T as Config>::MaxCodeLen::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
+			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
+			raw_blob
+				.try_append(&mut program_blob)
+				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
+
+			let module = Self::prepare(raw_blob[..].into())?;
+			let exports = module
+				.exports()
+				.map(|export| export.symbol().clone().into_inner().to_vec())
+				.collect();
+
+			let mut blob_metadata = match CodeMetadata::<T>::get(&origin) {
+				Some(meta) => meta,
+				None => BlobMetadata { owner: origin.clone(), version: 0 },
+			};
+			blob_metadata.version =
+				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			ensure!(
+				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
+				Error::<T>::CodeVersionIsTooBig
+			);
+			let contract_address =
+				Self::contract_address(&origin, &T::Hashing::hash_of(&blob_metadata));
+
+			let version = blob_metadata.version;
+			Code::<T>::insert(&contract_address, (&raw_blob, &version));
+			CodeAddress::<T>::insert((&origin, &version), &contract_address);
+			CodeMetadata::<T>::insert(&origin, blob_metadata);
+
+			Ok((UploadResult { contract_address, version }, exports))
+		}
+
+		fn check_execute_args(
+			data: &[u8],
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> Result<(), DispatchError> {
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			let ref_time: u64 = gas_limit.ref_time();
-			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
-			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			ensure!(gas_limit.ref_time() <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
 
 			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
 
@@ -381,6 +510,39 @@ pub mod pallet {
 				Error::<T>::UserDataIsTooLarge
 			);
 
+			Ok(())
+		}
+
+		fn do_execute(
+			state: &mut State<T>,
+			gas: u32,
+			blob: Vec<u8>,
+		) -> Result<InstanceCallResult, DispatchError> {
+			let mut instance = Self::instantiate(Self::prepare(blob)?)?;
+			instance.set_gas(gas.into());
+
+			sp_runtime::print("====== BEFORE CALL ======");
+
+			let result = instance.call_typed_and_get_result::<u64, ()>(state, "main", ());
+
+			let (result, not_enough_gas, trap) = match result {
+				Err(CallError::NotEnoughGas) => (None, true, false),
+				Err(CallError::Trap) => (None, false, true),
+				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
+				Ok(res) => (Some(res), false, false),
+			};
+
+			sp_runtime::print("====== AFTER CALL ======");
+
+			Ok(InstanceCallResult { result, gas_after: instance.gas(), not_enough_gas, trap })
+		}
+
+		fn init_state(
+			who: T::AccountId,
+			contract_address: T::AccountId,
+			version: CodeVersion,
+			data: Vec<u8>,
+		) -> Result<State<T>, DispatchError> {
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
@@ -397,14 +559,7 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
-			let (raw_blob, version) = Code::<T>::get(&contract_address)
-				.map(|(blob, version)| (blob.into_inner(), version))
-				.ok_or(Error::<T>::ProgramBlobNotFound)?;
-
-			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_before.into());
-
-			let mut state = State {
+			let state = State {
 				addresses: [contract_address.clone(), who.clone()].to_vec(),
 				data,
 				mutating_operations: [].to_vec(),
@@ -444,118 +599,9 @@ pub mod pallet {
 				 -> Option<Vec<u8>> {
 					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
 				},
-				insert: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>,
-				         max_storage_size: usize,
-				         mut data: Vec<u8>|
-				 -> u64 {
-					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
-					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, version, key), buffer);
-						0
-					} else {
-						1
-					}
-				},
-				delete: |contract_address: T::AccountId,
-				         version: CodeVersion,
-				         key: StorageKey<T>|
-				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, version, key));
-					0
-				},
 			};
 
-			sp_runtime::print("====== BEFORE CALL ======");
-
-			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
-
-			let (result, not_enough_gas, trap) = match result {
-				Err(CallError::NotEnoughGas) => (None, true, false),
-				Err(CallError::Trap) => (None, false, true),
-				Err(_) => Err(Error::<T>::PolkaVMModuleExecutionFailed)?,
-				Ok(res) => (Some(res), false, false),
-			};
-
-			sp_runtime::print("====== AFTER CALL ======");
-
-			if !not_enough_gas && !trap {
-				state.mutating_operations.iter().for_each(|op| match op {
-					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
-					(MutatingStorageOperationType::Set, key, value) =>
-						if let Some(data) = value {
-							CodeStorage::<T>::insert(key, data)
-						},
-				})
-			}
-
-			ExecutionResult::<T>::insert(
-				(&contract_address, version, &who),
-				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
-			);
-
-			// Emit an event.
-			Self::deposit_event(Event::ExecutionResult {
-				who,
-				contract_address,
-				version,
-				result,
-				not_enough_gas,
-				trap,
-				gas_before,
-				gas_after: instance.gas(),
-			});
-
-			let normalized_gas_after =
-				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
-
-			Ok(PostDispatchInfo {
-				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
-				pays_fee: Pays::Yes,
-			})
-		}
-	}
-
-	impl<T: Config> Pallet<T> {
-		pub fn bare_upload(
-			origin: T::AccountId,
-			program_blob: Vec<u8>,
-		) -> UploadResult<T::AccountId> {
-			log::debug!(
-				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
-				origin,
-				program_blob.len()
-			);
-
-			UploadResult { contract_address: origin.clone(), version: 0 }
-		}
-
-		pub fn bare_execute(
-			origin: T::AccountId,
-			contract_address: T::AccountId,
-			data: Vec<u8>,
-			gas_limit: Weight,
-			storage_deposit_limit: u64,
-			gas_price: u64,
-		) -> ExecResult {
-			log::debug!(
-				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
-				origin,
-				contract_address,
-				data.len(),
-				gas_limit,
-				storage_deposit_limit,
-				gas_price,
-			);
-
-			ExecResult {
-				result: None,
-				not_enough_gas: false,
-				trap: false,
-				gas_before: 0,
-				gas_after: 0,
-			}
+			return Ok(state)
 		}
 	}
 
@@ -902,7 +948,7 @@ sp_api::decl_runtime_apis! {
 		/// Upload new smart contract.
 		///
 		/// See [`crate::Pallet::bare_upload`].
-		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> Result<UploadResult<AccountId>, DispatchError>;
 
 		/// Execute a given smart contract from a specified account.
 		///
@@ -914,6 +960,6 @@ sp_api::decl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: u64,
 			gas_price: u64,
-		) -> ExecResult;
+		) -> Result<ExecResult, DispatchError>;
 	}
 }
