@@ -389,7 +389,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn bare_upload(
 			origin: T::AccountId,
-			mut program_blob: Vec<u8>,
+			program_blob: Vec<u8>,
 		) -> Result<UploadResult<T::AccountId>, DispatchError> {
 			log::debug!(
 				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
