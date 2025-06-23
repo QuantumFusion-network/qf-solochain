@@ -22,15 +22,20 @@ frame = { workspace = true, features = [
 	"runtime",
 ], default-features = false }
 log = { workspace = true }
+bp-header-chain = { workspace = true, default-features = false }
+bp-runtime = { workspace = true, default-features = false }
 polkadot-parachain-primitives = { workspace = true, default-features = false }
-sp-trie = { workspace = true, default-features = false }
 sp-consensus-grandpa = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+sp-trie = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
 runtime-benchmarks = [
 	"frame/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
 ]
 std = [
 	"codec/std",
@@ -39,5 +44,8 @@ std = [
 	"scale-info/std",
 	"sp-consensus-grandpa/std",
 	"sp-trie/std",
+	"sp-std/std",
+    "bp-header-chain/std",
+    "bp-runtime/std",
 ]
 try-runtime = ["frame/try-runtime"]

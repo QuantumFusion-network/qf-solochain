@@ -165,6 +165,16 @@ polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", de
 polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
 
+# spin
+bp-bridge-hub-cumulus = { path = "./vendor/polkadot-sdk/bridges/chains/chain-bridge-hub-cumulus", default-features = false }
+bp-header-chain = { path = "./vendor/polkadot-sdk/bridges/primitives/header-chain", default-features = false }
+bp-polkadot-core = { path = "./vendor/polkadot-sdk/bridges/primitives/polkadot-core", default-features = false }
+bp-runtime = { path = "./vendor/polkadot-sdk/bridges/primitives/runtime", default-features = false }
+relay-substrate-client = { path = "./vendor/polkadot-sdk/bridges/relays/client-substrate", default-features = false }
+relay-utils = { path = "./vendor/polkadot-sdk/bridges/relays/utils", default-features = false }
+sp-std = { path = "./vendor/polkadot-sdk/substrate/primitives/std", default-features = false }
+substrate-relay-helper = { path = "./vendor/polkadot-sdk/bridges/relays/lib-substrate-relay", default-features = false }
+
 # hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
 [patch.'https://github.com/w3f/fflonk']
 fflonk = { git = "https://www.github.com/w3f/fflonk", rev = "be95d4c971b1d15b5badfc06ff13f5c07987d484" }
