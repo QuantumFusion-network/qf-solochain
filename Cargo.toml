@@ -16,7 +16,6 @@ members = [
 	"pallets/spin-polkadot",
 	"parachain/node",
 	"primitives/*",
-	"pvm-test-runner",
 	"qf-test-runner",
 	"runtimes/qf-runtime",
 ]
