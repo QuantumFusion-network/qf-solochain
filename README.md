@@ -83,9 +83,6 @@ Then run functions:
 - `execute(a, b, op)` with the two numbers (`a`, `b`) you want to calculate and select the type of operation `op` with 0
 - sum, 1 - sub, 2 - mul.
 
-NOTE - you can use the precompiled `qf-pvm-calc.polkavm` blob to test the node. You can find it in the `pvm_prog/precompiled_examples`
-folder.
-
 ### Testing
 
 For testing compiled polkavm binary blobs use the [qf-test-runner/README.md](qf-test-runner/README.md)
