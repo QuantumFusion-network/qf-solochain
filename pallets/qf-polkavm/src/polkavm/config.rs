@@ -1,4 +1,4 @@
-use crate::polkavm::error::{Error, bail};
+use crate::polkavm::error::{bail, Error};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum BackendKind {

@@ -19,15 +19,15 @@ use sp_consensus_slots::Slot;
 use sp_core::crypto::{ByteArray, Pair};
 use sp_keystore::KeystorePtr;
 use sp_runtime::{
-	DigestItem,
 	traits::{Block as BlockT, Header, NumberFor, Zero},
+	DigestItem,
 };
 
 pub use sc_consensus_slots::check_equivocation;
 
 use super::{
-	AuthorityId, CompatibilityMode, CompatibleDigestItem, LOG_TARGET, SessionLength, SlotDuration,
-	SpinApi, SpinAuxData,
+	AuthorityId, CompatibilityMode, CompatibleDigestItem, SessionLength, SlotDuration, SpinApi,
+	SpinAuxData, LOG_TARGET,
 };
 
 /// Get the slot duration for SPIN by reading from a runtime API at the best

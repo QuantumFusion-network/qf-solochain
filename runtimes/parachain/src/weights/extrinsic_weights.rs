@@ -20,7 +20,7 @@ pub mod constants {
 
 	use frame_support::{
 		parameter_types,
-		weights::{Weight, constants},
+		weights::{constants, Weight},
 	};
 
 	parameter_types! {

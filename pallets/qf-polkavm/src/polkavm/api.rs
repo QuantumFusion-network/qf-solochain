@@ -6,8 +6,8 @@ use polkavm_common::{
 	abi::{MemoryMap, MemoryMapBuilder, VM_ADDR_RETURN_TO_HOST},
 	cast::cast,
 	program::{
-		FrameKind, ISA32_V1, ISA32_V1_NoSbrk, ISA64_V1, Imports, InstructionSet, Instructions,
-		JumpTable, Opcode, ProgramBlob, Reg,
+		FrameKind, ISA32_V1_NoSbrk, Imports, InstructionSet, Instructions, JumpTable, Opcode,
+		ProgramBlob, Reg, ISA32_V1, ISA64_V1,
 	},
 	utils::{ArcBytes, AsUninitSliceMut},
 };
@@ -19,11 +19,11 @@ if_compiler_is_supported! {
 }
 
 use crate::polkavm::{
-	Gas, ProgramCounter,
 	config::{BackendKind, Config, GasMeteringKind, ModuleConfig, SandboxKind},
-	error::{Error, bail, bail_static},
+	error::{bail, bail_static, Error},
 	interpreter::{InterpretedInstance, InterpretedModule},
 	utils::{GuestInit, InterruptKind},
+	Gas, ProgramCounter,
 };
 
 #[cfg(feature = "module-cache")]

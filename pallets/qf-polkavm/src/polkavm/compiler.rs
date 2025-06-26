@@ -5,8 +5,8 @@ use polkavm_assembler::{Assembler, Label};
 use polkavm_common::{
 	abi::VM_CODE_ADDRESS_ALIGNMENT,
 	program::{
-		InstructionVisitor, Instructions, JumpTable, ParsedInstruction, ProgramCounter,
-		ProgramExport, RawReg, is_jump_target_valid,
+		is_jump_target_valid, InstructionVisitor, Instructions, JumpTable, ParsedInstruction,
+		ProgramCounter, ProgramExport, RawReg,
 	},
 	zygote::VM_COMPILER_MAXIMUM_INSTRUCTION_LENGTH,
 };

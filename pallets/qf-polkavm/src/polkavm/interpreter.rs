@@ -5,15 +5,15 @@
 extern crate alloc;
 
 use crate::polkavm::{
-	Gas, GasMeteringKind, ProgramCounter,
 	api::{MemoryAccessError, Module, RegValue},
 	error::Error,
 	gas::GasVisitor,
 	utils::{FlatMap, GuestInit, InterruptKind, Segfault},
+	Gas, GasMeteringKind, ProgramCounter,
 };
 use alloc::{
 	boxed::Box,
-	collections::{BTreeMap, btree_map::Entry},
+	collections::{btree_map::Entry, BTreeMap},
 	vec::Vec,
 };
 use core::{mem::MaybeUninit, num::NonZeroU32};
@@ -21,7 +21,7 @@ use polkavm_common::{
 	abi::VM_ADDR_RETURN_TO_HOST,
 	cast::cast,
 	operation::*,
-	program::{InstructionVisitor, RawReg, Reg, asm},
+	program::{asm, InstructionVisitor, RawReg, Reg},
 	utils::{align_to_next_page_usize, byte_slice_init, slice_assume_init_mut},
 };
 
@@ -485,7 +485,11 @@ impl InterpretedInstance {
 	}
 
 	pub fn program_counter(&self) -> Option<ProgramCounter> {
-		if !self.program_counter_valid { None } else { Some(self.program_counter) }
+		if !self.program_counter_valid {
+			None
+		} else {
+			Some(self.program_counter)
+		}
 	}
 
 	pub fn next_program_counter(&self) -> Option<ProgramCounter> {
@@ -518,7 +522,11 @@ impl InterpretedInstance {
 
 		// TODO: This is very slow.
 		let result = each_page(&self.module, address, size, |page_address, _, _, _| {
-			if !self.dynamic_memory.pages.contains_key(&page_address) { Err(()) } else { Ok(()) }
+			if !self.dynamic_memory.pages.contains_key(&page_address) {
+				Err(())
+			} else {
+				Ok(())
+			}
 		});
 
 		result.is_ok()
@@ -695,7 +703,11 @@ impl InterpretedInstance {
 	}
 
 	pub fn heap_size(&self) -> u32 {
-		if !self.module.is_dynamic_paging() { self.basic_memory.heap_size() } else { todo!() }
+		if !self.module.is_dynamic_paging() {
+			self.basic_memory.heap_size()
+		} else {
+			todo!()
+		}
 	}
 
 	pub fn sbrk(&mut self, size: u32) -> Option<u32> {
@@ -1084,7 +1096,11 @@ impl<'a> Visitor<'a> {
 	) -> Option<Target> {
 		let s1 = self.get64(s1);
 		let s2 = self.get64(s2);
-		if callback(s1, s2) { Some(target_true) } else { Some(target_false) }
+		if callback(s1, s2) {
+			Some(target_true)
+		} else {
+			Some(target_false)
+		}
 	}
 
 	fn segfault_impl(

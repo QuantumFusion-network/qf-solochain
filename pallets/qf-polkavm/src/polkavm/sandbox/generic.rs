@@ -3,7 +3,7 @@
 use polkavm_common::{
 	error::{ExecutionError, Trap},
 	program::Reg,
-	utils::{AsUninitSliceMut, align_to_next_page_usize, byte_slice_init},
+	utils::{align_to_next_page_usize, byte_slice_init, AsUninitSliceMut},
 	zygote::{
 		AddressTable, AddressTableRaw, CacheAligned, VM_ADDR_JUMP_TABLE,
 		VM_ADDR_JUMP_TABLE_RETURN_TO_HOST, VM_SANDBOX_MAXIMUM_JUMP_TABLE_VIRTUAL_SIZE,
@@ -18,12 +18,12 @@ use core::{
 };
 use std::{borrow::Cow, sync::Arc};
 
-use super::{SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind, get_native_page_size};
+use super::{get_native_page_size, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind};
 use crate::polkavm::{
-	Gas, ProgramCounter,
 	api::{CompiledModuleKind, MemoryAccessError, Module},
 	compiler::CompiledModule,
 	config::Config,
+	Gas, ProgramCounter,
 };
 
 #[inline(always)]
@@ -67,7 +67,7 @@ fn to_usize<T>(value: T) -> Cast<T, usize> {
 #[allow(non_camel_case_types)]
 mod sys {
 	pub use polkavm_linux_raw::{
-		SIG_DFL, SIG_IGN, c_int, c_void, siginfo_t, size_t, ucontext as ucontext_t,
+		c_int, c_void, siginfo_t, size_t, ucontext as ucontext_t, SIG_DFL, SIG_IGN,
 	};
 	pub const SIGSEGV: c_int = polkavm_linux_raw::SIGSEGV as c_int;
 	pub const SIGILL: c_int = polkavm_linux_raw::SIGILL as c_int;
@@ -123,7 +123,7 @@ mod sys {
 use libc as sys;
 
 use core::ffi::c_void;
-use sys::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE, c_int, size_t};
+use sys::{c_int, size_t, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, PROT_READ, PROT_WRITE};
 
 pub(crate) const GUEST_MEMORY_TO_VMCTX_OFFSET: isize = -4096;
 
@@ -897,7 +897,11 @@ impl Sandbox {
 			address = map_end;
 		}
 
-		if length == 0 { Ok(()) } else { Err(()) }
+		if length == 0 {
+			Ok(())
+		} else {
+			Err(())
+		}
 	}
 
 	fn get_memory_slice(&self, address: u32, length: u32) -> Option<&[u8]> {
