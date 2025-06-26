@@ -1,7 +1,0 @@
-[package]
-name = "qf-pvm-calc"
-version = "0.1.0"
-publish = false
-
-[dependencies]
-polkavm-derive = { workspace = true }

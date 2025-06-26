@@ -4,17 +4,9 @@ Project with `cargo build --release` creates the following executables.
 
 ```console
 $ find target/release -maxdepth 1 -executable -type f
-target/release/qf-test-runner
-target/release/pvm-test-runner
 target/release/qf-parachain-node
 target/release/qf-node
 ```
-
-- **qf-test-runner**: This is a test runner executable for the Quantum Fusion network.
-It's designed to run tests for the QF blockchain implementation.
-
-- **pvm-test-runner**: This is a test runner specifically for the PolkaVM (PVM) component.
-A test runner for running PolkaVM contracts
 
 - **qf-parachain-node**: This is the node implementation for running Quantum Fusion as a parachain.
  Parachains are specialized blockchains that connect to the Polkadot relay chain.

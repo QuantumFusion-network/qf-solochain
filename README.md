@@ -83,20 +83,6 @@ Then run functions:
 - `execute(a, b, op)` with the two numbers (`a`, `b`) you want to calculate and select the type of operation `op` with 0
 - sum, 1 - sub, 2 - mul.
 
-NOTE - you can use the precompiled `qf-pvm-calc.polkavm` blob to test the node. You can find it in the `pvm_prog/precompiled_examples`
-folder.
-
-### Testing
-
-For testing compiled polkavm binary blobs use the [qf-test-runner/README.md](qf-test-runner/README.md)
-
-### Troubleshooting
-
-If your compiled `.polkavm` file is not working, try to run `make tools` again that reinstall the tools with `polkatool`
-for actual version.
-
-For any compilation errors try to run `make clean` or `rm -rf target` and then try again.
-
 ## Makefile commands
 
 - Build the node: `make qf-node`
@@ -112,8 +98,6 @@ For any compilation errors try to run `make clean` or `rm -rf target` and then t
 - Make chain spec: `make qf-chainspec`
 - Make PolkaVM blob: `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example
   `make pvm-prog-calc`
-- Test the compiled `.polkavm` blob: `make test-pvm-prog-<progname>` where `<progname>` is the name of the compiled
-  program. For example `make test-pvm-prog-calc`
 
 ## Contributing
 

@@ -11,9 +11,6 @@ pvm-prog-%:
 	mkdir -p output
 	polkatool link --run-only-if-newer -s pvm_prog/target/riscv32emac-unknown-none-polkavm/release/qf-pvm-$* -o output/qf-pvm-$*.polkavm
 
-test-pvm-prog-%:
-	cd qf-test-runner; cargo run -- --program=../output/qf-pvm-$*.polkavm
-
 chain-spec-builder:
 	cargo install --path vendor/polkadot-sdk/substrate/bin/utils/chain-spec-builder
 
