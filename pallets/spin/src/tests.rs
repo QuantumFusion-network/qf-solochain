@@ -4,13 +4,13 @@
 
 use super::pallet;
 use crate::mock::{
-	DEFAULT_SESSION_LENGTH, MockDisabledValidators, RuntimeOrigin, Spin, System, Test,
-	build_ext_and_execute_test,
+	build_ext_and_execute_test, MockDisabledValidators, RuntimeOrigin, Spin, System, Test,
+	DEFAULT_SESSION_LENGTH,
 };
 use codec::Encode;
 use frame_support::{assert_err, assert_ok, traits::OnInitialize};
-use qfp_consensus_spin::{SPIN_ENGINE_ID, Slot};
-use sp_runtime::{Digest, DigestItem, traits::BadOrigin};
+use qfp_consensus_spin::{Slot, SPIN_ENGINE_ID};
+use sp_runtime::{traits::BadOrigin, Digest, DigestItem};
 
 #[test]
 fn initial_values() {

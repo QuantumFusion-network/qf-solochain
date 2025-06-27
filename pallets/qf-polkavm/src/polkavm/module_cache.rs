@@ -1,7 +1,7 @@
 use crate::polkavm::{
-	ModuleConfig, ProgramBlob,
 	api::{Module, ModulePrivate},
 	mutex::Mutex,
+	ModuleConfig, ProgramBlob,
 };
 use alloc::{
 	collections::BTreeMap,

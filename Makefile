@@ -42,7 +42,7 @@ polkavm-pallet:
 	cargo build -p pallet-qf-polkavm-dev
 
 fmt:
-	cargo fmt --all
+	cargo +nightly fmt --all
 
 check-wasm:
 	SKIP_WASM_BUILD= cargo check --no-default-features --target=wasm32-unknown-unknown -p qf-runtime

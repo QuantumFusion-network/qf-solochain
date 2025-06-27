@@ -1,6 +1,6 @@
 [workspace.package]
 authors = ["Quantum Fusion Network <admin@qfnetwork.xyz>"]
-edition = "2024"
+edition = "2021"
 homepage = "https://qfnetwork.xyz/"
 license = ""
 repository = "https://github.com/QuantumFusion-network"

@@ -12,10 +12,10 @@
 // - StorageDepositLimitIsTooLow
 
 use crate::{
-	BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion, Config,
-	Error, Event, ExecResult, ExecutionResult, StorageKey, mock::*,
+	mock::*, BlobMetadata, CodeAddress, CodeMetadata, CodeStorage, CodeStorageSlot, CodeVersion,
+	Config, Error, Event, ExecResult, ExecutionResult, StorageKey,
 };
-use frame_support::{BoundedVec, assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, BoundedVec};
 
 const ALICE: AccountId = 1;
 const BOB: AccountId = 2;

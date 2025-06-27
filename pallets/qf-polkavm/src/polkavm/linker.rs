@@ -1,12 +1,12 @@
 extern crate alloc;
 
 use crate::{
+	polkavm::{
+		api::RegValue, error::bail, program::ProgramSymbol, Error, InterruptKind, Module,
+		ProgramCounter, RawInstance, Reg,
+	},
 	CodeStorageKey, CodeStorageSlot, CodeVersion, Config as PalletConfig, MutatingStorageOperation,
 	StorageKey,
-	polkavm::{
-		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
-		program::ProgramSymbol,
-	},
 };
 use alloc::{
 	borrow::ToOwned, collections::btree_map::BTreeMap, format, string::String, sync::Arc, vec::Vec,
@@ -14,14 +14,14 @@ use alloc::{
 use core::marker::PhantomData;
 
 #[cfg(not(feature = "std"))]
-use alloc::collections::BTreeMap as LookupMap;
-#[cfg(not(feature = "std"))]
 use alloc::collections::btree_map::Entry;
+#[cfg(not(feature = "std"))]
+use alloc::collections::BTreeMap as LookupMap;
 
 #[cfg(feature = "std")]
-use std::collections::HashMap as LookupMap;
-#[cfg(feature = "std")]
 use std::collections::hash_map::Entry;
+#[cfg(feature = "std")]
+use std::collections::HashMap as LookupMap;
 
 trait CallFn<T: PalletConfig, UserError>: Send + Sync {
 	fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
@@ -278,7 +278,11 @@ pub trait FuncResult: Send + Sized {
 
 	#[doc(hidden)]
 	fn _get(is_64_bit: bool, get_reg: impl FnMut() -> RegValue) -> Self {
-		if is_64_bit { Self::_get64(get_reg) } else { Self::_get32(get_reg) }
+		if is_64_bit {
+			Self::_get64(get_reg)
+		} else {
+			Self::_get32(get_reg)
+		}
 	}
 
 	#[doc(hidden)]

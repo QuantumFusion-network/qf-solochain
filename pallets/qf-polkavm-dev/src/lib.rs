@@ -56,7 +56,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use scale_info::{TypeInfo, prelude::vec::Vec};
+	use scale_info::{prelude::vec::Vec, TypeInfo};
 	use sp_runtime::traits::Hash;
 
 	use polkavm::{

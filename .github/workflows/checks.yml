@@ -49,7 +49,7 @@ jobs:
 
       - name: Cargo fmt
         run: |
-          cargo fmt --all -- --check
+          cargo +nightly fmt --all -- --check
 
       - name: Check code
         run: |
