@@ -163,10 +163,6 @@ polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", de
 polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
 
-# hotfix for https://github.com/paritytech/polkadot-sdk/issues/7653
-[patch.'https://github.com/w3f/fflonk']
-fflonk = { git = "https://www.github.com/w3f/fflonk", rev = "be95d4c971b1d15b5badfc06ff13f5c07987d484" }
-
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
 
