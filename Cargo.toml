@@ -1,6 +1,6 @@
 [workspace.package]
 authors = ["Quantum Fusion Network <admin@qfnetwork.xyz>"]
-edition = "2024"
+edition = "2021"
 homepage = "https://qfnetwork.xyz/"
 license = ""
 repository = "https://github.com/QuantumFusion-network"
@@ -16,8 +16,6 @@ members = [
 	"pallets/spin-polkadot",
 	"parachain/node",
 	"primitives/*",
-	"pvm-test-runner",
-	"qf-test-runner",
 	"runtimes/qf-runtime",
 ]
 exclude = [

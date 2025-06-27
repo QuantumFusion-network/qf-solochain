@@ -8,10 +8,10 @@ use polkavm_common::{
 	program::Reg,
 	utils::{align_to_next_page_usize, slice_assume_init_mut},
 	zygote::{
-		AddressTable, AddressTablePacked, ExtTable, ExtTablePacked, VM_ADDR_NATIVE_CODE,
+		AddressTable, AddressTablePacked, ExtTable, ExtTablePacked, VmCtx, VmFd, VmMap,
 		VMCTX_FUTEX_BUSY, VMCTX_FUTEX_GUEST_ECALLI, VMCTX_FUTEX_GUEST_NOT_ENOUGH_GAS,
 		VMCTX_FUTEX_GUEST_PAGEFAULT, VMCTX_FUTEX_GUEST_SIGNAL, VMCTX_FUTEX_GUEST_STEP,
-		VMCTX_FUTEX_GUEST_TRAP, VMCTX_FUTEX_IDLE, VmCtx, VmFd, VmMap,
+		VMCTX_FUTEX_GUEST_TRAP, VMCTX_FUTEX_IDLE, VM_ADDR_NATIVE_CODE,
 	},
 };
 
@@ -23,19 +23,19 @@ use core::{
 	sync::atomic::Ordering,
 	time::Duration,
 };
-use linux_raw::{Fd, Mmap, abort, cstr, syscall_readonly};
+use linux_raw::{abort, cstr, syscall_readonly, Fd, Mmap};
 use std::{sync::Arc, time::Instant};
 
 use super::{
-	OffsetTable, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind, get_native_page_size,
+	get_native_page_size, OffsetTable, SandboxInit, SandboxKind, WorkerCache, WorkerCacheKind,
 };
 use crate::polkavm::{
-	Gas, InterruptKind, ProgramCounter, RegValue, Segfault,
 	api::{CompiledModuleKind, MemoryAccessError, Module},
-	compiler::{B32, B64, Bitness, CompiledModule},
+	compiler::{Bitness, CompiledModule, B32, B64},
 	config::{Config, GasMeteringKind},
 	page_set::PageSet,
 	shm_allocator::{ShmAllocation, ShmAllocator},
+	Gas, InterruptKind, ProgramCounter, RegValue, Segfault,
 };
 
 pub struct GlobalState {
@@ -1247,7 +1247,8 @@ impl super::Sandbox for Sandbox {
 		global: &crate::polkavm::sandbox::GlobalStateKind,
 	) -> &Self::GlobalState {
 		#[allow(irrefutable_let_patterns)]
-		let crate::polkavm::sandbox::GlobalStateKind::Linux(global) = global else {
+		let crate::polkavm::sandbox::GlobalStateKind::Linux(global) = global
+		else {
 			unreachable!()
 		};
 		global
@@ -1255,7 +1256,10 @@ impl super::Sandbox for Sandbox {
 
 	fn downcast_worker_cache(cache: &WorkerCacheKind) -> &WorkerCache<Self> {
 		#[allow(irrefutable_let_patterns)]
-		let crate::polkavm::sandbox::WorkerCacheKind::Linux(cache) = cache else { unreachable!() };
+		let crate::polkavm::sandbox::WorkerCacheKind::Linux(cache) = cache
+		else {
+			unreachable!()
+		};
 		cache
 	}
 
@@ -2047,7 +2051,11 @@ impl super::Sandbox for Sandbox {
 		}
 
 		let value = self.vmctx().next_native_program_counter.load(Ordering::Relaxed);
-		if value == 0 { None } else { Some(value as usize) }
+		if value == 0 {
+			None
+		} else {
+			Some(value as usize)
+		}
 	}
 
 	fn accessible_aux_size(&self) -> u32 {
@@ -2343,7 +2351,11 @@ impl super::Sandbox for Sandbox {
 		self.wait()?.expect_idle()?;
 
 		let result = self.vmctx().arg.load(Ordering::Relaxed);
-		if result == 0 { Ok(None) } else { Ok(Some(result)) }
+		if result == 0 {
+			Ok(None)
+		} else {
+			Ok(Some(result))
+		}
 	}
 
 	fn pid(&self) -> Option<u32> {
@@ -2442,7 +2454,11 @@ impl Sandbox {
 		.map_err(Error::from_str)?;
 
 		self.is_program_counter_valid = true;
-		if is_out_of_gas { Ok(Interrupt::NotEnoughGas) } else { Ok(Interrupt::Trap) }
+		if is_out_of_gas {
+			Ok(Interrupt::NotEnoughGas)
+		} else {
+			Ok(Interrupt::Trap)
+		}
 	}
 
 	#[inline(never)]

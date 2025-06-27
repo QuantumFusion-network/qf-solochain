@@ -24,26 +24,26 @@
 // For more information, please refer to <http://unlicense.org>
 
 // Substrate and Polkadot dependencies
-use frame_election_provider_support::{SequentialPhragmen, bounds::ElectionBoundsBuilder, onchain};
+use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, Get, Nothing, VariantCountOf},
+	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Get, Nothing, VariantCountOf},
 	weights::{
-		IdentityFee, Weight,
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
+		IdentityFee, Weight,
 	},
 };
 use frame_system::{
-	EnsureRoot,
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
+	EnsureRoot,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
-	Perbill,
 	curve::PiecewiseLinear,
 	traits::{One, OpaqueKeys},
+	Perbill,
 };
 use sp_version::RuntimeVersion;
 
@@ -51,9 +51,10 @@ use crate::{MILLI_UNIT, SESSION_LENGTH};
 
 // Local module imports
 use super::{
-	AccountId, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce, PalletInfo,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
-	RuntimeTask, SLOT_DURATION, Session, SessionKeys, Spin, Staking, System, Timestamp, VERSION,
+	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
+	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
+	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
+	VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);

@@ -7,7 +7,7 @@ use qfc_consensus_spin::{ImportQueueParams, SlotProportion, StartSpinParams};
 use qfp_consensus_spin::sr25519::AuthorityPair as SpinPair;
 use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_grandpa::SharedVoterState;
-use sc_service::{Configuration, TaskManager, WarpSyncConfig, error::Error as ServiceError};
+use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpSyncConfig};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use std::{sync::Arc, time::Duration};

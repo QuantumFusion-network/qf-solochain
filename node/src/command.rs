@@ -1,5 +1,5 @@
 use crate::{
-	benchmarking::{RemarkBuilder, TransferKeepAliveBuilder, inherent_benchmark_data},
+	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
 	cli::{Cli, Subcommand},
 	service,

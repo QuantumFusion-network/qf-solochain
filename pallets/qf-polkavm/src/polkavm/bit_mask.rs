@@ -22,7 +22,11 @@ pub trait RawMask:
 		let mask_before = (Self::ONE << bit_index) - Self::ONE;
 		let mask_after = !mask_before;
 		let bits_after = self & mask_after;
-		if bits_after == Self::ZERO { u32::MAX } else { bits_after.trailing_zeros() }
+		if bits_after == Self::ZERO {
+			u32::MAX
+		} else {
+			bits_after.trailing_zeros()
+		}
 	}
 }
 
