@@ -11,7 +11,7 @@ pvm-prog-%:
 	polkatool link --run-only-if-newer -s pvm_prog/target/riscv32emac-unknown-none-polkavm/release/qf-pvm-$* -o output/qf-pvm-$*.polkavm
 
 chain-spec-builder:
-	cargo install --path vendor/polkadot-sdk/substrate/bin/utils/chain-spec-builder
+	cargo install --git https://github.com/paritytech/polkadot-sdk --force staging-chain-spec-builder
 
 polkatool:
 	cargo install --path vendor/polkavm/tools/polkatool
