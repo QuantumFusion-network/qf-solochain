@@ -164,8 +164,9 @@ impl onchain::Config for OnChainSeqPhragmen {
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
 
-	// type MaxBackersPerWinner = MaxBackersPerWinner; // TODO(khssnv): uncomment at `stable2406` or later?
-	// type MaxWinnersPerPage = MaxWinnersPerPage; // TODO(khssnv): uncomment at `stable2406` or later?
+	// TODO(khssnv): uncomment at `stable2406` or later?
+	// type MaxBackersPerWinner = MaxBackersPerWinner;
+	// type MaxWinnersPerPage = MaxWinnersPerPage;
 	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2406` or later?
 }
 
@@ -241,7 +242,7 @@ impl pallet_staking::Config for Runtime {
 	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2406` or later?
 	/// Maximum number of validators that can be marked disabled at once,
 	/// limiting how many can be chilled or forced out in a batch
-	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2406` or later?
+	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2406`?
 	type Filter = Nothing;
 }
 
