@@ -146,7 +146,7 @@ parameter_types! {
 	// Maximum winners that can be chosen as active validators
 	pub const MaxActiveValidators: u32 = 1000;
 
-	// TODO(khssnv): uncomment the block at `stable2406` or later?
+	// TODO(khssnv): uncomment the block at `stable2506` or later?
 	// One page only, fill the whole page with the `MaxActiveValidators`.
 	// pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
 	// Unbonded, thus the max backers per winner maps to the max electing voters limit.
@@ -157,17 +157,17 @@ pub type OnChainAccuracy = sp_runtime::Perbill;
 
 pub struct OnChainSeqPhragmen;
 impl onchain::Config for OnChainSeqPhragmen {
-	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2406` or later?
+	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2506` or later?
 	type System = Runtime;
 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
 
-	// TODO(khssnv): uncomment at `stable2406` or later?
+	// TODO(khssnv): uncomment at `stable2506` or later?
 	// type MaxBackersPerWinner = MaxBackersPerWinner;
 	// type MaxWinnersPerPage = MaxWinnersPerPage;
-	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2406` or later?
+	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2506` or later?
 }
 
 pallet_staking_reward_curve::build! {
@@ -222,7 +222,7 @@ impl pallet_staking::Config for Runtime {
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
 	/// Maximum number of active validators allowed
-	// type MaxValidatorSet = ConstU32<100>; // TODO(khssnv): uncomment at `stable2406` or later?
+	// type MaxValidatorSet = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
@@ -239,10 +239,10 @@ impl pallet_staking::Config for Runtime {
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
 	/// Maximum number of invulnerable validators
-	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2406` or later?
+	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Maximum number of validators that can be marked disabled at once,
 	/// limiting how many can be chilled or forced out in a batch
-	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2406`?
+	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506`?
 	type Filter = Nothing;
 }
 

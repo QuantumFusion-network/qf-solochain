@@ -180,7 +180,7 @@ pub fn run() -> sc_cli::Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
 			runner.run_node_until_exit(|config| async move {
-				// TODO(khssnv): remove `expect` at `stable2406` or later.
+				// TODO(khssnv): remove `expect` at `stable2506` or later.
 				match config.network.network_backend.expect("missing network backend") {
 					sc_network::config::NetworkBackendType::Libp2p => service::new_full::<
 						sc_network::NetworkWorker<
