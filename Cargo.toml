@@ -163,6 +163,12 @@ polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", de
 polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
 
+# On-demand coretime
+order-primitives = { git = "https://github.com/RegionX-Labs/On-Demand.git", rev = "e565f0e52f1e380e1d8d269e7e1b6cb5615c431c", default-features = false }
+pallet-on-demand = { git = "https://github.com/RegionX-Labs/On-Demand.git", rev = "e565f0e52f1e380e1d8d269e7e1b6cb5615c431c", default-features = false }
+polkadot-runtime-parachains = { version = "19.1.0", default-features = false }
+rococo-runtime = { version = "22.1.0", default-features = false }
+
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
 
