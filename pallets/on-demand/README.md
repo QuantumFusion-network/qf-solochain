@@ -1,1 +1,0 @@
-Forked from `RegionX-Labs/on-demand` repository at commit [`a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0`](https://github.com/RegionX-Labs/On-Demand/tree/e565f0e52f1e380e1d8d269e7e1b6cb5615c431c/pallets/on-demand)
