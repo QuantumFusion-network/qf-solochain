@@ -25,37 +25,61 @@ exclude = [
 
 [workspace.dependencies]
 async-trait = { version = "0.1.79" }
+clap = { version = "4.5.10" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
-log = { version = "0.4.22", default-features = false }
-scale-info = { version = "2.11.1", default-features = false }
-
-# Debug
-tracing = { version = "0.1.40", default-features = false }
-# std
 color-print = { version = "0.3.4" }
 docify = { version = "0.2.9" }
 env_logger = { version = "0.11.3" }
+futures = { version = "0.3.30" }
 hex-literal = { version = "0.4.1", default-features = false }
+image = { version = "0.24.7", default-features = false }
+jsonrpsee = { version = "0.24.7" }
+libc = "0.2.149"
+log = { version = "0.4.22", default-features = false }
 parking_lot = { version = "0.12.1", default-features = false }
+paste = "1.0.15"
+ruzstd = { version = "0.5.0", default-features = false }
+scale-info = { version = "2.11.1", default-features = false }
+schnellru = { version = "0.2.3" }
 serde = { version = "1.0.214", default-features = false }
 smallvec = { version = "1.11.0", default-features = false }
 tempfile = { version = "3.8.1" }
 thiserror = { version = "1.0.64" }
 tokio = { version = "1.40.0", default-features = false }
+tracing = { version = "0.1.40", default-features = false }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
-# Node
-clap = { version = "4.5.10" }
+# Polkadot SDK
+cumulus-pallet-parachain-system = { version = "0.20.0", default-features = false }
+cumulus-primitives-aura = { version = "0.17.0", default-features = false }
+frame = { version = "0.9.1", default-features = false, package = "polkadot-sdk-frame" }
+frame-benchmarking = { version = "40.2.0", default-features = false }
 frame-benchmarking-cli = { version = "47.2.0", default-features = false }
-futures = { version = "0.3.30" }
-jsonrpsee = { version = "0.24.7" }
+frame-election-provider-support = { version = "40.1.1", default-features = false }
+frame-executive = { version = "40.0.1", default-features = false }
+frame-metadata-hash-extension = { version = "0.8.0", default-features = false }
+frame-support = { version = "40.1.0", default-features = false }
+frame-system = { version = "40.1.0", default-features = false }
+frame-system-benchmarking = { version = "40.0.0", default-features = false }
+frame-system-rpc-runtime-api = { version = "36.0.0", default-features = false }
+frame-try-runtime = { version = "0.46.0", default-features = false }
+pallet-aura = { version = "39.0.0", default-features = false }
+pallet-balances = { version = "41.1.0", default-features = false }
+pallet-grandpa = { version = "40.0.0", default-features = false }
+pallet-session = { version = "40.0.1", default-features = false }
+pallet-spin = { path = "pallets/spin", default-features = false }
+pallet-staking = { version = "40.1.1", default-features = false }
+pallet-staking-reward-curve = { version = "12.0.0", default-features = false }
+pallet-staking-runtime-api = { version = "26.0.0", default-features = false }
+pallet-sudo = { version = "40.0.0", default-features = false }
+pallet-template = { version = "0.1.0", default-features = false }
+pallet-timestamp = { version = "39.0.0", default-features = false }
+pallet-transaction-payment = { version = "40.0.0", default-features = false }
 pallet-transaction-payment-rpc = { version = "43.0.0", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { version = "40.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "16.1.0", default-features = false }
 polkadot-sdk = { version = "2503.0.1", default-features = false }
-polkavm = { path = "vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
-qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
-qf-runtime = { path = "runtimes/qf-runtime", default-features = false }
-qfc-consensus-spin = { path = "client/consensus-spin", default-features = false }
+prometheus-endpoint = { version = "0.17.2", package = "substrate-prometheus-endpoint", default-features = false }
 sc-basic-authorship = { version = "0.49.0", default-features = false }
 sc-block-builder = { version = "0.44.0", default-features = false }
 sc-chain-spec = { version = "42.0.0", default-features = false }
@@ -77,83 +101,38 @@ sc-tracing = { version = "39.0.0", default-features = false }
 sc-transaction-pool = { version = "39.0.0", default-features = false }
 sc-transaction-pool-api = { version = "39.0.0", default-features = false }
 serde_json = { version = "1.0.124", default-features = false }
-sp-blockchain = { version = "39.0.0", default-features = false }
-sp-io = { version = "40.0.1", default-features = false }
-sp-keyring = { version = "41.0.0", default-features = false }
-sp-timestamp = { version = "36.0.0", default-features = false }
-sp-tracing = { version = "17.1.0", default-features = false }
-sp-trie = { version = "39.1.0", default-features = false }
-substrate-build-script-utils = { version = "11.0.0", default-features = false }
-substrate-frame-rpc-system = { version = "43.0.0", default-features = false }
-
-# this is a frame-based runtime, thus importing `frame` with runtime feature enabled.
-frame = { version = "0.9.1", default-features = false, package = "polkadot-sdk-frame" }
-frame-benchmarking = { version = "40.2.0", default-features = false }
-frame-election-provider-support = { version = "40.1.1", default-features = false }
-frame-executive = { version = "40.0.1", default-features = false }
-frame-metadata-hash-extension = { version = "0.8.0", default-features = false }
-frame-support = { version = "40.1.0", default-features = false }
-frame-system = { version = "40.1.0", default-features = false }
-frame-system-benchmarking = { version = "40.0.0", default-features = false }
-frame-system-rpc-runtime-api = { version = "36.0.0", default-features = false }
-frame-try-runtime = { version = "0.46.0", default-features = false }
-
-cumulus-pallet-parachain-system = { version = "0.20.0", default-features = false }
-cumulus-primitives-aura = { version = "0.17.0", default-features = false }
-
-pallet-aura = { version = "39.0.0", default-features = false }
-pallet-faucet = { path = "pallets/faucet", default-features = false }
-pallet-grandpa = { version = "40.0.0", default-features = false }
-pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
-pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
-pallet-spin = { path = "pallets/spin", default-features = false }
-pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
-pallet-template = { version = "0.1.0", default-features = false }
-prometheus-endpoint = { version = "0.17.2", package = "substrate-prometheus-endpoint", default-features = false }
-qfp-consensus-spin = { path = "primitives/consensus-spin", default-features = false }
 sp-api = { version = "36.0.1", default-features = false }
 sp-application-crypto = { version = "40.1.0", default-features = false }
 sp-block-builder = { version = "36.0.0", default-features = false }
+sp-blockchain = { version = "39.0.0", default-features = false }
 sp-consensus = { version = "0.42.0", default-features = false }
 sp-consensus-grandpa = { version = "23.1.0", default-features = false }
 sp-consensus-slots = { version = "0.42.1", default-features = false }
 sp-core = { version = "36.1.0", default-features = false }
+sp-genesis-builder = { version = "0.17.0", default-features = false }
 sp-inherents = { version = "36.0.0", default-features = false }
+sp-io = { version = "40.0.1", default-features = false }
+sp-keyring = { version = "41.0.0", default-features = false }
 sp-keystore = { version = "0.42.0", default-features = false }
 sp-offchain = { version = "36.0.0", default-features = false }
+sp-runtime = { version = "41.1.0", features = ["serde"], default-features = false }
 sp-session = { version = "38.1.0", default-features = false }
 sp-staking = { version = "38.0.0", default-features = false }
 sp-std = { version = "14.0.0", default-features = false }
 sp-storage = { version = "22.0.0", default-features = false }
+sp-timestamp = { version = "36.0.0", default-features = false }
+sp-tracing = { version = "17.1.0", default-features = false }
 sp-transaction-pool = { version = "36.0.0", default-features = false }
-substrate-wasm-builder = { version = "26.0.1", default-features = false }
-
-# pallets that we want to use
-pallet-balances = { version = "41.1.0", default-features = false }
-pallet-session = { version = "40.0.1", default-features = false }
-pallet-staking = { version = "40.1.1", default-features = false }
-pallet-staking-reward-curve = { version = "12.0.0", default-features = false }
-pallet-staking-runtime-api = { version = "26.0.0", default-features = false }
-pallet-sudo = { version = "40.0.0", default-features = false }
-pallet-timestamp = { version = "39.0.0", default-features = false }
-pallet-transaction-payment = { version = "40.0.0", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { version = "40.0.0", default-features = false }
-
-# genesis builder that allows us to interact with runtime genesis config
-sp-genesis-builder = { version = "0.17.0", default-features = false }
-sp-runtime = { version = "41.1.0", features = ["serde"], default-features = false }
+sp-trie = { version = "39.1.0", default-features = false }
 sp-version = { version = "39.0.0", default-features = false }
 sp-version-proc-macro = { version = "15.0.0", default-features = false }
-
+substrate-build-script-utils = { version = "11.0.0", default-features = false }
+substrate-frame-rpc-system = { version = "43.0.0", default-features = false }
 substrate-test-runtime-client = { version = "2.0.0", default-features = false }
+substrate-wasm-builder = { version = "26.0.1", default-features = false }
 
-# polkavm
-image = { version = "0.24.7", default-features = false }
-libc = "0.2.149"
-paste = "1.0.15"
-ruzstd = { version = "0.5.0", default-features = false }
-schnellru = { version = "0.2.3" }
-
+# PolkaVM
+polkavm = { path = "vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
 polkavm-assembler = { path = "vendor/polkavm/crates/polkavm-assembler", default-features = false }
 polkavm-common = { path = "vendor/polkavm/crates/polkavm-common", default-features = false }
 polkavm-derive = { path = "vendor/polkavm/crates/polkavm-derive", default-features = false }
@@ -162,6 +141,16 @@ polkavm-derive-impl-macro = { path = "vendor/polkavm/crates/polkavm-derive-impl-
 polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", default-features = false }
 polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
 polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
+
+# Local
+pallet-faucet = { path = "pallets/faucet", default-features = false }
+pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
+pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
+pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
+qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
+qf-runtime = { path = "runtimes/qf-runtime", default-features = false }
+qfc-consensus-spin = { path = "client/consensus-spin", default-features = false }
+qfp-consensus-spin = { path = "primitives/consensus-spin", default-features = false }
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
