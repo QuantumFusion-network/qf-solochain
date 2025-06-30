@@ -1,17 +1,17 @@
 use core::sync::atomic::Ordering;
 
 use polkavm_assembler::{
-	Label, NonZero, ReservedAssembler, U1, U2, U3, U4,
 	amd64::{
-		Condition, LoadKind, MemOp, Reg::rsp, RegIndex as NativeReg, RegIndex::*, RegSize, Size,
-		addr::*, inst::*,
+		addr::*, inst::*, Condition, LoadKind, MemOp, Reg::rsp, RegIndex as NativeReg, RegIndex::*,
+		RegSize, Size,
 	},
+	Label, NonZero, ReservedAssembler, U1, U2, U3, U4,
 };
 
 use polkavm_common::{
 	cast::cast,
 	program::{ProgramCounter, RawReg, Reg},
-	zygote::{VM_ADDR_VMCTX, VmCtx},
+	zygote::{VmCtx, VM_ADDR_VMCTX},
 };
 
 use crate::polkavm::{
@@ -29,7 +29,7 @@ const GENERIC_SANDBOX_MEMORY_REG: NativeReg = AUX_TMP_REG;
 /// context.
 const LINUX_SANDBOX_VMCTX_REG: NativeReg = AUX_TMP_REG;
 
-use polkavm_common::regmap::{AUX_TMP_REG, TMP_REG, to_native_reg as conv_reg_const};
+use polkavm_common::regmap::{to_native_reg as conv_reg_const, AUX_TMP_REG, TMP_REG};
 
 polkavm_common::static_assert!(polkavm_common::regmap::to_guest_reg(TMP_REG).is_none());
 polkavm_common::static_assert!(polkavm_common::regmap::to_guest_reg(AUX_TMP_REG).is_none());

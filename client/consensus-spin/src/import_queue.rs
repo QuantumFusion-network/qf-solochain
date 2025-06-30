@@ -5,20 +5,20 @@
 //! Module implementing the logic for verifying and importing SPIN blocks.
 
 use crate::{
-	AuthorityId, CompatibilityMode, Error, LOG_TARGET, SpinAuxData, aux_data,
-	standalone::SealVerificationError,
+	aux_data, standalone::SealVerificationError, AuthorityId, CompatibilityMode, Error,
+	SpinAuxData, LOG_TARGET,
 };
 use codec::Codec;
 use log::{debug, info, trace};
 use prometheus_endpoint::Registry;
-use qfp_consensus_spin::{SpinApi, inherents::SpinInherentData};
-use sc_client_api::{BlockOf, UsageProvider, backend::AuxStore};
+use qfp_consensus_spin::{inherents::SpinInherentData, SpinApi};
+use sc_client_api::{backend::AuxStore, BlockOf, UsageProvider};
 use sc_consensus::{
 	block_import::{BlockImport, BlockImportParams, ForkChoiceStrategy},
 	import_queue::{BasicQueue, BoxJustificationImport, DefaultImportQueue, Verifier},
 };
-use sc_consensus_slots::{CheckedHeader, InherentDataProviderExt, check_equivocation};
-use sc_telemetry::{CONSENSUS_DEBUG, CONSENSUS_TRACE, TelemetryHandle, telemetry};
+use sc_consensus_slots::{check_equivocation, CheckedHeader, InherentDataProviderExt};
+use sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG, CONSENSUS_TRACE};
 use sp_api::{ApiExt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder as BlockBuilderApi;
 use sp_blockchain::HeaderBackend;
@@ -27,8 +27,8 @@ use sp_consensus_slots::Slot;
 use sp_core::crypto::Pair;
 use sp_inherents::{CreateInherentDataProviders, InherentDataProvider as _};
 use sp_runtime::{
-	DigestItem,
 	traits::{Block as BlockT, Header, NumberFor},
+	DigestItem,
 };
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 

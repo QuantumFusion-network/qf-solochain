@@ -24,25 +24,25 @@
 // For more information, please refer to <http://unlicense.org>
 
 // Substrate and Polkadot dependencies
-use frame_election_provider_support::{SequentialPhragmen, bounds::ElectionBoundsBuilder, onchain};
+use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, Nothing, VariantCountOf},
+	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Nothing, VariantCountOf},
 	weights::{
-		IdentityFee, Weight,
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
+		IdentityFee, Weight,
 	},
 };
 use frame_system::{
-	EnsureRoot,
 	limits::{BlockLength, BlockWeights},
+	EnsureRoot,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
-	Perbill,
 	curve::PiecewiseLinear,
 	traits::{One, OpaqueKeys},
+	Perbill,
 };
 use sp_version::RuntimeVersion;
 
@@ -50,9 +50,10 @@ use crate::{MILLI_UNIT, SESSION_LENGTH};
 
 // Local module imports
 use super::{
-	AccountId, Balance, Balances, Block, BlockNumber, EXISTENTIAL_DEPOSIT, Hash, Nonce, PalletInfo,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin,
-	RuntimeTask, SLOT_DURATION, Session, SessionKeys, Spin, Staking, System, Timestamp, VERSION,
+	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
+	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
+	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
+	VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -144,24 +145,29 @@ parameter_types! {
 		ElectionBoundsBuilder::default().voters_count(MaxElectingVoters::get().into()).build();
 	// Maximum winners that can be chosen as active validators
 	pub const MaxActiveValidators: u32 = 1000;
+
+	// TODO(khssnv): uncomment the block at `stable2506` or later?
 	// One page only, fill the whole page with the `MaxActiveValidators`.
-	pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
+	// pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
 	// Unbonded, thus the max backers per winner maps to the max electing voters limit.
-	pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
+	// pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
 }
 
 pub type OnChainAccuracy = sp_runtime::Perbill;
 
 pub struct OnChainSeqPhragmen;
 impl onchain::Config for OnChainSeqPhragmen {
-	type Sort = ConstBool<true>;
+	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2506` or later?
 	type System = Runtime;
 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
-	type MaxBackersPerWinner = MaxBackersPerWinner;
-	type MaxWinnersPerPage = MaxWinnersPerPage;
+
+	// TODO(khssnv): uncomment at `stable2506` or later?
+	// type MaxBackersPerWinner = MaxBackersPerWinner;
+	// type MaxWinnersPerPage = MaxWinnersPerPage;
+	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2506` or later?
 }
 
 pallet_staking_reward_curve::build! {
@@ -216,7 +222,7 @@ impl pallet_staking::Config for Runtime {
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
 	/// Maximum number of active validators allowed
-	type MaxValidatorSet = ConstU32<100>;
+	// type MaxValidatorSet = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
@@ -233,10 +239,10 @@ impl pallet_staking::Config for Runtime {
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
 	/// Maximum number of invulnerable validators
-	type MaxInvulnerables = ConstU32<20>;
+	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Maximum number of validators that can be marked disabled at once,
 	/// limiting how many can be chilled or forced out in a batch
-	type MaxDisabledValidators = ConstU32<100>;
+	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506`?
 	type Filter = Nothing;
 }
 
@@ -302,22 +308,30 @@ impl pallet_sudo::Config for Runtime {
 }
 
 parameter_types! {
-	pub const PolkaVmMaxCodeLen: u32 = 1024;
-	pub const PolkaVmMaxGasLimit: u32 = 2097152;
+	pub const PolkaVmMaxCodeLen: u32 = 131072;
+	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
+	pub const PolkaVmMaxUserDataLen: u32 = 2048;
+	pub const PolkaVmMaxGasLimit: u64 = 2097152;
 	pub const PolkaVmMaxStorageKeySize: u32 = 256;
 	pub const PolkaVmMaxStorageSlots: u32 = 4;
+	pub const PolkaVmMaxLogLen: u32 = 1024;
 	pub const PolkaVmMinGasPrice: u64 = 1;
-	pub const PolkaVmStorageSize: u32 = 8;
+	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
+	pub const PolkaVmStorageSize: u32 = 2048;
 	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
 }
 
 impl pallet_qf_polkavm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MaxCodeLen = PolkaVmMaxCodeLen;
+	type MaxCodeVersion = PolkaVmMaxCodeVersion;
+	type MaxUserDataLen = PolkaVmMaxUserDataLen;
 	type MaxGasLimit = PolkaVmMaxGasLimit;
 	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
 	type MaxStorageSlots = PolkaVmMaxStorageSlots;
+	type MaxLogLen = PolkaVmMaxLogLen;
 	type MinGasPrice = PolkaVmMinGasPrice;
+	type MinStorageDepositLimit = PolkaVmMinStorageDepositLimit;
 	type StorageSize = PolkaVmStorageSize;
 	type StorageSlotPrice = PolkaVmStorageSlotPrice;
 	type Currency = Balances;

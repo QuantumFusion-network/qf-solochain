@@ -23,7 +23,7 @@ use std::{fmt::Debug, marker::PhantomData, pin::Pin, sync::Arc};
 use codec::Codec;
 use futures::prelude::*;
 
-use sc_client_api::{BlockOf, backend::AuxStore};
+use sc_client_api::{backend::AuxStore, BlockOf};
 use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy, StateAction};
 use sc_consensus_slots::{
 	BackoffAuthoringBlocksStrategy, InherentDataProviderExt, SimpleSlotWorkerToSlotWorker,
@@ -45,13 +45,13 @@ pub mod standalone;
 
 pub use crate::standalone::{find_pre_digest, slot_duration};
 pub use import_queue::{
-	BuildVerifierParams, CheckForEquivocation, ImportQueueParams, SpinVerifier, build_verifier,
-	import_queue,
+	build_verifier, import_queue, BuildVerifierParams, CheckForEquivocation, ImportQueueParams,
+	SpinVerifier,
 };
 pub use qfp_consensus_spin::{
-	ConsensusLog, SPIN_ENGINE_ID, SessionLength, SlotDuration, SpinApi, SpinAuxData,
 	digests::CompatibleDigestItem,
-	inherents::{INHERENT_IDENTIFIER, InherentDataProvider, InherentType as SpinInherent},
+	inherents::{InherentDataProvider, InherentType as SpinInherent, INHERENT_IDENTIFIER},
+	ConsensusLog, SessionLength, SlotDuration, SpinApi, SpinAuxData, SPIN_ENGINE_ID,
 };
 pub use sc_consensus_slots::SlotProportion;
 pub use sp_consensus::SyncOracle;

@@ -2,7 +2,6 @@ GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=
 
 vendor-clone:
 	git clone --depth=1 --branch v0.21.0 https://github.com/paritytech/polkavm.git vendor/polkavm
-	git clone --depth=1 https://github.com/QuantumFusion-network/polkadot-sdk vendor/polkadot-sdk
 
 tools: polkatool chain-spec-builder
 
@@ -11,11 +10,8 @@ pvm-prog-%:
 	mkdir -p output
 	polkatool link --run-only-if-newer -s pvm_prog/target/riscv32emac-unknown-none-polkavm/release/qf-pvm-$* -o output/qf-pvm-$*.polkavm
 
-test-pvm-prog-%:
-	cd qf-test-runner; cargo run -- --program=../output/qf-pvm-$*.polkavm
-
 chain-spec-builder:
-	cargo install --path vendor/polkadot-sdk/substrate/bin/utils/chain-spec-builder
+	cargo install --git https://github.com/paritytech/polkadot-sdk --force staging-chain-spec-builder
 
 polkatool:
 	cargo install --path vendor/polkavm/tools/polkatool
@@ -45,7 +41,7 @@ polkavm-pallet:
 	cargo build -p pallet-qf-polkavm-dev
 
 fmt:
-	cargo fmt --all
+	cargo +nightly fmt --all
 
 check-wasm:
 	SKIP_WASM_BUILD= cargo check --no-default-features --target=wasm32-unknown-unknown -p qf-runtime

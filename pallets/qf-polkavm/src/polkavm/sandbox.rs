@@ -9,13 +9,13 @@ use core::{
 use polkavm_common::zygote::AddressTable;
 
 use crate::polkavm::{
-	Gas, InterruptKind, MemoryAccessError, ProgramCounter, Reg, RegValue,
 	api::{EngineState, Module},
 	compiler::CompiledModule,
 	config::{Config, SandboxKind},
 	error::Error,
 	mutex::Mutex,
 	utils::GuestInit,
+	Gas, InterruptKind, MemoryAccessError, ProgramCounter, Reg, RegValue,
 };
 
 macro_rules! get_field_offset {
@@ -46,7 +46,7 @@ unsafe extern "C" {
 }
 
 #[cfg(not(target_os = "linux"))]
-use libc::{_SC_PAGESIZE, sysconf};
+use libc::{sysconf, _SC_PAGESIZE};
 
 static NATIVE_PAGE_SIZE: AtomicUsize = AtomicUsize::new(0);
 

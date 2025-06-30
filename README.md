@@ -23,7 +23,8 @@ although there are ways to run it, we recommend using [WSL](https://learn.micros
 or a virtual machine.
 
 1. Install Polkadot SDK dependencies following https://docs.polkadot.com/develop/parachains/install-polkadot-sdk/.
-1. Clone the repository and build the node binary.
+
+2. Clone the repository and build the node binary.
 
     ```console
     git clone --recursive https://github.com/QuantumFusion-network/qf-solochain.git
@@ -31,17 +32,23 @@ or a virtual machine.
     cargo build --release
     ```
 
-1. Inspect available subcommands.
+3. Inspect available subcommands.
 
     ```console
     ./target/release/qf-solochain --help
     ```
 
-1. Run a local node in dev mode.
+4. Run a local node in dev mode.
 
     ```bash
     make qf-run
     ```
+
+## Executables and runtimes
+
+This section describes the project's executables and runtimes and provides step-by-step instructions
+ for running a local testnet. This guide is suitable for advanced users.
+See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 
 ## Run the Full Node
 
@@ -76,20 +83,6 @@ Then run functions:
 - `execute(a, b, op)` with the two numbers (`a`, `b`) you want to calculate and select the type of operation `op` with 0
 - sum, 1 - sub, 2 - mul.
 
-NOTE - you can use the precompiled `qf-pvm-calc.polkavm` blob to test the node. You can find it in the `pvm_prog/precompiled_examples`
-folder.
-
-### Testing
-
-For testing compiled polkavm binary blobs use the [qf-test-runner/README.md](qf-test-runner/README.md)
-
-### Troubleshooting
-
-If your compiled `.polkavm` file is not working, try to run `make tools` again that reinstall the tools with `polkatool`
-for actual version.
-
-For any compilation errors try to run `make clean` or `rm -rf target` and then try again.
-
 ## Makefile commands
 
 - Build the node: `make qf-node`
@@ -105,8 +98,6 @@ For any compilation errors try to run `make clean` or `rm -rf target` and then t
 - Make chain spec: `make qf-chainspec`
 - Make PolkaVM blob: `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example
   `make pvm-prog-calc`
-- Test the compiled `.polkavm` blob: `make test-pvm-prog-<progname>` where `<progname>` is the name of the compiled
-  program. For example `make test-pvm-prog-calc`
 
 ## Contributing
 

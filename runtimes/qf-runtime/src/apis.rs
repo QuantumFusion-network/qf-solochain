@@ -30,20 +30,21 @@ use frame_support::{
 	weights::Weight,
 };
 use pallet_grandpa::AuthorityId as GrandpaId;
-use qfp_consensus_spin::{SpinAuxData, sr25519::AuthorityId as SpinId};
+use qfp_consensus_spin::{sr25519::AuthorityId as SpinId, SpinAuxData};
 use sp_api::impl_runtime_apis;
-use sp_core::{OpaqueMetadata, crypto::KeyTypeId};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-	ApplyExtrinsicResult,
 	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionSource, TransactionValidity},
+	ApplyExtrinsicResult,
 };
 use sp_version::RuntimeVersion;
 
 // Local module imports
 use super::{
-	AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, Runtime, RuntimeCall,
-	RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment, VERSION,
+	AccountId, Balance, Block, Executive, Grandpa, InherentDataExt, Nonce, QFPolkaVM, Runtime,
+	RuntimeCall, RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment,
+	VERSION,
 };
 
 impl_runtime_apis! {
@@ -304,6 +305,31 @@ impl_runtime_apis! {
 
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
 			vec![]
+		}
+	}
+
+	impl pallet_qf_polkavm::QfPolkavmApi<Block, AccountId, Balance> for Runtime {
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> pallet_qf_polkavm::UploadResult<AccountId> {
+			QFPolkaVM::bare_upload(origin, program_blob)
+		}
+
+		fn execute(
+			origin: AccountId,
+			contract_address: AccountId,
+			data: Vec<u8>,
+			gas_limit: Option<Weight>,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> pallet_qf_polkavm::ExecResult {
+			let gas_limit = gas_limit.unwrap_or(super::configs::RuntimeBlockWeights::get().max_block);
+			QFPolkaVM::bare_execute(
+				origin,
+				contract_address,
+				data,
+				gas_limit,
+				storage_deposit_limit,
+				gas_price,
+			)
 		}
 	}
 }

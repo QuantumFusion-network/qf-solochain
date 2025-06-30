@@ -2,7 +2,7 @@ SPIN consensus.
 
 SPIN works by having a list of authorities A who are expected to roughly
 agree on the current time. Time is divided up into discrete slots of t
-seconds each. Several slots make up a session, and every session's author is 
+seconds each. Several slots make up a session, and every session's author is
 selected by formula A[session_idx % |A|].
 
 The author is allowed to issue N blocks but not more during that session,

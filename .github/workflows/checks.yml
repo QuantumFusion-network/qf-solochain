@@ -21,6 +21,14 @@ jobs:
         # with:
         #   submodules: recursive
 
+      # Update files to resolve fixable issues:
+      # `markdownlint-cli2 "**/*.md" "#target" "#vendor" --config .markdownlint.yaml --fix`.
+      - name: Check Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          config: '.markdownlint.yaml'
+          globs: '**/*.md'
+
       - run: |
           make vendor-clone
 
@@ -41,8 +49,12 @@ jobs:
 
       - name: Cargo fmt
         run: |
-          cargo fmt --all -- --check
+          cargo +nightly fmt --all -- --check
 
       - name: Check code
         run: |
           cargo check --locked --all
+
+      - name: Tests
+        run: |
+          cargo test -p pallet-qf-polkavm

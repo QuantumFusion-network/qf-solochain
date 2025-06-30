@@ -1,24 +1,27 @@
 extern crate alloc;
 
 use crate::{
-	BalanceOf, Config as PalletConfig, StorageKey,
 	polkavm::{
-		Error, InterruptKind, Module, ProgramCounter, RawInstance, Reg, api::RegValue, error::bail,
-		program::ProgramSymbol,
+		api::RegValue, error::bail, program::ProgramSymbol, Error, InterruptKind, Module,
+		ProgramCounter, RawInstance, Reg,
 	},
+	CodeStorageKey, CodeStorageSlot, CodeVersion, Config as PalletConfig, MutatingStorageOperation,
+	StorageKey,
 };
-use alloc::{borrow::ToOwned, format, string::String, sync::Arc, vec::Vec};
+use alloc::{
+	borrow::ToOwned, collections::btree_map::BTreeMap, format, string::String, sync::Arc, vec::Vec,
+};
 use core::marker::PhantomData;
 
 #[cfg(not(feature = "std"))]
-use alloc::collections::BTreeMap as LookupMap;
-#[cfg(not(feature = "std"))]
 use alloc::collections::btree_map::Entry;
+#[cfg(not(feature = "std"))]
+use alloc::collections::BTreeMap as LookupMap;
 
 #[cfg(feature = "std")]
-use std::collections::HashMap as LookupMap;
-#[cfg(feature = "std")]
 use std::collections::hash_map::Entry;
+#[cfg(feature = "std")]
+use std::collections::HashMap as LookupMap;
 
 trait CallFn<T: PalletConfig, UserError>: Send + Sync {
 	fn call(&self, user_data: &mut State<T>, instance: &mut RawInstance) -> Result<(), UserError>;
@@ -275,7 +278,11 @@ pub trait FuncResult: Send + Sized {
 
 	#[doc(hidden)]
 	fn _get(is_64_bit: bool, get_reg: impl FnMut() -> RegValue) -> Self {
-		if is_64_bit { Self::_get64(get_reg) } else { Self::_get32(get_reg) }
+		if is_64_bit {
+			Self::_get64(get_reg)
+		} else {
+			Self::_get32(get_reg)
+		}
 	}
 
 	#[doc(hidden)]
@@ -591,61 +598,23 @@ where
 
 pub struct State<T: PalletConfig> {
 	pub addresses: Vec<T::AccountId>,
-	pub balances: Vec<BalanceOf<T>>,
-	pub log_message: Vec<u8>,
+	pub data: Vec<u8>,
+	pub mutating_operations: Vec<MutatingStorageOperation<T>>,
+	pub raw_storage: BTreeMap<CodeStorageKey<T>, Option<CodeStorageSlot<T>>>,
+	pub code_version: CodeVersion,
 	pub max_storage_size: usize,
 	pub max_storage_key_size: u32,
 	pub max_storage_slot_idx: u32,
-	pub transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
+	pub max_log_len: usize,
+	pub transfer: fn(T::AccountId, T::AccountId, u32) -> u64,
 	pub print: fn(Vec<u8>) -> u64,
 	pub balance: fn(T::AccountId) -> u64,
-	pub balance_of: fn(T::AccountId) -> u64,
 	pub block_number: fn() -> u64,
 	pub account_id: fn() -> u64,
 	pub caller: fn() -> u64,
-	pub get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-	pub insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-	pub delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
-}
-
-impl<T: PalletConfig> State<T> {
-	pub fn new(
-		addresses: Vec<T::AccountId>,
-		balances: Vec<BalanceOf<T>>,
-		log_message: Vec<u8>,
-		max_storage_size: usize,
-		max_storage_key_size: u32,
-		max_storage_slot_idx: u32,
-		transfer: fn(T::AccountId, T::AccountId, BalanceOf<T>) -> u64,
-		print: fn(Vec<u8>) -> u64,
-		balance: fn(T::AccountId) -> u64,
-		balance_of: fn(T::AccountId) -> u64,
-		block_number: fn() -> u64,
-		account_id: fn() -> u64,
-		caller: fn() -> u64,
-		get: fn(T::AccountId, T::AccountId, StorageKey<T>) -> Option<Vec<u8>>,
-		insert: fn(T::AccountId, T::AccountId, StorageKey<T>, usize, Vec<u8>) -> u64,
-		delete: fn(T::AccountId, T::AccountId, StorageKey<T>) -> u64,
-	) -> Self {
-		Self {
-			addresses,
-			balances,
-			log_message,
-			max_storage_size,
-			max_storage_key_size,
-			max_storage_slot_idx,
-			transfer,
-			print,
-			balance,
-			balance_of,
-			block_number,
-			account_id,
-			caller,
-			get,
-			insert,
-			delete,
-		}
-	}
+	pub get: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> Option<Vec<u8>>,
+	pub insert: fn(T::AccountId, version: CodeVersion, StorageKey<T>, usize, Vec<u8>) -> u64,
+	pub delete: fn(T::AccountId, version: CodeVersion, StorageKey<T>) -> u64,
 }
 
 #[non_exhaustive]

@@ -39,29 +39,44 @@
 // We make sure this pallet uses `no_std` for compiling to Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 mod polkavm;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 pub mod weights;
 pub use weights::*;
+
+use codec::Codec;
+
+use frame_support::pallet_prelude::*;
+use sp_std::prelude::*;
 
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various useful types required by all FRAME pallets.
 	use super::*;
+	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{
 		dispatch::PostDispatchInfo,
-		pallet_prelude::*,
 		traits::{
 			fungible::{Inspect, Mutate},
 			tokens::Preservation,
 		},
 	};
 	use frame_system::pallet_prelude::*;
-	use scale_info::{TypeInfo, prelude::vec::Vec};
+	use num_derive::{FromPrimitive, ToPrimitive};
+	use num_traits::ToPrimitive;
+	use scale_info::TypeInfo;
 	use sp_runtime::traits::{Hash, SaturatedConversion, TrailingZeroInput};
 
 	use polkavm::{
@@ -73,23 +88,41 @@ pub mod pallet {
 		<<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type CodeHash<T> = <T as frame_system::Config>::Hash;
 	type CodeVec<T> = BoundedVec<u8, <T as Config>::MaxCodeLen>;
-	type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
-	pub type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeVersion = u64;
+	pub(super) type CodeStorageSlot<T> = BoundedVec<u8, <T as Config>::StorageSize>;
+	pub(super) type StorageKey<T> = BoundedVec<u8, <T as Config>::MaxStorageKeySize>;
+	pub(super) type CodeStorageKey<T> =
+		(<T as frame_system::Config>::AccountId, CodeVersion, StorageKey<T>);
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub(super) struct BlobMetadata<T: Config> {
-		owner: T::AccountId,
-		version: u64,
+	#[derive(Clone)]
+	pub(super) enum MutatingStorageOperationType {
+		Set,
+		Delete,
 	}
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
-	pub(super) struct ExecResult {
-		result: Option<u64>,
-		not_enough_gas: bool,
-		trap: bool,
-		gas_before: u32,
-		gas_after: i64,
+	pub(super) type MutatingStorageOperation<T> =
+		(MutatingStorageOperationType, CodeStorageKey<T>, Option<CodeStorageSlot<T>>);
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	#[scale_info(skip_type_params(T))]
+	pub(super) struct BlobMetadata<T: Config> {
+		pub owner: T::AccountId,
+		pub version: CodeVersion,
+	}
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	pub struct UploadResult<AccountId> {
+		pub contract_address: AccountId,
+		pub version: CodeVersion,
+	}
+
+	#[derive(Debug, Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq)]
+	pub struct ExecResult {
+		pub result: Option<u64>,
+		pub not_enough_gas: bool,
+		pub trap: bool,
+		pub gas_before: u32,
+		pub gas_after: i64,
 	}
 
 	// The `Pallet` struct serves as a placeholder to implement traits, methods and dispatchables
@@ -116,7 +149,13 @@ pub mod pallet {
 		type MaxCodeLen: Get<u32>;
 
 		#[pallet::constant]
-		type MaxGasLimit: Get<u32>;
+		type MaxCodeVersion: Get<u64>;
+
+		#[pallet::constant]
+		type MaxUserDataLen: Get<u32>;
+
+		#[pallet::constant]
+		type MaxGasLimit: Get<u64>;
 
 		#[pallet::constant]
 		type MaxStorageSlots: Get<u32>;
@@ -125,7 +164,13 @@ pub mod pallet {
 		type MaxStorageKeySize: Get<u32>;
 
 		#[pallet::constant]
+		type MaxLogLen: Get<u32>;
+
+		#[pallet::constant]
 		type MinGasPrice: Get<u64>;
+
+		#[pallet::constant]
+		type MinStorageDepositLimit: Get<u64>;
 
 		#[pallet::constant]
 		type StorageSize: Get<u32>;
@@ -141,11 +186,12 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	pub(super) type Code<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, CodeVec<T>>;
+	pub(super) type Code<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, (CodeVec<T>, CodeVersion)>;
 
 	#[pallet::storage]
 	pub(super) type ExecutionResult<T: Config> =
-		StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), ExecResult>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion, T::AccountId), ExecResult>;
 
 	#[pallet::storage]
 	pub(super) type CodeMetadata<T: Config> =
@@ -153,15 +199,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub(super) type CodeAddress<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
+		StorageMap<_, Blake2_128Concat, (T::AccountId, CodeVersion), T::AccountId>;
 
 	#[pallet::storage]
-	pub(super) type CodeStorage<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		(T::AccountId, T::AccountId, StorageKey<T>),
-		CodeStorageSlot<T>,
-	>;
+	pub(super) type CodeStorage<T: Config> =
+		StorageMap<_, Blake2_128Concat, CodeStorageKey<T>, CodeStorageSlot<T>>;
 
 	/// Events that functions in this pallet can emit.
 	///
@@ -182,7 +224,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
-			/// The new value set.
+			version: CodeVersion,
 			result: Option<u64>,
 			not_enough_gas: bool,
 			trap: bool,
@@ -194,6 +236,7 @@ pub mod pallet {
 			who: T::AccountId,
 			// The smart contract account.
 			contract_address: T::AccountId,
+			version: CodeVersion,
 			// List of function in the smart contract.
 			exports: Vec<Vec<u8>>,
 		},
@@ -211,11 +254,9 @@ pub mod pallet {
 	pub enum Error<T> {
 		IntegerOverflow,
 		ProgramBlobNotFound,
-		InvalidOperation,
-		InvalidOperands,
 
 		// PolkaVM errors
-		ProgramBlobTooLarge,
+		ProgramBlobIsTooLarge,
 		ProgramBlobParsingFailed,
 		PolkaVMConfigurationFailed,
 		PolkaVMEngineCreationFailed,
@@ -228,10 +269,14 @@ pub mod pallet {
 		PolkaVMTrap,
 		GasLimitIsTooHigh,
 		GasPriceIsTooLow,
+		StorageDepositLimitIsTooLow,
 
 		/// Performing the requested transfer failed. Probably because there isn't enough
 		/// free balance in the sender's account.
 		TransferFailed,
+
+		CodeVersionIsTooBig,
+		UserDataIsTooLarge,
 	}
 
 	/// The pallet's dispatchable functions ([`Call`]s).
@@ -260,7 +305,7 @@ pub mod pallet {
 			let mut raw_blob = BoundedVec::with_bounded_capacity(max_len);
 			raw_blob
 				.try_append(&mut program_blob)
-				.map_err(|_| Error::<T>::ProgramBlobTooLarge)?;
+				.map_err(|_| Error::<T>::ProgramBlobIsTooLarge)?;
 
 			let module = Self::prepare(raw_blob[..].into())?;
 			let exports = module
@@ -272,22 +317,26 @@ pub mod pallet {
 				Some(meta) => meta,
 				None => BlobMetadata { owner: who.clone(), version: 0 },
 			};
-			let old_contract_address =
-				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
-			let old_version = blob_metadata.version;
 			blob_metadata.version =
 				blob_metadata.version.checked_add(1).ok_or(Error::<T>::IntegerOverflow)?;
+			ensure!(
+				blob_metadata.version <= <T as Config>::MaxCodeVersion::get(),
+				Error::<T>::CodeVersionIsTooBig
+			);
 			let contract_address =
 				Self::contract_address(&who, &T::Hashing::hash_of(&blob_metadata));
 
-			if old_version != 0 {
-				Code::<T>::remove(old_contract_address)
-			}
-			Code::<T>::insert(&contract_address, &raw_blob);
-			CodeAddress::<T>::insert(&who, &contract_address);
+			let version = blob_metadata.version;
+			Code::<T>::insert(&contract_address, (&raw_blob, &version));
+			CodeAddress::<T>::insert((&who, &version), &contract_address);
 			CodeMetadata::<T>::insert(&who, blob_metadata);
 
-			Self::deposit_event(Event::ProgramBlobUploaded { who, contract_address, exports });
+			Self::deposit_event(Event::ProgramBlobUploaded {
+				who,
+				contract_address,
+				version,
+				exports,
+			});
 
 			Ok(())
 		}
@@ -302,21 +351,35 @@ pub mod pallet {
 		pub fn execute(
 			origin: OriginFor<T>,
 			contract_address: T::AccountId,
-			to: T::AccountId,
-			value: BalanceOf<T>,
-			op: u32,
-			gas_limit: u32,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
 			gas_price: u64,
 		) -> DispatchResultWithPostInfo {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			ensure!(op <= 5, Error::<T>::InvalidOperation);
-
 			let max_gas_limit = <T as Config>::MaxGasLimit::get()
 				.try_into()
 				.map_err(|_| Error::<T>::IntegerOverflow)?;
-			ensure!(gas_limit <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let ref_time: u64 = gas_limit.ref_time();
+			ensure!(ref_time <= max_gas_limit, Error::<T>::GasLimitIsTooHigh);
+			let gas_before: u32 = ref_time.try_into().map_err(|_| Error::<T>::IntegerOverflow)?;
+
+			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+
+			ensure!(
+				storage_deposit_limit >= <T as Config>::MinStorageDepositLimit::get(),
+				Error::<T>::StorageDepositLimitIsTooLow
+			);
+
+			ensure!(
+				data.len() <=
+					<T as Config>::MaxUserDataLen::get()
+						.try_into()
+						.map_err(|_| Error::<T>::IntegerOverflow)?,
+				Error::<T>::UserDataIsTooLarge
+			);
 
 			let max_storage_size = <T as Config>::StorageSize::get()
 				.try_into()
@@ -330,75 +393,83 @@ pub mod pallet {
 				.checked_sub(1)
 				.ok_or(Error::<T>::IntegerOverflow)?;
 
-			ensure!(gas_price >= <T as Config>::MinGasPrice::get(), Error::<T>::GasPriceIsTooLow);
+			let max_log_len = <T as Config>::MaxLogLen::get()
+				.try_into()
+				.map_err(|_| Error::<T>::IntegerOverflow)?;
 
-			let raw_blob = Code::<T>::get(&contract_address)
-				.ok_or(Error::<T>::ProgramBlobNotFound)?
-				.into_inner();
+			let (raw_blob, version) = Code::<T>::get(&contract_address)
+				.map(|(blob, version)| (blob.into_inner(), version))
+				.ok_or(Error::<T>::ProgramBlobNotFound)?;
 
 			let mut instance = Self::instantiate(Self::prepare(raw_blob)?)?;
-			instance.set_gas(gas_limit.into());
+			instance.set_gas(gas_before.into());
 
-			let mut state = State::new(
-				[contract_address.clone(), who.clone(), to].to_vec(),
-				[value].to_vec(),
-				[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 33, 33].to_vec(),
+			let mut state = State {
+				addresses: [contract_address.clone(), who.clone()].to_vec(),
+				data,
+				mutating_operations: [].to_vec(),
+				raw_storage: BTreeMap::new(),
+				code_version: version,
 				max_storage_size,
 				max_storage_key_size,
 				max_storage_slot_idx,
-				|from: T::AccountId, to: T::AccountId, value: BalanceOf<T>| -> u64 {
+				max_log_len,
+				transfer: |from: T::AccountId, to: T::AccountId, value: u32| -> u64 {
 					if !value.is_zero() && from != to {
 						if let Err(_) =
-							T::Currency::transfer(&from, &to, value, Preservation::Preserve)
+							T::Currency::transfer(&from, &to, value.into(), Preservation::Preserve)
 						{
 							return 1;
 						}
 					}
 					0
 				},
-				|m: Vec<u8>| -> u64 {
-					sp_runtime::print(&*m);
+				print: |m: Vec<u8>| -> u64 {
+					let msg = alloc::string::String::from_utf8_lossy(&m);
+					let msg_log = alloc::format!("polkavm: {msg}");
+					sp_runtime::print(msg_log.as_str());
 					return 0;
 				},
-				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
-				|address: T::AccountId| -> u64 { T::Currency::balance(&address).saturated_into() },
-				|| -> u64 { frame_system::Pallet::<T>::block_number().saturated_into() },
-				|| -> u64 { 0 },
-				|| -> u64 { 1 },
-				|contract_address: T::AccountId,
-				 account_address: T::AccountId,
-				 key: StorageKey<T>|
-				 -> Option<Vec<u8>> {
-					CodeStorage::<T>::get((contract_address, account_address, key))
-						.map(|d| d.to_vec())
+				balance: |address: T::AccountId| -> u64 {
+					T::Currency::balance(&address).saturated_into()
 				},
-				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
-				 key: StorageKey<T>,
-				 max_storage_size: usize,
-				 mut data: Vec<u8>|
+				block_number: || -> u64 {
+					frame_system::Pallet::<T>::block_number().saturated_into()
+				},
+				account_id: || -> u64 { 0 },
+				caller: || -> u64 { 1 },
+				get: |contract_address: T::AccountId,
+				      version: CodeVersion,
+				      key: StorageKey<T>|
+				 -> Option<Vec<u8>> {
+					CodeStorage::<T>::get((contract_address, version, key)).map(|d| d.to_vec())
+				},
+				insert: |contract_address: T::AccountId,
+				         version: CodeVersion,
+				         key: StorageKey<T>,
+				         max_storage_size: usize,
+				         mut data: Vec<u8>|
 				 -> u64 {
 					let mut buffer = BoundedVec::with_bounded_capacity(max_storage_size);
 					if let Ok(_) = buffer.try_append(&mut data) {
-						CodeStorage::<T>::insert((contract_address, caller_address, key), buffer);
+						CodeStorage::<T>::insert((contract_address, version, key), buffer);
 						0
 					} else {
 						1
 					}
 				},
-				|contract_address: T::AccountId,
-				 caller_address: T::AccountId,
-				 key: StorageKey<T>|
+				delete: |contract_address: T::AccountId,
+				         version: CodeVersion,
+				         key: StorageKey<T>|
 				 -> u64 {
-					CodeStorage::<T>::remove((contract_address, caller_address, key));
+					CodeStorage::<T>::remove((contract_address, version, key));
 					0
 				},
-			);
+			};
 
 			sp_runtime::print("====== BEFORE CALL ======");
 
-			let result =
-				instance.call_typed_and_get_result::<u64, (u32,)>(&mut state, "main", (op,));
+			let result = instance.call_typed_and_get_result::<u64, ()>(&mut state, "main", ());
 
 			let (result, not_enough_gas, trap) = match result {
 				Err(CallError::NotEnoughGas) => (None, true, false),
@@ -409,25 +480,30 @@ pub mod pallet {
 
 			sp_runtime::print("====== AFTER CALL ======");
 
+			if !not_enough_gas && !trap {
+				state.mutating_operations.iter().for_each(|op| match op {
+					(MutatingStorageOperationType::Delete, key, _) => CodeStorage::<T>::remove(key),
+					(MutatingStorageOperationType::Set, key, value) =>
+						if let Some(data) = value {
+							CodeStorage::<T>::insert(key, data)
+						},
+				})
+			}
+
 			ExecutionResult::<T>::insert(
-				(&contract_address, &who),
-				ExecResult {
-					result,
-					not_enough_gas,
-					trap,
-					gas_before: gas_limit,
-					gas_after: instance.gas(),
-				},
+				(&contract_address, version, &who),
+				ExecResult { result, not_enough_gas, trap, gas_before, gas_after: instance.gas() },
 			);
 
 			// Emit an event.
 			Self::deposit_event(Event::ExecutionResult {
 				who,
 				contract_address,
+				version,
 				result,
 				not_enough_gas,
 				trap,
-				gas_before: gas_limit,
+				gas_before,
 				gas_after: instance.gas(),
 			});
 
@@ -435,11 +511,51 @@ pub mod pallet {
 				if instance.gas() < 0 { 0u64 } else { instance.gas() as u64 };
 
 			Ok(PostDispatchInfo {
-				actual_weight: Some(Weight::from_all(
-					(u64::from(gas_limit) - normalized_gas_after) * gas_price,
-				)),
+				actual_weight: Some(Weight::from_all(gas_limit.ref_time() - normalized_gas_after)),
 				pays_fee: Pays::Yes,
 			})
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn bare_upload(
+			origin: T::AccountId,
+			program_blob: Vec<u8>,
+		) -> UploadResult<T::AccountId> {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_upload(origin: {:?}, program_blob.len(): {:?})",
+				origin,
+				program_blob.len()
+			);
+
+			UploadResult { contract_address: origin.clone(), version: 0 }
+		}
+
+		pub fn bare_execute(
+			origin: T::AccountId,
+			contract_address: T::AccountId,
+			data: Vec<u8>,
+			gas_limit: Weight,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult {
+			log::debug!(
+				target: "runtime::qf-polkavm", "bare_execute(origin: {:?}, contract_address: {:?}, data.len(): {:?}, gas_limit: {:?}, storage_deposit_limit: {:?}, gas_price: {:?})",
+				origin,
+				contract_address,
+				data.len(),
+				gas_limit,
+				storage_deposit_limit,
+				gas_price,
+			);
+
+			ExecResult {
+				result: None,
+				not_enough_gas: false,
+				trap: false,
+				gas_before: 0,
+				gas_after: 0,
+			}
 		}
 	}
 
@@ -471,20 +587,33 @@ pub mod pallet {
 		}
 
 		fn instantiate(module: PolkaVMModule) -> Result<Instance<T>, DispatchError> {
+			#[derive(Debug, FromPrimitive, ToPrimitive)]
+			enum HostFunctionError {
+				MaxLogLenExceeded = 1005,
+				FailedToReadLogBuffer = 1006,
+				IndexOutOfBounds = 1007,
+				FailedToWriteVmMemory = 1008,
+			}
+
 			// High-level API.
 			let mut linker: Linker<T> = Linker::<T>::new();
 
 			linker
-				.define_typed(
-					"transfer",
-					|caller: Caller<T>, address_idx: u32, balance_idx: u32| -> u64 {
-						(caller.user_data.transfer)(
-							caller.user_data.addresses[0].clone(),
-							caller.user_data.addresses[address_idx as usize].clone(),
-							caller.user_data.balances[balance_idx as usize].clone(),
-						)
-					},
-				)
+				.define_typed("transfer", |caller: Caller<T>, balance: u32| -> u64 {
+					let from = match caller.user_data.addresses.get(0) {
+						Some(from) => from.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+
+					let to = match caller.user_data.addresses.get(1) {
+						Some(to) => to.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+
+					(caller.user_data.transfer)(from, to, balance)
+				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
@@ -495,13 +624,26 @@ pub mod pallet {
 
 			linker
 				.define_typed("balance_of", |caller: Caller<T>| -> u64 {
-					(caller.user_data.balance)(caller.user_data.addresses[2].clone())
+					(caller.user_data.balance)(caller.user_data.addresses[1].clone())
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
-				.define_typed("print", |caller: Caller<T>| -> u64 {
-					(caller.user_data.print)(caller.user_data.log_message.clone())
+				.define_typed("print", |caller: Caller<T>, msg_pointer: u32, len: u32| -> u64 {
+					let user_data = caller.user_data;
+					if len as usize > user_data.max_log_len {
+						return HostFunctionError::MaxLogLenExceeded.to_u64().expect("a number");
+					}
+
+					let raw_data = match caller.instance.read_memory(msg_pointer, len) {
+						Ok(raw_data) => raw_data,
+						Err(_) =>
+							return HostFunctionError::FailedToReadLogBuffer
+								.to_u64()
+								.expect("a number"),
+					};
+
+					(user_data.print)(raw_data)
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
@@ -528,6 +670,51 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
 
 			linker
+				.define_typed("get_address_len", |caller: Caller<T>, address_idx: u32| -> u64 {
+					let address = match caller.user_data.addresses.get(address_idx as usize) {
+						Some(address) => address.clone(),
+						None =>
+							return HostFunctionError::IndexOutOfBounds.to_u64().expect("a number"),
+					};
+					let raw_data: Vec<u8> = address.encode();
+
+					raw_data.len() as u64
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed(
+					"get_address",
+					|caller: Caller<T>, address_idx: u32, write_pointer: u32| -> u64 {
+						let address = match caller.user_data.addresses.get(address_idx as usize) {
+							Some(address) => address.clone(),
+							None =>
+								return HostFunctionError::IndexOutOfBounds
+									.to_u64()
+									.expect("a number"),
+						};
+						let raw_data: Vec<u8> = address.encode();
+
+						match caller.instance.write_memory(write_pointer, &raw_data) {
+							Err(_) =>
+								HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
+							Ok(_) => 0,
+						}
+					},
+				)
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
+				.define_typed("get_user_data", |caller: Caller<T>, pointer: u32| -> u64 {
+					match caller.instance.write_memory(pointer, &caller.user_data.data) {
+						Err(_) =>
+							HostFunctionError::FailedToWriteVmMemory.to_u64().expect("a number"),
+						Ok(_) => 0,
+					}
+				})
+				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
+
+			linker
 				.define_typed(
 					"get",
 					|caller: Caller<T>, storage_key_pointer: u32, pointer: u32| -> u64 {
@@ -540,23 +727,32 @@ pub mod pallet {
 							);
 							match storage_key.try_append(&mut raw_storage_key) {
 								Ok(_) => (),
-								Err(_) => return 1,
+								Err(_) => return 1010,
 							};
 
-							let result = (caller.user_data.get)(
+							let result = match caller.user_data.raw_storage.get(&(
 								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[1].clone(),
-								storage_key,
-							);
+								caller.user_data.code_version,
+								storage_key.clone(),
+							)) {
+								Some(Some(r)) => Some(r.to_vec()),
+								Some(None) => None,
+								None => (caller.user_data.get)(
+									caller.user_data.addresses[0].clone(),
+									caller.user_data.code_version,
+									storage_key,
+								),
+							};
+
 							if let Some(chunk) = result {
 								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
+									Err(_) => return 1011,
 									Ok(_) => return 0,
 								}
 							}
 							return 0;
 						} else {
-							return 1;
+							return 1012;
 						}
 					},
 				)
@@ -564,38 +760,56 @@ pub mod pallet {
 
 			linker
 				.define_typed(
-					"read",
-					|caller: Caller<T>,
-					 address_idx: u32,
-					 storage_key_pointer: u32,
-					 pointer: u32|
-					 -> u64 {
+					"set",
+					|caller: Caller<T>, storage_key_pointer: u32, buffer: u32| -> u64 {
 						if let Ok(mut raw_storage_key) = caller
 							.instance
 							.read_memory(storage_key_pointer, caller.user_data.max_storage_key_size)
 						{
-							let mut storage_key = BoundedVec::with_bounded_capacity(
-								caller.user_data.max_storage_key_size as usize,
-							);
-							match storage_key.try_append(&mut raw_storage_key) {
-								Ok(_) => (),
-								Err(_) => return 1,
-							};
-
-							let result = (caller.user_data.get)(
-								caller.user_data.addresses[0].clone(),
-								caller.user_data.addresses[address_idx as usize].clone(),
-								storage_key,
-							);
-							if let Some(chunk) = result {
-								match caller.instance.write_memory(pointer, &chunk) {
-									Err(_) => return 1,
-									Ok(_) => return 0,
+							if let Ok(mut raw_data) = caller
+								.instance
+								.read_memory(buffer, caller.user_data.max_storage_size as u32)
+							{
+								let mut storage_key = BoundedVec::with_bounded_capacity(
+									caller.user_data.max_storage_key_size as usize,
+								);
+								match storage_key.try_append(&mut raw_storage_key) {
+									Ok(_) => (),
+									Err(_) => return 1020,
 								}
+
+								let mut data = BoundedVec::with_bounded_capacity(
+									caller.user_data.max_storage_size as usize,
+								);
+								match data.try_append(&mut raw_data) {
+									Ok(_) => (),
+									Err(_) => return 1021,
+								}
+
+								caller.user_data.mutating_operations.push((
+									MutatingStorageOperationType::Set,
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.code_version,
+										storage_key.clone(),
+									),
+									Some(data.clone()),
+								));
+								caller.user_data.raw_storage.insert(
+									(
+										caller.user_data.addresses[0].clone(),
+										caller.user_data.code_version,
+										storage_key,
+									),
+									Some(data),
+								);
+
+								return 0;
+							} else {
+								1022
 							}
-							return 0;
 						} else {
-							return 1;
+							1023
 						}
 					},
 				)
@@ -612,17 +826,30 @@ pub mod pallet {
 						);
 						match storage_key.try_append(&mut raw_storage_key) {
 							Ok(_) => (),
-							Err(_) => return 1,
+							Err(_) => return 31,
 						};
 
-						(caller.user_data.delete)(
-							caller.user_data.addresses[0].clone(),
-							caller.user_data.addresses[1].clone(),
-							storage_key,
+						caller.user_data.mutating_operations.push((
+							MutatingStorageOperationType::Delete,
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.code_version,
+								storage_key.clone(),
+							),
+							None,
+						));
+						caller.user_data.raw_storage.insert(
+							(
+								caller.user_data.addresses[0].clone(),
+								caller.user_data.code_version,
+								storage_key,
+							),
+							None,
 						);
+
 						return 0;
 					} else {
-						1
+						32
 					}
 				})
 				.map_err(|_| Error::<T>::HostFunctionDefinitionFailed)?;
@@ -663,5 +890,30 @@ pub mod pallet {
 			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
 				.expect("infinite length input; no invalid inputs for type; qed")
 		}
+	}
+}
+
+sp_api::decl_runtime_apis! {
+	/// The API used to dry-run smart contract interactions.
+	pub trait QfPolkavmApi<AccountId, Balance> where
+		AccountId: Codec,
+		Balance: Codec,
+	{
+		/// Upload new smart contract.
+		///
+		/// See [`crate::Pallet::bare_upload`].
+		fn upload(origin: AccountId, program_blob: Vec<u8>) -> UploadResult<AccountId>;
+
+		/// Execute a given smart contract from a specified account.
+		///
+		/// See [`crate::Pallet::bare_execute`].
+		fn execute(
+			origin: AccountId,
+			contract_address: AccountId,
+			data: Vec<u8>,
+			gas_limit: Option<Weight>,
+			storage_deposit_limit: u64,
+			gas_price: u64,
+		) -> ExecResult;
 	}
 }

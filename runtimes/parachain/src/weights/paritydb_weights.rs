@@ -20,7 +20,7 @@ pub mod constants {
 
 	use frame_support::{
 		parameter_types,
-		weights::{RuntimeDbWeight, constants},
+		weights::{constants, RuntimeDbWeight},
 	};
 
 	parameter_types! {

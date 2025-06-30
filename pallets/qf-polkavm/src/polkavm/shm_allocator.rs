@@ -6,7 +6,7 @@ use polkavm_common::cast::cast;
 
 use crate::polkavm::{mutex::Mutex, sandbox::get_native_page_size};
 use alloc::sync::Arc;
-use linux_raw::{Error, Fd, cstr};
+use linux_raw::{cstr, Error, Fd};
 use polkavm_linux_raw as linux_raw;
 
 use crate::polkavm::generic_allocator::{GenericAllocation, GenericAllocator};

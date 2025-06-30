@@ -1,5 +1,5 @@
 use crate::{
-	benchmarking::{RemarkBuilder, TransferKeepAliveBuilder, inherent_benchmark_data},
+	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
 	cli::{Cli, Subcommand},
 	service,
@@ -180,7 +180,8 @@ pub fn run() -> sc_cli::Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
 			runner.run_node_until_exit(|config| async move {
-				match config.network.network_backend {
+				// TODO(khssnv): remove `expect` at `stable2506` or later.
+				match config.network.network_backend.expect("missing network backend") {
 					sc_network::config::NetworkBackendType::Libp2p => service::new_full::<
 						sc_network::NetworkWorker<
 							qf_runtime::opaque::Block,
