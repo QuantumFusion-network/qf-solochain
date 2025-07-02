@@ -116,7 +116,7 @@ impl pallet_spin::Config for Runtime {
 	type DefaultSessionLength = ConstU32<SESSION_LENGTH>;
 }
 
-pub const LEADERSHIP_TENURES_PER_SESSION: u32 = 30;
+pub const LEADER_TENURES_PER_SESSION: u32 = 30;
 
 /// Provides dynamic session length to reflect changes in leader's tenure duration
 pub struct SessionPeriodLength<T>(core::marker::PhantomData<T>);
@@ -124,7 +124,7 @@ pub struct SessionPeriodLength<T>(core::marker::PhantomData<T>);
 impl<T: pallet_spin::Config> Get<BlockNumberFor<T>> for SessionPeriodLength<T> {
 	fn get() -> BlockNumberFor<T> {
 		pallet_spin::SessionLength::<T>::get()
-			.saturating_mul(LEADERSHIP_TENURES_PER_SESSION)
+			.saturating_mul(LEADER_TENURES_PER_SESSION)
 			.into()
 	}
 }
