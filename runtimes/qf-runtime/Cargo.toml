@@ -33,6 +33,7 @@ frame-executive = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
 
 # frame pallets
+pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-session = { workspace = true }
@@ -104,6 +105,7 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
+	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
 	"pallet-qf-polkavm-dev/std",
@@ -156,6 +158,7 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
+	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-qf-polkavm-dev/try-runtime",
