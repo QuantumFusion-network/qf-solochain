@@ -16,7 +16,7 @@ members = [
 	"pallets/spin-polkadot",
 	"parachain/node",
 	"primitives/*",
-	"runtimes/qf-runtime",
+	"runtimes/*",
 ]
 exclude = [
 	"vendor",
