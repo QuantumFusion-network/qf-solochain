@@ -11,9 +11,7 @@ resolver = "2"
 members = [
 	"client/*",
 	"node",
-	"pallets/qf-polkavm",
-	"pallets/qf-polkavm-dev",
-	"pallets/spin-polkadot",
+	"pallets/*",
 	"parachain/node",
 	"primitives/*",
 	"runtimes/*",
