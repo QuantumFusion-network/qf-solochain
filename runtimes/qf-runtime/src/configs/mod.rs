@@ -105,6 +105,11 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
+	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?
+}
+
 impl pallet_spin::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = SpinId;

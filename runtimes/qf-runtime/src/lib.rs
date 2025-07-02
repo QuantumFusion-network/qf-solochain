@@ -239,4 +239,7 @@ mod runtime {
 
 	#[runtime::pallet_index(11)]
 	pub type Session = pallet_session;
+
+	#[runtime::pallet_index(13)]
+	pub type Authorship = pallet_authorship;
 }
