@@ -5643,6 +5643,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b112acc8b3adf4b107a8ec20977da0273a8c386765a3ec0229bd500a1443f9f"
 
 [[package]]
+name = "humantime-serde"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57a3db5ea5923d99402c94e9feb261dc5ee9b4efa158b0315f788cf549cc200c"
+dependencies = [
+ "humantime",
+ "serde",
+]
+
+[[package]]
 name = "hyper"
 version = "0.14.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9539,6 +9549,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-revive"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ff67ac7b1053411a2bd2f5438cc0fa0c58757ec0c51efa551f1cfcd9ebc7ee3"
+dependencies = [
+ "alloy-core",
+ "derive_more 0.99.20",
+ "environmental",
+ "ethabi-decode",
+ "ethereum-types",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "humantime-serde",
+ "impl-trait-for-tuples",
+ "log",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "pallet-revive-fixtures",
+ "pallet-revive-proc-macro",
+ "pallet-revive-uapi",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "paste",
+ "polkavm 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm-common 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.8.5",
+ "rand_pcg",
+ "ripemd",
+ "rlp 0.6.1",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "substrate-bn",
+ "subxt-signer",
+]
+
+[[package]]
 name = "pallet-revive-eth-rpc"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9551,7 +9610,7 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "log",
- "pallet-revive",
+ "pallet-revive 0.5.0",
  "parity-scale-codec",
  "rlp 0.6.1",
  "sc-cli",
@@ -9597,7 +9656,7 @@ dependencies = [
  "pallet-assets",
  "pallet-balances",
  "pallet-message-queue",
- "pallet-revive",
+ "pallet-revive 0.5.0",
  "pallet-revive-uapi",
  "pallet-timestamp",
  "pallet-xcm",
@@ -11831,7 +11890,7 @@ dependencies = [
  "pallet-recovery",
  "pallet-referenda",
  "pallet-remark",
- "pallet-revive",
+ "pallet-revive 0.5.0",
  "pallet-revive-eth-rpc",
  "pallet-revive-mock-network",
  "pallet-root-offences",
@@ -12934,11 +12993,13 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "pallet-authorship",
  "pallet-balances",
  "pallet-faucet",
  "pallet-grandpa",
  "pallet-qf-polkavm",
  "pallet-qf-polkavm-dev",
+ "pallet-revive 0.6.1",
  "pallet-session",
  "pallet-spin",
  "pallet-staking",
