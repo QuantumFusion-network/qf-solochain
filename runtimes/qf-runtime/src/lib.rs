@@ -242,4 +242,7 @@ mod runtime {
 
 	#[runtime::pallet_index(13)]
 	pub type Authorship = pallet_authorship;
+
+	#[runtime::pallet_index(14)]
+	pub type Revive = pallet_revive;
 }
