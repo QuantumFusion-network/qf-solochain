@@ -28,11 +28,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"support.anonymous.an".into()
+		"https://github.com/QuantumFusion-network/qf-solochain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2024
 	}
 
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -180,8 +180,7 @@ pub fn run() -> sc_cli::Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
 			runner.run_node_until_exit(|config| async move {
-				// TODO(khssnv): remove `expect` at `stable2506` or later.
-				match config.network.network_backend.expect("missing network backend") {
+				match config.network.network_backend {
 					sc_network::config::NetworkBackendType::Libp2p => service::new_full::<
 						sc_network::NetworkWorker<
 							qf_runtime::opaque::Block,
