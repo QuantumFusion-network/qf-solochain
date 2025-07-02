@@ -19,7 +19,6 @@ members = [
 	"runtimes/qf-runtime",
 ]
 exclude = [
-	"pvm_prog",
 	"vendor",
 ]
 
