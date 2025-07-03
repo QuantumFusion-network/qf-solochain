@@ -150,7 +150,15 @@ qfc-consensus-spin = { path = "client/consensus-spin", default-features = false 
 qfp-consensus-spin = { path = "primitives/consensus-spin", default-features = false }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(polkavm_dev_debug_zygote)'] }
+suspicious_double_ref_op = { level = "allow", priority = 2 }
+unexpected_cfgs = { level = "warn", check-cfg = [
+	'cfg(build_opt_level, values("3"))',
+	'cfg(build_profile, values("debug", "release"))',
+	'cfg(enable_alloc_error_handler)',
+	'cfg(fuzzing)',
+	'cfg(kani)',
+	'cfg(polkavm_dev_debug_zygote)',
+] }
 
 [workspace.lints.clippy]
 all = { level = "allow", priority = 0 }
