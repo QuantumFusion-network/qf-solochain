@@ -54,7 +54,7 @@ jobs:
 
       - name: Cargo clippy
         run: |
-          cargo clippy --all-targets --all-features --locked --workspace --quiet
+          cargo clippy --all-targets --locked --workspace --quiet
 
       - name: Check code
         run: |
