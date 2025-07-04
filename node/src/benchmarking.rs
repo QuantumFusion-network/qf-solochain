@@ -11,7 +11,7 @@ use sc_client_api::BlockBackend;
 use sp_core::{Encode, Pair};
 use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;
-use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
+use sp_runtime::{generic, OpaqueExtrinsic, SaturatedConversion};
 
 use std::{sync::Arc, time::Duration};
 
@@ -141,12 +141,13 @@ pub fn create_benchmark_extrinsic(
 	);
 	let signature = raw_payload.using_encoded(|e| sender.sign(e));
 
-	runtime::UncheckedExtrinsic::new_signed(
+	generic::UncheckedExtrinsic::new_signed(
 		call,
 		sp_runtime::AccountId32::from(sender.public()).into(),
 		runtime::Signature::Sr25519(signature),
 		tx_ext,
 	)
+	.into()
 }
 
 /// Generates inherent data for the `benchmark overhead` command.
