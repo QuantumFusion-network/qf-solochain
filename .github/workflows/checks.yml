@@ -62,4 +62,4 @@ jobs:
 
       - name: Tests
         run: |
-          cargo test -p pallet-qf-polkavm
+          cargo test --locked --workspace --no-fail-fast
