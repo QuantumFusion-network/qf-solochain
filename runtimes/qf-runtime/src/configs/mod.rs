@@ -187,7 +187,7 @@ parameter_types! {
 	/// Вefines the bonding (locking) period for staking funds (measured in eras)
 	pub const BondingDuration: sp_staking::EraIndex = 3;
 	/// Delay before a slash (penalty) becomes effective
-	pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7;
+	pub const SlashDeferDuration: sp_staking::EraIndex = 2;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 }
 
