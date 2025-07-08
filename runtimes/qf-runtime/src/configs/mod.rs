@@ -35,7 +35,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
@@ -103,6 +103,11 @@ impl frame_system::Config for Runtime {
 	/// prefix.
 	type SS58Prefix = SS58Prefix;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
+
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
+	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?
 }
 
 impl pallet_spin::Config for Runtime {
@@ -355,4 +360,52 @@ impl pallet_faucet::Config for Runtime {
 	type FaucetAmount = FaucetAmount;
 	type LockPeriod = LockPeriod;
 	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
+}
+
+// TODO(khssnv): revisit.
+parameter_types! {
+	pub const DepositPerItem: Balance = 0;
+	pub const DepositPerByte: Balance = 0;
+	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
+	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
+	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
+	pub const ChainId: u64 = 42;
+	pub const NativeToEthRatio: u32 = 1;
+}
+
+impl pallet_revive::Config for Runtime {
+	type Time = Timestamp;
+	type Currency = Balances;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type CallFilter = Nothing;
+	type DepositPerItem = DepositPerByte;
+	type DepositPerByte = DepositPerByte;
+	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
+	type ChainExtension = ();
+	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
+	type RuntimeMemory = RuntimeMemory;
+	type PVFMemory = PVFMemory;
+	type UnsafeUnstableInterface = ConstBool<true>; // TODO(khssnv): try with `false` at `stable2506`.
+	type UploadOrigin = EnsureSigned<Self::AccountId>;
+	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+	type Xcm = ();
+	type ChainId = ChainId;
+	type NativeToEthRatio = NativeToEthRatio;
+	type EthGasEncoder = ();
+	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
+}
+
+impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
+	type Error = ();
+
+	fn try_from(value: RuntimeCall) -> Result<Self, Self::Error> {
+		match value {
+			RuntimeCall::Revive(call) => Ok(call),
+			_ => Err(()),
+		}
+	}
 }
