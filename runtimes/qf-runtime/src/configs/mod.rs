@@ -362,6 +362,7 @@ impl pallet_faucet::Config for Runtime {
 	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
 }
 
+// TODO(khssnv): revisit.
 parameter_types! {
 	pub const DepositPerItem: Balance = 0;
 	pub const DepositPerByte: Balance = 0;
@@ -386,7 +387,7 @@ impl pallet_revive::Config for Runtime {
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = RuntimeMemory;
 	type PVFMemory = PVFMemory;
-	type UnsafeUnstableInterface = ConstBool<true>;
+	type UnsafeUnstableInterface = ConstBool<true>; // TODO(khssnv): try with `false` at `stable2506`.
 	type UploadOrigin = EnsureSigned<Self::AccountId>;
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
