@@ -323,7 +323,7 @@ impl_runtime_apis! {
 			Executive::initialize_block(&header);
 			for (index, ext) in extrinsics.into_iter().enumerate() {
 				if index as u32 == tx_index {
-				trace(tracer.as_tracing(), || {
+					trace(tracer.as_tracing(), || {
 						let _ = Executive::apply_extrinsic(ext);
 					});
 					break;
@@ -345,12 +345,10 @@ impl_runtime_apis! {
 			let mut tracer = Revive::evm_tracer(tracer_type);
 			let result = trace(tracer.as_tracing(), || Self::eth_transact(tx));
 
-			if let Some(trace) = tracer.collect_trace() {
-				Ok(trace)
-			} else if let Err(err) = result {
-				Err(err)
-			} else {
-				Ok(tracer.empty_trace())
+			match (tracer.collect_trace(), result) {
+				(Some(trace), _) => Ok(trace),
+				(None, Err(err)) => Err(err),
+				(None, Ok(_)) => Ok(tracer.empty_trace()),
 			}
 		}
 	}
