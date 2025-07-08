@@ -366,6 +366,10 @@ parameter_types! {
 	pub const DepositPerItem: Balance = 0;
 	pub const DepositPerByte: Balance = 0;
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
+	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
+	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
+	pub const ChainId: u64 = 42;
+	pub const NativeToEthRatio: u32 = 1;
 }
 
 impl pallet_revive::Config for Runtime {
@@ -380,16 +384,16 @@ impl pallet_revive::Config for Runtime {
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
 	type ChainExtension = ();
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
-	type RuntimeMemory = ConstU32<{ 128 * 1024 * 1024 }>;
-	type PVFMemory = ConstU32<{ 512 * 1024 * 1024 }>;
+	type RuntimeMemory = RuntimeMemory;
+	type PVFMemory = PVFMemory;
 	type UnsafeUnstableInterface = ConstBool<true>;
 	type UploadOrigin = EnsureSigned<Self::AccountId>;
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
 	type Xcm = ();
-	type ChainId = ConstU64<42>;
-	type NativeToEthRatio = ConstU32<1>;
+	type ChainId = ChainId;
+	type NativeToEthRatio = NativeToEthRatio;
 	type EthGasEncoder = ();
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
 }
