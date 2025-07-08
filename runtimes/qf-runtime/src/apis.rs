@@ -33,7 +33,7 @@ use frame_support::{
 };
 use frame_system::limits::BlockWeights;
 use pallet_grandpa::AuthorityId as GrandpaId;
-use pallet_revive::AddressMapper;
+use pallet_revive::{tracing::trace as revive_trace, AddressMapper};
 use qfp_consensus_spin::{sr25519::AuthorityId as SpinId, SpinAuxData};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, U256};
@@ -293,13 +293,12 @@ impl_runtime_apis! {
 			block: Block,
 			tracer_type: pallet_revive::evm::TracerType,
 		) -> Vec<(u32, pallet_revive::evm::Trace)> {
-			use pallet_revive::tracing::trace;
 			let mut tracer = Revive::evm_tracer(tracer_type);
 			let mut traces = vec![];
 			let (header, extrinsics) = block.deconstruct();
 			Executive::initialize_block(&header);
 			for (index, ext) in extrinsics.into_iter().enumerate() {
-				trace(tracer.as_tracing(), || {
+				revive_trace(tracer.as_tracing(), || {
 					let _ = Executive::apply_extrinsic(ext);
 				});
 
@@ -316,14 +315,13 @@ impl_runtime_apis! {
 			tx_index: u32,
 			tracer_type: pallet_revive::evm::TracerType,
 		) -> Option<pallet_revive::evm::Trace> {
-			use pallet_revive::tracing::trace;
 			let mut tracer = Revive::evm_tracer(tracer_type);
 			let (header, extrinsics) = block.deconstruct();
 
 			Executive::initialize_block(&header);
 			for (index, ext) in extrinsics.into_iter().enumerate() {
 				if index as u32 == tx_index {
-					trace(tracer.as_tracing(), || {
+					revive_trace(tracer.as_tracing(), || {
 						let _ = Executive::apply_extrinsic(ext);
 					});
 					break;
@@ -341,9 +339,8 @@ impl_runtime_apis! {
 			)
 			-> Result<pallet_revive::evm::Trace, pallet_revive::EthTransactError>
 		{
-			use pallet_revive::tracing::trace;
 			let mut tracer = Revive::evm_tracer(tracer_type);
-			let result = trace(tracer.as_tracing(), || Self::eth_transact(tx));
+			let result = revive_trace(tracer.as_tracing(), || Self::eth_transact(tx));
 
 			match (tracer.collect_trace(), result) {
 				(Some(trace), _) => Ok(trace),
