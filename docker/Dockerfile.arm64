@@ -2,7 +2,7 @@ ARG BUILD_ARCH=arm64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Sviatoslav Alekseev <sviatoslav.alekseev@proton.me>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -28,7 +28,7 @@ RUN rm -rf /opt/qf-solochain/target
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Sviatoslav Alekseev <sviatoslav.alekseev@proton.me>"
 
 RUN mkdir -p /opt/qf-solochain
 

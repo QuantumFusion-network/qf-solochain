@@ -2,6 +2,8 @@ ARG BUILD_ARCH=x86_64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
+LABEL MAINTAINER="Sviatoslav Alekseev <sviatoslav.alekseev@proton.me>"
+
 RUN mkdir -p /opt/qf-solochain
 
 RUN apt-get update && \
