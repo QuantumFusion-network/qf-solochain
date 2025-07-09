@@ -543,7 +543,7 @@ where
 mod tests {
 	use super::*;
 	use parking_lot::Mutex;
-	use sc_consensus_aura::sr25519::AuthorityPair;
+	use qfp_consensus_spin::sr25519::AuthorityPair;
 	use sc_block_builder::BlockBuilderBuilder;
 	use sc_client_api::BlockchainEvents;
 	use sc_consensus::BoxJustificationImport;
