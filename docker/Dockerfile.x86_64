@@ -2,7 +2,7 @@ ARG BUILD_ARCH=x86_64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Sviatoslav Alekseev <sviatoslav.alekseev@proton.me>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -28,7 +28,7 @@ RUN make qf-node-release
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Sviatoslav Alekseev <sviatoslav.alekseev@proton.me>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 RUN mkdir -p /opt/qf-solochain
 
