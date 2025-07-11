@@ -6,7 +6,7 @@
     "/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWBAtaXQXjKZrrZHR57fa8N1zyMfXXfPLUZdw31iKGEPWT"
   ],
   "telemetryEndpoints": null,
-  "protocolId": null,
+  "protocolId": "local-test",
   "properties": {
     "ss58Format": 42,
     "tokenDecimals": 18,
