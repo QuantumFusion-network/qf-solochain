@@ -2,7 +2,7 @@ ARG BUILD_ARCH=x86_64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -28,13 +28,13 @@ RUN make qf-node-release
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 RUN mkdir -p /opt/qf-solochain
 
 RUN apt-get update && \
     apt-get install -y ca-certificates && \
-    update-ca-certificates 
+    update-ca-certificates
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 RUN apt install -y protobuf-compiler curl
 

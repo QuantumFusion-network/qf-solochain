@@ -37,6 +37,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
@@ -106,6 +107,11 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
+	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?
+}
+
 impl pallet_spin::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = SpinId;
@@ -157,24 +163,29 @@ parameter_types! {
 		ElectionBoundsBuilder::default().voters_count(MaxElectingVoters::get().into()).build();
 	// Maximum winners that can be chosen as active validators
 	pub const MaxActiveValidators: u32 = 1000;
+
+	// TODO(khssnv): uncomment the block at `stable2506` or later?
 	// One page only, fill the whole page with the `MaxActiveValidators`.
-	pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
+	// pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
 	// Unbonded, thus the max backers per winner maps to the max electing voters limit.
-	pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
+	// pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
 }
 
 pub type OnChainAccuracy = sp_runtime::Perbill;
 
 pub struct OnChainSeqPhragmen;
 impl onchain::Config for OnChainSeqPhragmen {
-	type Sort = ConstBool<true>;
+	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2506` or later?
 	type System = Runtime;
 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
-	type MaxBackersPerWinner = MaxBackersPerWinner;
-	type MaxWinnersPerPage = MaxWinnersPerPage;
+
+	// TODO(khssnv): uncomment at `stable2506` or later?
+	// type MaxBackersPerWinner = MaxBackersPerWinner;
+	// type MaxWinnersPerPage = MaxWinnersPerPage;
+	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2506` or later?
 }
 
 pallet_staking_reward_curve::build! {
@@ -194,7 +205,7 @@ parameter_types! {
 	/// Вefines the bonding (locking) period for staking funds (measured in eras)
 	pub const BondingDuration: sp_staking::EraIndex = 3;
 	/// Delay before a slash (penalty) becomes effective
-	pub const SlashDeferDuration: sp_staking::EraIndex = 24 * 7;
+	pub const SlashDeferDuration: sp_staking::EraIndex = 2;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 }
 
@@ -229,7 +240,7 @@ impl pallet_staking::Config for Runtime {
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
 	/// Maximum number of active validators allowed
-	type MaxValidatorSet = ConstU32<100>;
+	// type MaxValidatorSet = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
@@ -246,10 +257,10 @@ impl pallet_staking::Config for Runtime {
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
 	/// Maximum number of invulnerable validators
-	type MaxInvulnerables = ConstU32<20>;
+	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2506` or later?
 	/// Maximum number of validators that can be marked disabled at once,
 	/// limiting how many can be chilled or forced out in a batch
-	type MaxDisabledValidators = ConstU32<100>;
+	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506`?
 	type Filter = Nothing;
 }
 
@@ -290,7 +301,7 @@ impl pallet_balances::Config for Runtime {
 	type FreezeIdentifier = RuntimeFreezeReason;
 	type MaxFreezes = VariantCountOf<RuntimeFreezeReason>;
 	type RuntimeHoldReason = RuntimeHoldReason;
-	type RuntimeFreezeReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type DoneSlashHandler = ();
 }
 
@@ -362,4 +373,52 @@ impl pallet_faucet::Config for Runtime {
 	type FaucetAmount = FaucetAmount;
 	type LockPeriod = LockPeriod;
 	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
+}
+
+// TODO(khssnv): revisit.
+parameter_types! {
+	pub const DepositPerItem: Balance = 0;
+	pub const DepositPerByte: Balance = 0;
+	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
+	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
+	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
+	pub const ChainId: u64 = 42;
+	pub const NativeToEthRatio: u32 = 1;
+}
+
+impl pallet_revive::Config for Runtime {
+	type Time = Timestamp;
+	type Currency = Balances;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type CallFilter = Nothing;
+	type DepositPerItem = DepositPerByte;
+	type DepositPerByte = DepositPerByte;
+	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
+	type ChainExtension = ();
+	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
+	type RuntimeMemory = RuntimeMemory;
+	type PVFMemory = PVFMemory;
+	type UnsafeUnstableInterface = ConstBool<true>; // TODO(khssnv): try with `false` at `stable2506`.
+	type UploadOrigin = EnsureSigned<Self::AccountId>;
+	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+	type Xcm = ();
+	type ChainId = ChainId;
+	type NativeToEthRatio = NativeToEthRatio;
+	type EthGasEncoder = ();
+	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
+}
+
+impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
+	type Error = ();
+
+	fn try_from(value: RuntimeCall) -> Result<Self, Self::Error> {
+		match value {
+			RuntimeCall::Revive(call) => Ok(call),
+			_ => Err(()),
+		}
+	}
 }

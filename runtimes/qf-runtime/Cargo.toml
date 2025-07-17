@@ -9,6 +9,9 @@ repository.workspace = true
 edition.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
@@ -30,8 +33,10 @@ frame-executive = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
 
 # frame pallets
+pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
+pallet-revive = { workspace = true }
 pallet-session = { workspace = true }
 pallet-staking = { workspace = true }
 pallet-staking-reward-curve = { workspace = true }
@@ -101,10 +106,12 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
+	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
 	"pallet-qf-polkavm-dev/std",
 	"pallet-qf-polkavm/std",
+	"pallet-revive/std",
 	"pallet-session/std",
 	"pallet-spin/std",
 	"pallet-staking-runtime-api/std",
@@ -141,6 +148,7 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-qf-polkavm-dev/runtime-benchmarks",
 	"pallet-qf-polkavm/runtime-benchmarks",
+	"pallet-revive/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
@@ -153,10 +161,12 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
+	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-qf-polkavm-dev/try-runtime",
 	"pallet-qf-polkavm/try-runtime",
+	"pallet-revive/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-sudo/try-runtime",

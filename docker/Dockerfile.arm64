@@ -2,7 +2,7 @@ ARG BUILD_ARCH=arm64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -13,7 +13,7 @@ RUN apt install -y curl git
 RUN apt install -y protobuf-compiler libclang-dev
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.84.1 -y
 ENV PATH="$PATH:/root/.cargo/bin"
-RUN rustup target add wasm32-unknown-unknown --toolchain  1.84.1-aarch64-unknown-linux-gnu
+RUN rustup target add wasm32-unknown-unknown --toolchain 1.84.1-aarch64-unknown-linux-gnu
 RUN rustup component add rust-src --toolchain 1.84.1-aarch64-unknown-linux-gnu
 
 FROM builder AS builder-solochain
@@ -28,13 +28,13 @@ RUN rm -rf /opt/qf-solochain/target
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Max Pestov <ealataur@gmail.com>"
+LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
 
 RUN mkdir -p /opt/qf-solochain
 
 RUN apt-get update && \
     apt-get install -y ca-certificates && \
-    update-ca-certificates 
+    update-ca-certificates
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 RUN apt install -y protobuf-compiler curl
 

@@ -35,7 +35,7 @@ or a virtual machine.
 3. Inspect available subcommands.
 
     ```console
-    ./target/release/qf-solochain --help
+    ./target/release/qf-node --help
     ```
 
 4. Run a local node in dev mode.

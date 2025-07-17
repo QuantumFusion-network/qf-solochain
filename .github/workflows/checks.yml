@@ -34,13 +34,14 @@ jobs:
 
       - name: Setup build environment
         run: |
+          set -euo pipefail
           sudo apt update
           sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           . "$HOME/.cargo/env"
           rustup install
-          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-full-linux-x86_64.gz \
+          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz \
             | gzip -d - | sudo install -m 755 /dev/stdin /usr/local/bin/taplo
 
       - name: Check TOML format
@@ -51,10 +52,14 @@ jobs:
         run: |
           cargo +nightly fmt --all -- --check
 
+      - name: Cargo clippy
+        run: |
+          cargo clippy --all-targets --locked --workspace --quiet
+
       - name: Check code
         run: |
           cargo check --locked --all
 
       - name: Tests
         run: |
-          cargo test -p pallet-qf-polkavm
+          cargo test --locked --workspace --no-fail-fast
