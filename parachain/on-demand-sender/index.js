@@ -35,7 +35,7 @@ function getConfig() {
     let lastBlock = 0;
 
     console.log('Subscribing to new blocks...');
-    api.rpc.chain.subscribeNewHeads(async (header) => {
+    const unsub = api.rpc.chain.subscribeNewHeads(async (header) => {
         const blockNumber = header.number.toNumber();
         if (blockNumber === lastBlock) return;
         lastBlock = blockNumber;
@@ -49,6 +49,20 @@ function getConfig() {
             console.error(`${blockNumber} - error sending the order:`, err);
         }
     });
+
+    const cleanup = async () => {
+        try {
+            await unsub;
+            await api.disconnect();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            process.exit();
+        }
+    };
+
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
 })();
 
 /**
