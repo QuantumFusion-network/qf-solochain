@@ -27,7 +27,7 @@
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Nothing, VariantCountOf},
+	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Get, Nothing, VariantCountOf},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
 		IdentityFee, Weight,
@@ -35,6 +35,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
+	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
@@ -120,9 +121,20 @@ impl pallet_spin::Config for Runtime {
 	type DefaultSessionLength = ConstU32<SESSION_LENGTH>;
 }
 
+pub const LEADER_TENURES_PER_SESSION: u32 = 30;
+
+/// Provides dynamic session length to reflect changes in leader's tenure duration
+pub struct SessionPeriodLength<T>(core::marker::PhantomData<T>);
+
+impl<T: pallet_spin::Config> Get<BlockNumberFor<T>> for SessionPeriodLength<T> {
+	fn get() -> BlockNumberFor<T> {
+		pallet_spin::SessionLength::<T>::get()
+			.saturating_mul(LEADER_TENURES_PER_SESSION)
+			.into()
+	}
+}
+
 parameter_types! {
-	/// Session period - 30 leadership tenures
-	pub const Period: BlockNumber = 30 * SESSION_LENGTH;
 	/// Offset – 0 blocks
 	pub const Offset: BlockNumber = 0;
 }
@@ -131,8 +143,8 @@ impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Self>;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+	type ShouldEndSession = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
+	type NextSessionRotation = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
 	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
 	type DisablingStrategy = pallet_session::disabling::UpToLimitWithReEnablingDisablingStrategy;
