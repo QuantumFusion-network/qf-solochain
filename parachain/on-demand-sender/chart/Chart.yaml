@@ -1,0 +1,4 @@
+apiVersion: v2
+name: on-demand-sender
+version: 0.1.0
+description: Sends coretime order each relay chain block
