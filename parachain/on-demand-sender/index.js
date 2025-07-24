@@ -76,7 +76,7 @@ function getConfig() {
  * @returns {Promise<string>} Transaction hash
  */
 async function send(api, now, account, maxAmount, paraId) {
-    const tx = api.tx.onDemandAssignmentProvider.placeOrderKeepAlive(maxAmount, paraId);
+    const tx = (api.tx.onDemand ?? api.tx.onDemandAssignmentProvider).placeOrderKeepAlive(maxAmount, paraId);
     const unsub = await tx.signAndSend(account, ({ status }) => {
         if (status.isInBlock) {
             console.log(`${now} - block order included at blockHash ${status.asInBlock}`);
