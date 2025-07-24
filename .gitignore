@@ -8,3 +8,8 @@ target/
 *.polkavm
 
 output/
+
+node_modules
+dist
+.env*
+!.env.example
