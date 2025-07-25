@@ -10,7 +10,7 @@ const DEFAULT_TIMEOUT_MS = 1000;
  */
 function getConfig() {
     const apiUrl = process.env.RELAY_WS_URL;
-    const timeout = process.env.DEFAULT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS;
+    const timeout = process.env.TIMEOUT_MS || DEFAULT_TIMEOUT_MS;
     const mnemonic = process.env.MNEMONIC;
     const maxAmount = process.env.MAX_AMOUNT;
     const paraId = process.env.PARA_ID;

@@ -9,7 +9,7 @@ image:
   tag: "0.1.0"
 
 env:
-  DEFAULT_TIMEOUT_MS: 1000
+  TIMEOUT_MS: 1000
   MAX_AMOUNT: 10_000_000
   PARA_ID: 4775
   RELAY_WS_URL: wss://rpc.ibp.network/paseo
