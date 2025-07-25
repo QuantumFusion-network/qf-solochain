@@ -4,8 +4,8 @@
 
 replicaCount: 1
 
-images:
-  repository: qfnetwork
+image:
+  repository: qfnetwork/on-demand-sender
   tag: "0.1.0"
 
 env:

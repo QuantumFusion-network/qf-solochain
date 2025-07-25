@@ -25,7 +25,7 @@ spec:
                 secretKeyRef:
                   name: todo-secrets # TODO
                   key: on-demand-sender-mnemonic
-            {{- range .Values.env }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
             {{- end }}
