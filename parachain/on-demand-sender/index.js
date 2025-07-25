@@ -1,6 +1,8 @@
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
+const DEFAULT_TIMEOUT_MS = 1000;
+
 /**
  * Loads config from environment variables.
  * 
@@ -8,6 +10,7 @@ import { cryptoWaitReady } from '@polkadot/util-crypto';
  */
 function getConfig() {
     const apiUrl = process.env.RELAY_WS_URL;
+    const timeout = process.env.DEFAULT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS;
     const mnemonic = process.env.MNEMONIC;
     const maxAmount = process.env.MAX_AMOUNT;
     const paraId = process.env.PARA_ID;
@@ -17,17 +20,17 @@ function getConfig() {
         process.exit(1);
     }
 
-    return { apiUrl, mnemonic, maxAmount, paraId };
+    return { apiUrl, timeout, mnemonic, maxAmount, paraId };
 }
 
 // Get config from env and send an on-demand order each block.
 (async () => {
-    const { apiUrl, mnemonic, maxAmount, paraId } = getConfig();
+    const { apiUrl, timeout, mnemonic, maxAmount, paraId } = getConfig();
 
     await cryptoWaitReady();
 
     console.log(`Connecting to API at ${apiUrl}...`);
-    const wsProvider = new WsProvider(apiUrl);
+    const wsProvider = new WsProvider(apiUrl, { timeout });
     const api = await ApiPromise.create({ wsProvider });
     const keyring = new Keyring({ type: 'sr25519' });
     const account = keyring.addFromUri(mnemonic);
