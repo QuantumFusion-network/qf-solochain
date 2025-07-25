@@ -35,7 +35,7 @@ function getConfig() {
     let lastBlock = 0;
 
     console.log('Subscribing to new blocks...');
-    const unsub = api.rpc.chain.subscribeNewHeads(async (header) => {
+    const unsub = await api.rpc.chain.subscribeNewHeads(async (header) => {
         const blockNumber = header.number.toNumber();
         if (blockNumber === lastBlock) return;
         lastBlock = blockNumber;
@@ -52,7 +52,7 @@ function getConfig() {
 
     const cleanup = async () => {
         try {
-            await unsub;
+            unsub();
             await api.disconnect();
         } catch (e) {
             console.error(e);
