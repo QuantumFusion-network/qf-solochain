@@ -1,5 +1,8 @@
+import dotenv from 'dotenv';
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
+
+dotenv.config({ quiet: true });
 
 const DEFAULT_TIMEOUT_MS = 1000;
 
