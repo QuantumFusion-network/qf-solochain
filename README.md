@@ -10,7 +10,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/QuantumFusion-network/qf-solochain)
 ![GitHub last commit](https://img.shields.io/github/last-commit/QuantumFusion-network/qf-solochain)
 <br>
-[![Twitter URL](https://img.shields.io/twitter/follow/QuantumFusion_?style=social)](https://x.com/QuantumFusion_)
+[![Twitter URL](https://img.shields.io/twitter/follow/theqfnetwork?style=social)](https://x.com/theqfnetwork)
 
 </div>
 
