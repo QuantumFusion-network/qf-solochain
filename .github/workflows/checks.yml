@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  cargo-check:
-    name: Cargo Check
+  checks:
+    name: Checks
     runs-on: [self-hosted]
 
     steps:
