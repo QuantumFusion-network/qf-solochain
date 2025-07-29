@@ -21,13 +21,33 @@ jobs:
         # with:
         #   submodules: recursive
 
+      - name: Detect changed file types
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            markdown:
+              - .markdownlint.yaml
+              - '**/*.md'
+            rust:
+              - '**/*.lock'
+              - '**/*.rs'
+              - '**/*.toml'
+
       # Update files to resolve fixable issues:
       # `markdownlint-cli2 "**/*.md" "#target" "#vendor" --config .markdownlint.yaml --fix`.
       - name: Check Markdown
+        if: steps.filter.outputs.markdown == 'true'
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
           config: '.markdownlint.yaml'
           globs: '**/*.md'
+
+      - name: Skip - no Rust files changed
+        if: steps.filter.outputs.rust != 'true'
+        run: |
+          echo "No Rust files changed. Skipping further steps."
+          exit 0
 
       - run: |
           make vendor-clone
