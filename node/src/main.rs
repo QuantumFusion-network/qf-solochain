@@ -9,5 +9,6 @@ mod rpc;
 mod service;
 
 fn main() -> sc_cli::Result<()> {
+	println!("Hello, world!");
 	command::run()
 }
