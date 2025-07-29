@@ -9,21 +9,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  checks:
-    name: Checks
+  files-changed:
+    name: Detect what files changed
     runs-on: [self-hosted]
-
+    outputs:
+      markdown: ${{ steps.filter.outputs.markdown }}
+      rust: ${{ steps.filter.outputs.rust }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        # This is supposed to download submodules, but it doesn't actually work, so we're using
-        # `make vendor-clone` with `git clone ...` instead.
-        # with:
-        #   submodules: recursive
 
       - name: Detect changed file types
-        id: filter
         uses: dorny/paths-filter@v3
+        id: filter
         with:
           filters: |
             markdown:
@@ -34,20 +32,36 @@ jobs:
               - '**/*.rs'
               - '**/*.toml'
 
+  markdown:
+    if: needs.files-changed.outputs.markdown == 'true'
+    needs: files-changed
+    name: Check Markdown
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       # Update files to resolve fixable issues:
       # `markdownlint-cli2 "**/*.md" "#target" "#vendor" --config .markdownlint.yaml --fix`.
       - name: Check Markdown
-        if: steps.filter.outputs.markdown == 'true'
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
           config: ".markdownlint.yaml"
           globs: "**/*.md"
 
-      - name: Skip - no Rust files changed
-        if: steps.filter.outputs.rust != 'true'
-        run: |
-          echo "No Rust files changed. Skipping further steps."
-          exit 0
+  rust:
+    if: needs.files-changed.outputs.rust == 'true'
+    needs: files-changed
+    name: Check Rust
+    runs-on: [self-hosted]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        # This is supposed to download submodules, but it doesn't actually work, so we're using
+        # `make vendor-clone` with `git clone ...` instead.
+        # with:
+        #   submodules: recursive
 
       - run: |
           make vendor-clone
