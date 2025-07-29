@@ -40,8 +40,8 @@ jobs:
         if: steps.filter.outputs.markdown == 'true'
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
-          config: '.markdownlint.yaml'
-          globs: '**/*.md'
+          config: ".markdownlint.yaml"
+          globs: "**/*.md"
 
       - name: Skip - no Rust files changed
         if: steps.filter.outputs.rust != 'true'
