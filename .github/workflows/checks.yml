@@ -36,6 +36,8 @@ jobs:
               - '**/*.lock'
               - '**/*.rs'
               - '**/*.toml'
+              - Makefile
+              - node/src/res/*.json
 
   markdown:
     if: needs.files-changed.outputs.markdown == 'true' || github.event.inputs.force == 'true'
