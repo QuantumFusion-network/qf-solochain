@@ -40,7 +40,7 @@ jobs:
               - node/src/res/*.json
 
   markdown:
-    if: needs.files-changed.outputs.markdown == 'true' || github.event.inputs.force == 'true'
+    if: needs.files-changed.outputs.markdown == 'true' || github.event.inputs.force == 'true' || github.ref == 'refs/heads/main'
     needs: files-changed
     name: Check Markdown
     runs-on: [self-hosted]
@@ -57,7 +57,7 @@ jobs:
           globs: "**/*.md"
 
   rust:
-    if: needs.files-changed.outputs.rust == 'true' || github.event.inputs.force == 'true'
+    if: needs.files-changed.outputs.rust == 'true' || github.event.inputs.force == 'true' || github.ref == 'refs/heads/main'
     needs: files-changed
     name: Check Rust
     runs-on: [self-hosted]
