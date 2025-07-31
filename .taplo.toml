@@ -3,7 +3,6 @@
 # ignore zombienet as they do some deliberate custom toml stuff
 exclude = [
 	"target/**",
-	"vendor/**",
 	"zombienet/**",
 ]
 

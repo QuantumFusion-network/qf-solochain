@@ -73,16 +73,6 @@ First install build tools.
     make tools
     ```
 
-To compile a program, run `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For
-example, `make pvm-prog-calc`. The `.polkavm` file will be generated in `output/`.
-
-After that you can use the `make run` to run the node. Then go to UI Polkadot.js and call the extrinsic `qfPolkaVM`.
-Then run functions:
-
-- `upload(programBlob)` and upload the `.polkavm` blob
-- `execute(a, b, op)` with the two numbers (`a`, `b`) you want to calculate and select the type of operation `op` with 0
-- sum, 1 - sub, 2 - mul.
-
 ## Makefile commands
 
 - Build the node: `make qf-node`
@@ -90,14 +80,11 @@ Then run functions:
 - Build the node and run it: `make qf-run`
 - Build the node and run it with wasm file from `output`: `make qf-run-wasm`
 - Build the runtime: `make qf-runtime`
-- Build the pallet: `make polkavm-pallet`
 - Linting: `make clippy`
 - Formatting: `make fmt`
 - Run tests: `make qf-test`
 - Check all: `make check`
 - Make chain spec: `make qf-chainspec`
-- Make PolkaVM blob: `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example
-  `make pvm-prog-calc`
 
 ## Contributing
 
