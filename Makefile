@@ -2,11 +2,6 @@ GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=
 
 tools: polkatool chain-spec-builder
 
-pvm-prog-%:
-	cd pvm_prog; RUSTFLAGS=$(GUEST_RUST_FLAGS) cargo build -q --release --bin qf-pvm-$* -p qf-pvm-$*
-	mkdir -p output
-	polkatool link --run-only-if-newer -s pvm_prog/target/riscv32emac-unknown-none-polkavm/release/qf-pvm-$* -o output/qf-pvm-$*.polkavm
-
 chain-spec-builder:
 	cargo install --git https://github.com/paritytech/polkadot-sdk --force staging-chain-spec-builder
 
