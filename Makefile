@@ -34,9 +34,6 @@ qf-runtime:
 	mkdir -p output
 	cp target/debug/wbuild/qf-runtime/qf_runtime.wasm output
 
-polkavm-pallet:
-	cargo build -p pallet-qf-polkavm-dev
-
 fmt:
 	cargo +nightly fmt --all
 

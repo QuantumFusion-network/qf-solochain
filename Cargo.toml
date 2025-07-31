@@ -139,8 +139,6 @@ polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-
 
 # Local
 pallet-faucet = { path = "pallets/faucet", default-features = false }
-pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
-pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
 pallet-spin = { path = "pallets/spin", default-features = false }
 pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
 qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
