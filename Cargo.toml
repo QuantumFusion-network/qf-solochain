@@ -16,9 +16,6 @@ members = [
 	"primitives/*",
 	"runtimes/*",
 ]
-exclude = [
-	"vendor",
-]
 
 [workspace.dependencies]
 async-trait = { version = "0.1.79" }

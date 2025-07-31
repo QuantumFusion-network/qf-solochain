@@ -1,8 +1,5 @@
 GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=--unique --remap-path-prefix=$(pwd)= --remap-path-prefix=$HOME=~"
 
-vendor-clone:
-	git clone --depth=1 --branch v0.21.0 https://github.com/paritytech/polkavm.git vendor/polkavm
-
 tools: polkatool chain-spec-builder
 
 pvm-prog-%:
