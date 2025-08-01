@@ -1,0 +1,15 @@
+# Default values for on-demand-sender.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: qfnetwork/on-demand-sender
+  tag: "0.1.0"
+
+env:
+  TIMEOUT_MS: 1000
+  MAX_AMOUNT: 10_000_000
+  PARA_ID: 4775
+  RELAY_WS_URL: wss://rpc.ibp.network/paseo
