@@ -47,7 +47,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{MILLI_UNIT, SESSION_LENGTH};
+use crate::SESSION_LENGTH;
 
 // Local module imports
 use super::{
@@ -322,43 +322,6 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const PolkaVmMaxCodeLen: u32 = 131072;
-	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
-	pub const PolkaVmMaxUserDataLen: u32 = 2048;
-	pub const PolkaVmMaxGasLimit: u64 = 2097152;
-	pub const PolkaVmMaxStorageKeySize: u32 = 256;
-	pub const PolkaVmMaxStorageSlots: u32 = 4;
-	pub const PolkaVmMaxLogLen: u32 = 1024;
-	pub const PolkaVmMinGasPrice: u64 = 1;
-	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
-	pub const PolkaVmStorageSize: u32 = 2048;
-	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
-}
-
-impl pallet_qf_polkavm::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxCodeLen = PolkaVmMaxCodeLen;
-	type MaxCodeVersion = PolkaVmMaxCodeVersion;
-	type MaxUserDataLen = PolkaVmMaxUserDataLen;
-	type MaxGasLimit = PolkaVmMaxGasLimit;
-	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
-	type MaxStorageSlots = PolkaVmMaxStorageSlots;
-	type MaxLogLen = PolkaVmMaxLogLen;
-	type MinGasPrice = PolkaVmMinGasPrice;
-	type MinStorageDepositLimit = PolkaVmMinStorageDepositLimit;
-	type StorageSize = PolkaVmStorageSize;
-	type StorageSlotPrice = PolkaVmStorageSlotPrice;
-	type Currency = Balances;
-	type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_qf_polkavm_dev::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxCodeLen = PolkaVmMaxCodeLen;
-	type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

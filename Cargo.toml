@@ -16,9 +16,6 @@ members = [
 	"primitives/*",
 	"runtimes/*",
 ]
-exclude = [
-	"vendor",
-]
 
 [workspace.dependencies]
 async-trait = { version = "0.1.79" }
@@ -129,21 +126,8 @@ substrate-frame-rpc-system = { tag = "polkadot-stable2503-6", git = "https://git
 substrate-test-runtime-client = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 substrate-wasm-builder = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 
-# PolkaVM
-polkavm = { path = "vendor/polkavm/crates/polkavm", default-features = false, package = "polkavm" }
-polkavm-assembler = { path = "vendor/polkavm/crates/polkavm-assembler", default-features = false }
-polkavm-common = { path = "vendor/polkavm/crates/polkavm-common", default-features = false }
-polkavm-derive = { path = "vendor/polkavm/crates/polkavm-derive", default-features = false }
-polkavm-derive-impl = { path = "vendor/polkavm/crates/polkavm-derive-impl", default-features = false }
-polkavm-derive-impl-macro = { path = "vendor/polkavm/crates/polkavm-derive-impl-macro", default-features = false }
-polkavm-disassembler = { path = "vendor/polkavm/crates/polkavm-disassembler", default-features = false }
-polkavm-linker = { path = "vendor/polkavm/crates/polkavm-linker", default-features = false }
-polkavm-linux-raw = { path = "vendor/polkavm/crates/polkavm-linux-raw", default-features = false }
-
 # Local
 pallet-faucet = { path = "pallets/faucet", default-features = false }
-pallet-qf-polkavm = { path = "pallets/qf-polkavm", default-features = false }
-pallet-qf-polkavm-dev = { path = "pallets/qf-polkavm-dev", default-features = false }
 pallet-spin = { path = "pallets/spin", default-features = false }
 pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
 qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
@@ -158,8 +142,6 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 	'cfg(build_profile, values("debug", "release"))',
 	'cfg(enable_alloc_error_handler)',
 	'cfg(fuzzing)',
-	'cfg(kani)',
-	'cfg(polkavm_dev_debug_zygote)',
 ] }
 
 [workspace.lints.clippy]

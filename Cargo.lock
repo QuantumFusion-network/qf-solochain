@@ -2196,12 +2196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "color_quant"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
-
-[[package]]
 name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3996,16 +3990,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "env_filter"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
-dependencies = [
- "log",
- "regex",
-]
-
-[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4016,19 +4000,6 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.11.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13c863f0904021b108aa8b2f55046443e6b1ebde8fd4a15c399893aae4fa069f"
-dependencies = [
- "anstream",
- "anstyle",
- "env_filter",
- "jiff",
- "log",
 ]
 
 [[package]]
@@ -4282,7 +4253,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger 0.10.2",
+ "env_logger",
  "log",
 ]
 
@@ -5861,18 +5832,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "image"
-version = "0.24.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5690139d2f55868e080017335e4b94cb7414274c74f1669c84fb5feba2c9f69d"
-dependencies = [
- "bytemuck",
- "byteorder",
- "color_quant",
- "num-traits",
-]
-
-[[package]]
 name = "impl-codec"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6119,30 +6078,6 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
-
-[[package]]
-name = "jiff"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be1f93b8b1eb69c77f24bbb0afdf66f54b632ee39af40ca21c4365a1d7347e49"
-dependencies = [
- "jiff-static",
- "log",
- "portable-atomic",
- "portable-atomic-util",
- "serde",
-]
-
-[[package]]
-name = "jiff-static"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03343451ff899767262ec32146f6d559dd759fdadf42ff0e227c7c48f72594b4"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
 
 [[package]]
 name = "jni"
@@ -9249,51 +9184,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-qf-polkavm"
-version = "0.1.0"
-dependencies = [
- "env_logger 0.11.8",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "image",
- "libc",
- "log",
- "num-derive",
- "num-traits",
- "pallet-balances",
- "parity-scale-codec",
- "paste",
- "polkavm-assembler 0.21.0",
- "polkavm-common 0.21.0",
- "polkavm-linker 0.21.0",
- "polkavm-linux-raw 0.21.0",
- "ruzstd 0.5.0",
- "scale-info",
- "schnellru",
- "sp-api",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-qf-polkavm-dev"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "polkavm 0.21.0",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-ranked-collective"
 version = "40.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk.git?tag=polkadot-stable2503-6#598feddb893f5ad3923a62e41a2f179b6e10c30c"
@@ -9385,8 +9275,8 @@ dependencies = [
  "pallet-transaction-payment",
  "parity-scale-codec",
  "paste",
- "polkavm 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "polkavm-common 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm 0.21.0",
+ "polkavm-common 0.21.0",
  "rand 0.8.5",
  "rand_pcg",
  "ripemd",
@@ -9448,7 +9338,7 @@ dependencies = [
  "anyhow",
  "cargo_metadata",
  "pallet-revive-uapi",
- "polkavm-linker 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm-linker 0.21.0",
  "sp-core",
  "sp-io",
  "toml 0.8.22",
@@ -12024,6 +11914,8 @@ dependencies = [
 [[package]]
 name = "polkavm"
 version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfd34e2f74206fff33482ae1718e275f11365ef8c4de7f0e69217f8845303867"
 dependencies = [
  "libc",
  "log",
@@ -12033,30 +11925,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "polkavm"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfd34e2f74206fff33482ae1718e275f11365ef8c4de7f0e69217f8845303867"
-dependencies = [
- "libc",
- "log",
- "polkavm-assembler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "polkavm-common 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "polkavm-linux-raw 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "polkavm-assembler"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaad38dc420bfed79e6f731471c973ce5ff5e47ab403e63cf40358fef8a6368f"
-dependencies = [
- "log",
-]
-
-[[package]]
-name = "polkavm-assembler"
-version = "0.21.0"
 dependencies = [
  "log",
 ]
@@ -12083,21 +11955,12 @@ dependencies = [
 [[package]]
 name = "polkavm-common"
 version = "0.21.0"
-dependencies = [
- "blake3",
- "log",
- "polkavm-assembler 0.21.0",
-]
-
-[[package]]
-name = "polkavm-common"
-version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c16b809cfd398f861261c045a8745e6c78b71ea7e0d3ef6f7cc553eb27bc17e"
 dependencies = [
  "blake3",
  "log",
- "polkavm-assembler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm-assembler 0.21.0",
 ]
 
 [[package]]
@@ -12136,7 +11999,7 @@ version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24fd6c6215450c3e57511df5c38a82eb4bde208de15ee15046ac33852f3c3eaa"
 dependencies = [
- "polkavm-common 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm-common 0.21.0",
  "proc-macro2",
  "quote",
  "syn 2.0.101",
@@ -12181,6 +12044,8 @@ dependencies = [
 [[package]]
 name = "polkavm-linker"
 version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23bc764986c4a63f9ab9890c3f4eb9b4c13b6ff80d79685bd48ade147234aab4"
 dependencies = [
  "dirs",
  "gimli 0.31.1",
@@ -12193,30 +12058,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "polkavm-linker"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23bc764986c4a63f9ab9890c3f4eb9b4c13b6ff80d79685bd48ade147234aab4"
-dependencies = [
- "dirs",
- "gimli 0.31.1",
- "hashbrown 0.14.5",
- "log",
- "object 0.36.7",
- "polkavm-common 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "regalloc2 0.9.3",
- "rustc-demangle",
-]
-
-[[package]]
 name = "polkavm-linux-raw"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23eff02c070c70f31878a3d915e88a914ecf3e153741e2fb572dde28cce20fde"
-
-[[package]]
-name = "polkavm-linux-raw"
-version = "0.21.0"
 
 [[package]]
 name = "polkavm-linux-raw"
@@ -12283,15 +12128,6 @@ name = "portable-atomic"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "350e9b48cbc6b0e028b0473b114454c6316e57336ee184ceab6e53f72c178b3e"
-
-[[package]]
-name = "portable-atomic-util"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507"
-dependencies = [
- "portable-atomic",
-]
 
 [[package]]
 name = "potential_utf"
@@ -12718,8 +12554,6 @@ dependencies = [
  "pallet-balances",
  "pallet-faucet",
  "pallet-grandpa",
- "pallet-qf-polkavm",
- "pallet-qf-polkavm-dev",
  "pallet-revive",
  "pallet-session",
  "pallet-spin",
@@ -13707,17 +13541,6 @@ checksum = "ac3ffab8f9715a0d455df4bbb9d21e91135aab3cd3ca187af0cd0c3c3f868fdc"
 dependencies = [
  "byteorder",
  "thiserror-core",
- "twox-hash",
-]
-
-[[package]]
-name = "ruzstd"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58c4eb8a81997cf040a091d1f7e1938aeab6749d3a0dfa73af43cdc32393483d"
-dependencies = [
- "byteorder",
- "derive_more 0.99.20",
  "twox-hash",
 ]
 
