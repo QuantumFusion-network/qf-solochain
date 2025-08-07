@@ -59,20 +59,6 @@ See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 
 See [zombienet/README.md](zombienet/README.md).
 
-## Compiling Smart Contracts for PolkaVM
-
-First install build tools.
-
-1. Install [Rust toolchain targeting RISC-V RV32E](https://github.com/paritytech/rustc-rv32e-toolchain).
-1. Install [bun](https://bun.sh), npm, or yarn to use [Chopsticks](https://github.com/AcalaNetwork/chopsticks) to run
-   the blockchain node.
-1. Install polkatool[^1] (for relinking the standard RV32E ELF to a PolkaVM blob) and chain-spec-builder[^2](for building
-   the chain spec from a wasm).
-
-    ```console
-    make tools
-    ```
-
 ## Makefile commands
 
 - Build the node: `make qf-node`
@@ -101,6 +87,3 @@ By contributing, you agree to adhere to our [Contributor Covenant Code of Conduc
 a respectful and inclusive environment.
 
 We appreciate your support and look forward to your contributions! 🚀
-
-[^1]: <https://forum.polkadot.network/t/announcing-polkavm-a-new-risc-v-based-vm-for-smart-contracts-and-possibly-more/3811#the-compilation-pipeline-7> "The compilation pipeline".
-[^2]: <https://github.com/paritytech/polkadot-sdk/tree/master/substrate/bin/utils/chain-spec-builder> "chain-spec-builder".
