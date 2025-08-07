@@ -2,7 +2,8 @@
 
 The QF Runtime is a high-throughput Substrate-based runtime optimized for 100 ms block production, powered by a custom
 PoS-based **SPIN** [^1] consensus protocol that grants a single block-authoring right for a fixed sequence of slots and
-standard GRANDPA finality gadget. It also contains **PolkaVM** execution environment for smart contracts [^2].
+standard GRANDPA finality gadget. It also contains `pallet-revive`[^2] with **PolkaVM**[^3] execution environment for smart
+contracts.
 
 ## Key Features
 
@@ -28,5 +29,5 @@ PolkaVM pallet provides a fast, secure RISC-V virtual machine, offering lower ex
 WASM smart contracts [^3]. See [benchmarks](https://github.com/paritytech/polkavm/blob/master/BENCHMARKS.md).
 
 [^1]: <https://github.com/QuantumFusion-network/spec/tree/main/docs/SPIN> "SPIN docs".
-[^2]: <https://github.com/QuantumFusion-network/spec/blob/main/docs/PolkaVM/polkavm_pallet.md> "PolkaVM Pallet docs".
+[^2]: <https://github.com/paritytech/polkadot-sdk/tree/polkadot-stable2503-6/substrate/frame/revive> "Revive Pallet".
 [^3]: <https://github.com/paritytech/polkavm> "PolkaVM. A fast and secure RISC-V based virtual machine".
