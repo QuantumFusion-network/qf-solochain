@@ -28,6 +28,12 @@ the active validator set used by SPIN for block author selection.
 PolkaVM pallet provides a fast, secure RISC-V virtual machine, offering lower execution overhead compared to standard
 WASM smart contracts [^3]. See [benchmarks](https://github.com/paritytech/polkavm/blob/master/BENCHMARKS.md).
 
+With `pallet-revive` the blockchain supports native Rust smart contracts (see `qf-polkavm-sdk` [^4]), as well as Solidity
+(see Revive compiler [^5]), and ink! v6 (see [^6]).
+
 [^1]: <https://github.com/QuantumFusion-network/spec/tree/main/docs/SPIN> "SPIN docs".
 [^2]: <https://github.com/paritytech/polkadot-sdk/tree/polkadot-stable2503-6/substrate/frame/revive> "Revive Pallet".
 [^3]: <https://github.com/paritytech/polkavm> "PolkaVM. A fast and secure RISC-V based virtual machine".
+[^4]: <https://github.com/QuantumFusion-network/qf-polkavm-sdk> "QF Network PolkaVM SDK".
+[^5]: <https://github.com/paritytech/revive> "revive".
+[^6]: <https://github.com/use-ink/ink> "ink!".
