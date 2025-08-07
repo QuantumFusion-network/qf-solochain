@@ -1,12 +1,9 @@
 GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=--unique --remap-path-prefix=$(pwd)= --remap-path-prefix=$HOME=~"
 
-tools: polkatool chain-spec-builder
+tools: chain-spec-builder
 
 chain-spec-builder:
 	cargo install --git https://github.com/paritytech/polkadot-sdk --force staging-chain-spec-builder
-
-polkatool:
-	cargo install --git https://github.com/paritytech/polkavm.git --tag v0.26.0 polkatool
 
 qf-run: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all
