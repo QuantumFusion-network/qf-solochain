@@ -47,9 +47,9 @@ use sp_version::RuntimeVersion;
 // Local module imports
 use super::{
 	configs::RuntimeBlockWeights, AccountId, Balance, Block, BlockNumber, EthExtra, EthExtraImpl,
-	Executive, Grandpa, InherentDataExt, Nonce, QFPolkaVM, Revive, Runtime, RuntimeCall,
-	RuntimeGenesisConfig, RuntimeOrigin, SessionKeys, Spin, Staking, System, TransactionPayment,
-	UncheckedExtrinsic, VERSION,
+	Executive, Grandpa, InherentDataExt, Nonce, Revive, Runtime, RuntimeCall, RuntimeGenesisConfig,
+	RuntimeOrigin, SessionKeys, Spin, Staking, System, TransactionPayment, UncheckedExtrinsic,
+	VERSION,
 };
 
 impl_runtime_apis! {
@@ -470,31 +470,6 @@ impl_runtime_apis! {
 
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
 			vec![]
-		}
-	}
-
-	impl pallet_qf_polkavm::QfPolkavmApi<Block, AccountId, Balance> for Runtime {
-		fn upload(origin: AccountId, program_blob: Vec<u8>) -> pallet_qf_polkavm::UploadResult<AccountId> {
-			QFPolkaVM::bare_upload(origin, program_blob)
-		}
-
-		fn execute(
-			origin: AccountId,
-			contract_address: AccountId,
-			data: Vec<u8>,
-			gas_limit: Option<Weight>,
-			storage_deposit_limit: u64,
-			gas_price: u64,
-		) -> pallet_qf_polkavm::ExecResult {
-			let gas_limit = gas_limit.unwrap_or(super::configs::RuntimeBlockWeights::get().max_block);
-			QFPolkaVM::bare_execute(
-				origin,
-				contract_address,
-				data,
-				gas_limit,
-				storage_deposit_limit,
-				gas_price,
-			)
 		}
 	}
 }

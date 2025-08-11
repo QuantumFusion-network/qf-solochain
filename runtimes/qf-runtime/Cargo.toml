@@ -46,8 +46,6 @@ pallet-transaction-payment = { workspace = true }
 
 # QF pallets
 pallet-faucet = { workspace = true }
-pallet-qf-polkavm = { workspace = true }
-pallet-qf-polkavm-dev = { workspace = true }
 
 # primitives
 sp-api = { workspace = true }
@@ -109,8 +107,6 @@ std = [
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
-	"pallet-qf-polkavm-dev/std",
-	"pallet-qf-polkavm/std",
 	"pallet-revive/std",
 	"pallet-session/std",
 	"pallet-spin/std",
@@ -146,8 +142,6 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
-	"pallet-qf-polkavm-dev/runtime-benchmarks",
-	"pallet-qf-polkavm/runtime-benchmarks",
 	"pallet-revive/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
@@ -164,8 +158,6 @@ try-runtime = [
 	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
-	"pallet-qf-polkavm-dev/try-runtime",
-	"pallet-qf-polkavm/try-runtime",
 	"pallet-revive/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-staking/try-runtime",
