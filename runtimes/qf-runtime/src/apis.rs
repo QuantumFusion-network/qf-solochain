@@ -47,9 +47,9 @@ use sp_version::RuntimeVersion;
 // Local module imports
 use super::{
 	configs::RuntimeBlockWeights, AccountId, Balance, Block, BlockNumber, EthExtra, EthExtraImpl,
-	Executive, Grandpa, InherentDataExt, Nonce, Revive, Runtime, RuntimeCall,
-	RuntimeGenesisConfig, RuntimeOrigin, SessionKeys, Spin, Staking, System, TransactionPayment,
-	UncheckedExtrinsic, VERSION,
+	Executive, Grandpa, InherentDataExt, Nonce, Revive, Runtime, RuntimeCall, RuntimeGenesisConfig,
+	RuntimeOrigin, SessionKeys, Spin, Staking, System, TransactionPayment, UncheckedExtrinsic,
+	VERSION,
 };
 
 impl_runtime_apis! {
