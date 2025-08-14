@@ -132,8 +132,17 @@ pub fn new_partial(config: &Configuration) -> Result<Service, ServiceError> {
 pub fn new_full<
 	N: sc_network::NetworkBackend<Block, <Block as sp_runtime::traits::Block>::Hash>,
 >(
-	config: Configuration,
+	mut config: Configuration,
 ) -> Result<TaskManager, ServiceError> {
+	// Override default pruning values from 256 to 32_768 (approx. 54 minutes with 100 ms blocks).
+	if config.state_pruning.is_none() {
+		config.state_pruning = Some(sc_service::PruningMode::blocks_pruning(32_768));
+	}
+
+	if matches!(config.blocks_pruning, sc_service::BlocksPruning::Some(256)) {
+		config.blocks_pruning = sc_service::BlocksPruning::Some(32_768);
+	}
+
 	let sc_service::PartialComponents {
 		client,
 		backend,
