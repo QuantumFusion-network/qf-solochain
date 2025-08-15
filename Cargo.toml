@@ -135,6 +135,12 @@ qf-runtime = { path = "runtimes/qf-runtime", default-features = false }
 qfc-consensus-spin = { path = "client/consensus-spin", default-features = false }
 qfp-consensus-spin = { path = "primitives/consensus-spin", default-features = false }
 
+# On-demand coretime
+order-primitives = { git = "https://github.com/RegionX-Labs/On-Demand.git", rev = "e565f0e52f1e380e1d8d269e7e1b6cb5615c431c", default-features = false }
+pallet-on-demand = { git = "https://github.com/RegionX-Labs/On-Demand.git", rev = "e565f0e52f1e380e1d8d269e7e1b6cb5615c431c", default-features = false }
+polkadot-runtime-parachains = { version = "19.1.0", default-features = false }
+rococo-runtime = { version = "22.1.0", default-features = false }
+
 [workspace.lints.rust]
 suspicious_double_ref_op = { level = "allow", priority = 2 }
 unexpected_cfgs = { level = "warn", check-cfg = [
