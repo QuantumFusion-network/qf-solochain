@@ -1,4 +1,4 @@
-// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) QF Network, 2025.
 // Copyright (C) Parity Technologies (UK) Ltd., until 2025.
 // SPDX-License-Identifier: Apache-2.0
 

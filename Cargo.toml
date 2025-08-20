@@ -1,5 +1,5 @@
 [workspace.package]
-authors = ["Quantum Fusion Network <admin@qfnetwork.xyz>"]
+authors = ["QF Network <admin@qfnetwork.xyz>"]
 edition = "2021"
 homepage = "https://qfnetwork.xyz/"
 license = ""

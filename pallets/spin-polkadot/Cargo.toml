@@ -1,6 +1,6 @@
 [package]
 name = "pallet-spin-polkadot"
-description = "Quantum Fusion pallet for obtaining secure finality from Polkadot to SPIN."
+description = "QF Network pallet for obtaining secure finality from Polkadot to SPIN."
 version = "0.1.0"
 license.workspace = true
 authors.workspace = true

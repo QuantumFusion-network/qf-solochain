@@ -12,7 +12,7 @@ use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Quantum Fusion QF Node".into()
+		"QF Network Node".into()
 	}
 
 	fn impl_version() -> String {
