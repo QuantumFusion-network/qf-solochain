@@ -2,7 +2,7 @@
 
 ![Logo](Logo.jpg)
 
-# Quantum Fusion
+# QF Network
 
 [![License](https://img.shields.io/github/license/QuantumFusion-network/qf-solochain?color=green)](https://github.com/QuantumFusion-network/qf-solochain/blob/main/LICENSE)
 <br>

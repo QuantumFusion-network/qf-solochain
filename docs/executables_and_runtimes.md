@@ -8,12 +8,12 @@ target/release/qf-parachain-node
 target/release/qf-node
 ```
 
-- **qf-parachain-node**: This is the node implementation for running Quantum Fusion as a parachain.
+- **qf-parachain-node**: This is the node implementation for running QF Network as a parachain.
  Parachains are specialized blockchains that connect to the Polkadot relay chain.
   This executable allows QF to operate as part of the Polkadot ecosystem, with features
    like XCM (Cross-Consensus Message) support for cross-chain communication, as seen in the XCM configuration files.
 
-- **qf-node**: This is the standalone node implementation for the Quantum Fusion blockchain
+- **qf-node**: This is the standalone node implementation for the QF Network blockchain
  (referred to as "fastchain" in the documentation). It can run independently without connecting
   to a relay chain, and can operate in different modes including as a full node or as a validator.
 

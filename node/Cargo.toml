@@ -1,6 +1,6 @@
 [package]
 name = "qf-node"
-description = "Quantum Fusion solochain node"
+description = "QF Network solochain node"
 version = "0.1.16"
 license.workspace = true
 authors.workspace = true

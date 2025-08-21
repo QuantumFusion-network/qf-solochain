@@ -3,7 +3,7 @@ ARG QF_REF=main
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
+LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -26,7 +26,7 @@ RUN cargo build --release
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
+LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
 
 RUN apt-get update && \
     apt-get install -y ca-certificates protobuf-compiler curl && \
