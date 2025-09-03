@@ -27,7 +27,10 @@
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Get, Nothing, VariantCountOf},
+	traits::{
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Get, Nothing,
+		VariantCountOf,
+	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
 		IdentityFee, Weight,
@@ -54,7 +57,7 @@ use super::{
 	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
 	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
-	VERSION,
+	UNIT, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -104,6 +107,38 @@ impl frame_system::Config for Runtime {
 	/// prefix.
 	type SS58Prefix = SS58Prefix;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 100 * UNIT; // TODO(khssnv): storage utilization-based deposit.
+	pub const AssetAccountDeposit: Balance = 1 * UNIT;
+	pub const AssetsStringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 10 * UNIT;
+	pub const MetadataDepositPerByte: Balance = 1 * UNIT;
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = u32;
+	type AssetIdParameter = codec::Compact<u32>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Holder = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type CallbackHandle = (); // TODO(khssnv): pallet_assets::AutoIncAssetId?
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 impl pallet_authorship::Config for Runtime {
