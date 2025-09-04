@@ -57,12 +57,18 @@ polkadot-sdk = { workspace = true, default-features = false, features = [
 	"pallet-collator-selection",
 	"parachains-common",
 	"staging-parachain-info",
-
 	"runtime",
 ] }
 
 # Cumulus
 cumulus-pallet-parachain-system = { workspace = true }
+
+pallet-on-demand = { workspace = true, default-features = false }
+order-primitives = { workspace = true, default-features = false }
+
+# Polkadot
+polkadot-runtime-parachains = { workspace = true, default-features = false }
+rococo-runtime = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
@@ -74,12 +80,17 @@ std = [
 	"scale-info/std",
 	"serde_json/std",
 	"substrate-wasm-builder",
+	"pallet-on-demand/std",
+	"order-primitives/std",
+	"polkadot-runtime-parachains/std",
+	"rococo-runtime/std",
 ]
 
 runtime-benchmarks = [
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"hex-literal",
 	"polkadot-sdk/runtime-benchmarks",
+	"pallet-on-demand/runtime-benchmarks",
 ]
 
 try-runtime = [
