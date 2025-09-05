@@ -262,4 +262,7 @@ mod runtime {
 
 	#[runtime::pallet_index(14)]
 	pub type Revive = pallet_revive;
+
+	#[runtime::pallet_index(15)]
+	pub type Anchor = pallet_anchor;
 }
