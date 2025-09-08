@@ -110,11 +110,13 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const AssetDeposit: Balance = 100 * UNIT; // TODO(khssnv): storage utilization-based deposit.
+	pub const ApprovalDeposit: u128 = EXISTENTIAL_DEPOSIT;
 	pub const AssetAccountDeposit: Balance = 1 * UNIT;
+	pub const AssetDeposit: Balance = 100 * UNIT; // TODO(khssnv): storage utilization-based deposit.
 	pub const AssetsStringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = 10 * UNIT;
 	pub const MetadataDepositPerByte: Balance = 1 * UNIT;
+	pub const RemoveItemsLimit: u32 = 1000;
 }
 
 impl pallet_assets::Config for Runtime {
@@ -128,7 +130,7 @@ impl pallet_assets::Config for Runtime {
 	type AssetDeposit = AssetDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
-	type ApprovalDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+	type ApprovalDeposit = ApprovalDeposit;
 	type StringLimit = AssetsStringLimit;
 	type Freezer = ();
 	type Holder = ();
@@ -136,7 +138,7 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 	type CallbackHandle = (); // TODO(khssnv): pallet_assets::AutoIncAssetId?
 	type AssetAccountDeposit = AssetAccountDeposit;
-	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
+	type RemoveItemsLimit = RemoveItemsLimit;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
