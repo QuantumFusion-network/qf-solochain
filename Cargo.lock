@@ -12550,6 +12550,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
  "pallet-faucet",
