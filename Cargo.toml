@@ -58,6 +58,7 @@ frame-system = { tag = "polkadot-stable2503-6", git = "https://github.com/parity
 frame-system-benchmarking = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 frame-system-rpc-runtime-api = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 frame-try-runtime = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
+pallet-assets = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-aura = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-authorship = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-balances = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
