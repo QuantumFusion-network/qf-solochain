@@ -263,4 +263,7 @@ mod runtime {
 
 	#[runtime::pallet_index(15)]
 	pub type Assets = pallet_assets;
+
+	#[runtime::pallet_index(16)]
+	pub type Anchor = pallet_anchor;
 }
