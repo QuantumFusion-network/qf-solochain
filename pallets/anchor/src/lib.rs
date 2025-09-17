@@ -1,7 +1,3 @@
-// Copyright (C) QF Network, 2025.
-// Copyright (C) Parity Technologies (UK) Ltd., until 2025.
-// SPDX-License-Identifier: Apache-2.0
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::Get;
