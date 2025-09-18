@@ -122,6 +122,9 @@ fn testnet_genesis(
 	const STASH: u128 = 10u128.pow(5) * qf_runtime::UNIT;
 
 	serde_json::json!({
+		"assets": {
+			"nextAssetId": Some(1),
+		},
 		"balances": {
 			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
 		},
