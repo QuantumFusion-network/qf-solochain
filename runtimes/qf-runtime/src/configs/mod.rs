@@ -421,3 +421,7 @@ impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
 		}
 	}
 }
+
+impl pallet_anchor::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
