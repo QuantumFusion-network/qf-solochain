@@ -20,6 +20,7 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+pub use frame_support::traits::ConstU32;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -194,7 +195,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 ///
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
-type Migrations = ();
+type Migrations = (pallet_assets::migration::next_asset_id::SetNextAssetId<ConstU32<1>, Runtime>,);
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
