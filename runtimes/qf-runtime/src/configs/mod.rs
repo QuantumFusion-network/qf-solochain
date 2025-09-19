@@ -421,3 +421,10 @@ impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
 		}
 	}
 }
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PalletsOrigin = super::OriginCaller;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}

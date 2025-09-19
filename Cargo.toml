@@ -74,6 +74,7 @@ pallet-timestamp = { tag = "polkadot-stable2503-6", git = "https://github.com/pa
 pallet-transaction-payment = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-transaction-payment-rpc = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
+pallet-utility = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 polkadot-parachain-primitives = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 polkadot-sdk = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }

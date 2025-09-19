@@ -1,7 +1,7 @@
 [relaychain]
 default_command = "./target/release/qf-node"
 chain_spec_path = "./node/src/res/qf-local.raw.json"
-args = ["--state-pruning archive --blocks-pruning archive"]
+args = ["--state-pruning archive"]
 
 [[relaychain.nodes]]
 name = "alice"

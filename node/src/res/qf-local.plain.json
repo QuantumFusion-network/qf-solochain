@@ -15,6 +15,9 @@
     "runtimeGenesis": {
       "code": "0x00",
       "patch": {
+        "assets": {
+          "nextAssetId": 1
+        },
         "balances": {
           "balances": [
             [
