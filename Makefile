@@ -22,9 +22,9 @@ qf-node: qf-runtime
 	cp target/debug/qf-node output/qf-node
 
 qf-runtime:
-	cargo build -p qf-runtime
+	cargo build -p qf-runtime --release
 	mkdir -p output
-	cp target/debug/wbuild/qf-runtime/qf_runtime.wasm output
+	cp target/release/wbuild/qf-runtime/qf_runtime.wasm output
 
 fmt:
 	cargo +nightly fmt --all
