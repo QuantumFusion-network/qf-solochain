@@ -12459,7 +12459,7 @@ dependencies = [
 
 [[package]]
 name = "qf-node"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "clap",
  "frame-benchmarking-cli",
@@ -12539,7 +12539,7 @@ dependencies = [
 
 [[package]]
 name = "qf-runtime"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",

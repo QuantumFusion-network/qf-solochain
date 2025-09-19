@@ -136,7 +136,7 @@ impl pallet_assets::Config for Runtime {
 	type Holder = ();
 	type Extra = ();
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-	type CallbackHandle = (); // TODO(khssnv): pallet_assets::AutoIncAssetId?
+	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime>;
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type RemoveItemsLimit = RemoveItemsLimit;
 	#[cfg(feature = "runtime-benchmarks")]
