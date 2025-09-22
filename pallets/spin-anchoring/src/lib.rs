@@ -11,7 +11,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::config]
-	pub trait Config: pallet_timestamp::Config + frame_system::Config {
+	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
@@ -20,7 +20,6 @@ pub mod pallet {
 	pub struct Pallet<T>(core::marker::PhantomData<T>);
 
 	#[pallet::storage]
-	#[pallet::getter(fn secure_up_to)]
 	/// Highest fast-chain block number that is securely anchored.
 	pub type SecureUpTo<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 

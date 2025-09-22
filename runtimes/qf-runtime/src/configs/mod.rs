@@ -422,6 +422,6 @@ impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
 	}
 }
 
-impl pallet_anchor::Config for Runtime {
+impl pallet_spin_anchoring::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }

@@ -265,5 +265,5 @@ mod runtime {
 	pub type Assets = pallet_assets;
 
 	#[runtime::pallet_index(16)]
-	pub type Anchor = pallet_anchor;
+	pub type Anchor = pallet_spin_anchoring;
 }
