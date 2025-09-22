@@ -12470,7 +12470,7 @@ dependencies = [
 
 [[package]]
 name = "qf-node"
-version = "0.1.16"
+version = "0.1.18"
 dependencies = [
  "clap",
  "frame-benchmarking-cli",
@@ -12550,7 +12550,7 @@ dependencies = [
 
 [[package]]
 name = "qf-runtime"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -12577,6 +12577,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-utility",
  "parity-scale-codec",
  "qfp-consensus-spin",
  "scale-info",

@@ -1,14 +1,14 @@
-name: "QF-NODE: Build, Release, and Publish Docker"
+name: "Build, create release, and publish container image"
 
-run-name: "QF-NODE: Build, Release, and Publish Docker - ${{ github.ref_name }}"
+run-name: "Release - ${{ github.ref_name }}"
 on:
   push:
     tags:
-      - "*"
+      - "v*"
 
 jobs:
-  build_binary:
-    name: Build Binary
+  release:
+    name: Build binary and create GitHub release
     runs-on: [self-hosted, Linux, X64]
 
     steps:
@@ -38,7 +38,7 @@ jobs:
 
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Build Project
+      - name: Build project
         run: |
           make qf-node-release
 
@@ -62,7 +62,7 @@ jobs:
           echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
           echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.AT_PAT }}
@@ -74,8 +74,10 @@ jobs:
           files: |
             artifacts/qf-node-${{ github.ref_name }}
             artifacts/qf_runtime-${{ github.ref_name }}.wasm
+          generate_release_notes: true
+          append_body: true
           body: |
-            ## Runtimes
+            ## Checksums
             **qf-node-${{ github.ref_name }}**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
@@ -84,8 +86,8 @@ jobs:
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
 
-  build_docker:
-    name: Build and Publish Docker Image
+  publish-docker:
+    name: Build and publish Docker image
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout repository
@@ -97,14 +99,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PAT }}
 
-      - name: Build and Tag Docker Image
+      - name: Build and tag Docker image
         run: |
           cd docker
           docker build --no-cache -f Dockerfile.x86_64 -t qf-node:${{ github.ref_name }} .
           docker tag qf-node:${{ github.ref_name }} qfnetwork/qf-node:${{ github.ref_name }}
           docker tag qf-node:${{ github.ref_name }} qfnetwork/qf-node:latest
 
-      - name: Push Docker Image to Docker Hub (signed)
+      - name: Push Docker image to Docker Hub (signed)
         env:
           DOCKER_CONTENT_TRUST: "1"
           DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}

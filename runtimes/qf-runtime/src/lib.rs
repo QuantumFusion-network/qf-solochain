@@ -20,6 +20,7 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+pub use frame_support::traits::ConstU32;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -67,7 +68,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the runtime specification. A full node will not attempt to use its native
 	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
 	// `spec_version`, and `authoring_version` are the same between Wasm and native.
-	spec_version: 102,
+	spec_version: 103,
 	impl_version: 1,
 	apis: apis::RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -194,7 +195,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 ///
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
-type Migrations = ();
+type Migrations = (pallet_assets::migration::next_asset_id::SetNextAssetId<ConstU32<1>, Runtime>,);
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -265,5 +266,8 @@ mod runtime {
 	pub type Assets = pallet_assets;
 
 	#[runtime::pallet_index(16)]
-	pub type Anchor = pallet_spin_anchoring;
+	pub type Utility = pallet_utility;
+
+	#[runtime::pallet_index(17)]
+	pub type SpinAnchoring = pallet_spin_anchoring;
 }
