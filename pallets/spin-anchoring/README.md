@@ -1,4 +1,6 @@
-### pallet-spin-anchoring for tracking secure finality
+# pallet-spin-anchoring
+
+Secure finality tracking.
 
 Usage example with Polkadot.js. Use in https://portal.qfnetwork.xyz/#/js
 ```js
