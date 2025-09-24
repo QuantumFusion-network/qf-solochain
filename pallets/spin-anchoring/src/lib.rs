@@ -19,8 +19,8 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(core::marker::PhantomData<T>);
 
-	#[pallet::storage]
 	/// Highest fast-chain block number that is securely anchored.
+	#[pallet::storage]
 	pub type SecureUpTo<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
 	#[pallet::event]
