@@ -9568,6 +9568,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-spin-anchoring"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-spin-polkadot"
 version = "0.1.0"
 dependencies = [
@@ -12558,6 +12569,7 @@ dependencies = [
  "pallet-revive",
  "pallet-session",
  "pallet-spin",
+ "pallet-spin-anchoring",
  "pallet-staking",
  "pallet-staking-reward-curve",
  "pallet-staking-runtime-api",

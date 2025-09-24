@@ -267,4 +267,7 @@ mod runtime {
 
 	#[runtime::pallet_index(16)]
 	pub type Utility = pallet_utility;
+
+	#[runtime::pallet_index(17)]
+	pub type SpinAnchoring = pallet_spin_anchoring;
 }

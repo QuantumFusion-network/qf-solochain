@@ -85,6 +85,7 @@ frame-benchmarking = { optional = true, workspace = true }
 frame-system-benchmarking = { optional = true, workspace = true }
 
 # Spin
+pallet-spin-anchoring = { workspace = true }
 pallet-spin = { workspace = true }
 
 [build-dependencies]

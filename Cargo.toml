@@ -131,6 +131,7 @@ substrate-wasm-builder = { tag = "polkadot-stable2503-6", git = "https://github.
 # Local
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-spin = { path = "pallets/spin", default-features = false }
+pallet-spin-anchoring = { path = "pallets/spin-anchoring", default-features = false }
 pallet-spin-polkadot = { path = "pallets/spin-polkadot", default-features = false }
 qf-parachain-runtime = { path = "runtimes/parachain", default-features = false }
 qf-runtime = { path = "runtimes/qf-runtime", default-features = false }

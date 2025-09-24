@@ -428,3 +428,7 @@ impl pallet_utility::Config for Runtime {
 	type PalletsOrigin = super::OriginCaller;
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
+
+impl pallet_spin_anchoring::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
