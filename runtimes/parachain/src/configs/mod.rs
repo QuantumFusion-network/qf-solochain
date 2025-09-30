@@ -321,3 +321,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
 }
+
+impl pallet_spin_polkadot::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
