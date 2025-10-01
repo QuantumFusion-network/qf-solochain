@@ -9582,13 +9582,15 @@ dependencies = [
 name = "pallet-spin-polkadot"
 version = "0.1.0"
 dependencies = [
+ "finality-grandpa",
+ "frame-support",
+ "frame-system",
  "log",
  "parity-scale-codec",
- "polkadot-parachain-primitives",
- "polkadot-sdk-frame",
  "scale-info",
  "sp-consensus-grandpa",
- "sp-trie",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -12540,6 +12542,7 @@ dependencies = [
  "docify",
  "hex-literal",
  "log",
+ "pallet-spin-polkadot",
  "parity-scale-codec",
  "polkadot-sdk 2503.0.1",
  "scale-info",
