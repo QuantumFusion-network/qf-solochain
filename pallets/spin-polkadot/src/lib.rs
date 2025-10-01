@@ -129,7 +129,7 @@ pub mod pallet {
 
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
-			let target_hash = justification.commit.target_hash.clone();
+			let target_hash = justification.commit.target_hash;
 			let target_number_u32: u32 = justification
 				.commit
 				.target_number
@@ -178,7 +178,7 @@ pub mod pallet {
 
 			LastFinalized::<T>::put(FinalizedTarget::<_> {
 				number: target_number_u32,
-				hash: target_hash.clone(),
+				hash: target_hash,
 			});
 			LastJustification::<T>::put(proof);
 
