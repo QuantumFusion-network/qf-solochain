@@ -1,5 +1,20 @@
 # SPIN Pallet Overview
 
-- `pallet_spin` powers FastChain authoring for `qf-runtime`, replacing Aura with SPIN keys. Runtime wiring exposes it via `SessionKeys` and `Spin` in `construct_runtime` (`runtimes/qf-runtime/src/lib.rs:55`, `runtimes/qf-runtime/src/lib.rs:236`). Its config caps authorities at 32, forbids multi-block slots, and derives slot duration and session cadence from timestamp/`SESSION_LENGTH` (`runtimes/qf-runtime/src/configs/mod.rs:151`). The pallet maintains authority sets, slot tracking, and a root-only `set_session_length` control surface (`pallets/spin/src/lib.rs:144`, `pallets/spin/src/lib.rs:188`). Runtime APIs surface SPIN slot duration and aux data to the node service (`runtimes/qf-runtime/src/apis.rs:121`).
-- `pallet_spin_anchoring` provides the SecureUpTo watermark consumed by clients. It is registered at index 17 in the runtime (`runtimes/qf-runtime/src/lib.rs:272`) and configured to emit events via `RuntimeEvent` (`runtimes/qf-runtime/src/configs/mod.rs:432`). Storage `SecureUpTo` records the highest anchored FastChain block and `note_anchor_verified` (root-only) advances it, emitting `SecureFinalityAdvanced` for observers (`pallets/spin-anchoring/src/lib.rs:24`, `pallets/spin-anchoring/src/lib.rs:37`).
-- `pallet-spin-polkadot` bridges Polkadot finality proofs into SPIN. Although not yet composed into `qf-runtime`, it lives in the workspace (`Cargo.toml:135`) and defines the alive message state machine with Operational/CoolDown modes (`pallets/spin-polkadot/src/lib.rs:124`). Storage tracks validator membership and the last heartbeat proof (`pallets/spin-polkadot/src/lib.rs:137`, `pallets/spin-polkadot/src/lib.rs:142`). Its `AliveMessageProof` bundles relay-chain validation data with GRANDPA justifications, enabling timeout detection and cooldown recovery when relay heartbeats stall (`pallets/spin-polkadot/src/lib.rs:101`, `pallets/spin-polkadot/src/lib.rs:166`).
+- `pallet_spin` powers FastChain authoring for `qf-runtime`, replacing Aura with SPIN keys. Runtime wiring exposes it
+via `SessionKeys` and `Spin` in `construct_runtime` (`runtimes/qf-runtime/src/lib.rs:55`,
+`runtimes/qf-runtime/src/lib.rs:236`). Its config caps authorities at 32, forbids multi-block slots, and derives slot
+duration and session cadence from timestamp/`SESSION_LENGTH` (`runtimes/qf-runtime/src/configs/mod.rs:151`). The pallet
+maintains authority sets, slot tracking, and a root-only `set_session_length` control surface
+(`pallets/spin/src/lib.rs:144`, `pallets/spin/src/lib.rs:188`). Runtime APIs surface SPIN slot duration and aux data to
+the node service (`runtimes/qf-runtime/src/apis.rs:121`).
+- `pallet_spin_anchoring` provides the SecureUpTo watermark consumed by clients. It is registered at index 17 in the
+runtime (`runtimes/qf-runtime/src/lib.rs:272`) and configured to emit events via `RuntimeEvent`
+(`runtimes/qf-runtime/src/configs/mod.rs:432`). Storage `SecureUpTo` records the highest anchored FastChain block and
+`note_anchor_verified` (root-only) advances it, emitting `SecureFinalityAdvanced` for observers
+(`pallets/spin-anchoring/src/lib.rs:24`, `pallets/spin-anchoring/src/lib.rs:37`).
+- `pallet-spin-polkadot` bridges Polkadot finality proofs into SPIN. Although not yet composed into `qf-runtime`, it
+lives in the workspace (`Cargo.toml:135`) and defines the alive message state machine with Operational/CoolDown modes
+(`pallets/spin-polkadot/src/lib.rs:124`). Storage tracks validator membership and the last heartbeat proof
+(`pallets/spin-polkadot/src/lib.rs:137`, `pallets/spin-polkadot/src/lib.rs:142`). Its `AliveMessageProof` bundles
+relay-chain validation data with GRANDPA justifications, enabling timeout detection and cooldown recovery when relay
+heartbeats stall (`pallets/spin-polkadot/src/lib.rs:101`, `pallets/spin-polkadot/src/lib.rs:166`).

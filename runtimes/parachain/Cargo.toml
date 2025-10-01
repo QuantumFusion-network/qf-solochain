@@ -70,8 +70,8 @@ default = ["std"]
 std = [
 	"codec/std",
 	"cumulus-pallet-parachain-system/std",
-	"pallet-spin-polkadot/std",
 	"log/std",
+	"pallet-spin-polkadot/std",
 	"polkadot-sdk/std",
 	"scale-info/std",
 	"serde_json/std",
