@@ -190,7 +190,6 @@ pub mod pallet {
 			Ok(())
 		}
 	}
-
 }
 
 pub use pallet::*;

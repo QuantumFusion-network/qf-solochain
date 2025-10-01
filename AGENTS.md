@@ -10,8 +10,8 @@
 - `make qf-run` launches a dev FastChain with tmp state; `make qf-run-wasm` loads runtime overrides from `output/`.
 - `make clippy`, `make fmt`, and `make qf-test` wrap `cargo` lint, format (+nightly), and test with `SKIP_WASM_BUILD`.
 - Run `taplo format` (and `taplo format --check`) whenever you touch `.toml` files.
-- Run `cargo check`, `cargo clippy --all-targets`, `cargo +nightly fmt -- --check`, and
-  `cargo test --workspace --no-fail-fast` before review.
+- Run `cargo +nightly fmt --all` before committing to keep formatting consistent.
+- Run `cargo check`, `cargo clippy --all-targets`, `cargo +nightly fmt -- --check`, and `cargo test --workspace --no-fail-fast` before review.
 - Run `markdownlint-cli2 "**/*.md" "#target" --config .markdownlint.yaml --fix` when editing Markdown.
 
 ## Coding Style & Naming Conventions
