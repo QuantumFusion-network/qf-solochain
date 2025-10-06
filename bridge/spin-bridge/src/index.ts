@@ -1,7 +1,6 @@
-import { ApiPromise, WsProvider, SubmittableExtrinsic } from '@polkadot/api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
+import type { SubmittableExtrinsic } from '@polkadot/api/types';
 import { Keyring } from '@polkadot/keyring';
-import { AccountId32 } from '@polkadot/types/interfaces';
-import { HexString } from '@polkadot/util/types';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import pino from 'pino';
 
@@ -12,7 +11,7 @@ const LOG_LEVEL = process.env.LOG_LEVEL ?? 'info';
 
 const logger = pino({ level: LOG_LEVEL });
 
-type AuthorityTuple = [AccountId32, bigint];
+type AuthorityTuple = [string, bigint];
 
 type BridgeApis = {
   fastchain: ApiPromise;
@@ -26,18 +25,27 @@ function authorityTuplesEqual(a: AuthorityTuple[], b: AuthorityTuple[]): boolean
   for (let i = 0; i < a.length; i += 1) {
     const [idA, weightA] = a[i];
     const [idB, weightB] = b[i];
-    if (idA.toHex() !== idB.toHex() || weightA !== weightB) {
+    if (idA !== idB || weightA !== weightB) {
       return false;
     }
   }
   return true;
 }
 
-function extractAuthorities(list: any[]): AuthorityTuple[] {
-  return list.map((tuple: any) => {
-    const [id, weight] = tuple as [AccountId32, { toString: () => string }];
-    return [id, BigInt(weight.toString())];
+function decodeAuthorityList(
+  raw: { toArray: () => unknown[] },
+): AuthorityTuple[] {
+  return raw.toArray().map((tuple) => {
+    const [id, weight] = tuple as [{ toHex: () => string }, { toString: () => string }];
+    return [id.toHex(), BigInt(weight.toString())];
   });
+}
+
+async function fetchAuthorities(api: ApiPromise): Promise<AuthorityTuple[]> {
+  const raw = (await api.call.grandpaApi.grandpaAuthorities()) as unknown as {
+    toArray: () => unknown[];
+  };
+  return decodeAuthorityList(raw);
 }
 
 async function connectApis(): Promise<BridgeApis> {
@@ -47,7 +55,7 @@ async function connectApis(): Promise<BridgeApis> {
 }
 
 function formatAuthoritiesForParachain(authorities: AuthorityTuple[]) {
-  return authorities.map(([authorityId, weight]) => [authorityId.toHex(), weight.toString()]);
+  return authorities.map(([authorityId, weight]) => [authorityId, weight.toString()]);
 }
 
 async function signAndSendAndWait(
@@ -57,26 +65,28 @@ async function signAndSendAndWait(
   label: string,
 ) {
   return new Promise<void>((resolve, reject) => {
-    extrinsic.signAndSend(signer, { nonce: -1 }, (result) => {
-      if (result.dispatchError) {
-        if (result.dispatchError.isModule) {
-          const decoded = api.registry.findMetaError(result.dispatchError.asModule);
-          reject(new Error(`${label} failed: ${decoded.section}.${decoded.name}`));
-        } else {
-          reject(new Error(`${label} failed: ${result.dispatchError.toString()}`));
+    extrinsic
+      .signAndSend(signer, { nonce: -1 }, (result) => {
+        if (result.dispatchError) {
+          if (result.dispatchError.isModule) {
+            const decoded = api.registry.findMetaError(result.dispatchError.asModule);
+            reject(new Error(`${label} failed: ${decoded.section}.${decoded.name}`));
+          } else {
+            reject(new Error(`${label} failed: ${result.dispatchError.toString()}`));
+          }
+          return;
         }
-        return;
-      }
 
-      if (result.status.isInBlock) {
-        logger.debug({ hash: result.status.asInBlock.toHex() }, `${label} included in block`);
-      }
+        if (result.status.isInBlock) {
+          logger.debug({ hash: result.status.asInBlock.toHex() }, `${label} included in block`);
+        }
 
-      if (result.status.isFinalized) {
-        logger.info({ hash: result.status.asFinalized.toHex() }, `${label} finalized`);
-        resolve();
-      }
-    }).catch(reject);
+        if (result.status.isFinalized) {
+          logger.info({ hash: result.status.asFinalized.toHex() }, `${label} finalized`);
+          resolve();
+        }
+      })
+      .catch(reject);
   });
 }
 
@@ -86,13 +96,19 @@ async function ensureAuthoritySet(
   setId: number,
   authorities: AuthorityTuple[],
 ) {
-  const current = await api.query.spinPolkadot.authoritySet();
+  const currentRaw = await api.query.spinPolkadot.authoritySet();
+  const current = currentRaw.toJSON() as null | {
+    setId: number;
+    authorities: [string, string][];
+  };
   const desired = formatAuthoritiesForParachain(authorities);
 
-  if (current.isSome) {
-    const { setId: existingSetId, authorities: existingAuthorities } = current.unwrap();
-    const existingTuples = extractAuthorities(existingAuthorities.toArray());
-    if (existingSetId.eq(setId) && authorityTuplesEqual(existingTuples, authorities)) {
+  if (current) {
+    const existingTuples: AuthorityTuple[] = current.authorities.map(([idHex, weight]) => [
+      idHex,
+      BigInt(weight),
+    ]);
+    if (current.setId === setId && authorityTuplesEqual(existingTuples, authorities)) {
       return;
     }
   }
@@ -110,8 +126,8 @@ async function main() {
   const bridgeAccount = keyring.addFromUri(BRIDGE_URI, { name: 'spin-bridge' });
   logger.info({ FASTCHAIN_WS, PARACHAIN_WS, signer: bridgeAccount.address }, 'Bridge starting');
 
-  let currentSetId = (await fastchain.query.grandpa.currentSetId()).toNumber();
-  let currentAuthorities = extractAuthorities((await fastchain.query.grandpa.authorityList()).toArray());
+  let currentSetId = Number((await fastchain.query.grandpa.currentSetId()).toString());
+  let currentAuthorities = await fetchAuthorities(fastchain);
   await ensureAuthoritySet(parachain, bridgeAccount, currentSetId, currentAuthorities);
 
   let pending = Promise.resolve();
@@ -121,26 +137,31 @@ async function main() {
       .catch((err) => logger.error({ err }, 'Bridge task failed'));
   };
 
-  await fastchain.queryMulti([
-    fastchain.query.grandpa.currentSetId,
-    fastchain.query.grandpa.authorityList,
-  ], async ([setId, authorityList]) => {
-    const newSetId = setId.toNumber();
-    const newAuthorities = extractAuthorities(authorityList.toArray());
-    const changed =
-      newSetId !== currentSetId || !authorityTuplesEqual(newAuthorities, currentAuthorities);
-    if (changed) {
+  await fastchain.query.grandpa.currentSetId((setId: { toString: () => string }) => {
+    enqueue(async () => {
+      const newSetId = Number(setId.toString());
+      const newAuthorities = await fetchAuthorities(fastchain);
+      const changed =
+        newSetId !== currentSetId || !authorityTuplesEqual(newAuthorities, currentAuthorities);
+      if (!changed) {
+        return;
+      }
       currentSetId = newSetId;
       currentAuthorities = newAuthorities;
-      enqueue(() => ensureAuthoritySet(parachain, bridgeAccount, currentSetId, currentAuthorities));
-    }
+      await ensureAuthoritySet(parachain, bridgeAccount, currentSetId, currentAuthorities);
+    });
   });
 
-  await fastchain.rpc.grandpa.subscribeJustifications((raw: HexString) => {
+  await fastchain.rpc.grandpa.subscribeJustifications((notification: any) => {
     enqueue(async () => {
-      const proofBytes = fastchain.registry.createType('Bytes', raw);
-      logger.info({ size: proofBytes.length, setId: currentSetId }, 'Forwarding finality proof');
-      const tx = parachain.tx.spinPolkadot.submitFinalityProof(currentSetId, proofBytes);
+      const justification = notification?.justification ?? notification?.[1];
+      if (!justification) {
+        logger.warn('Received justification notification without payload');
+        return;
+      }
+      const proofHex = justification.toHex();
+      logger.info({ setId: currentSetId, proofLen: justification.length }, 'Forwarding finality proof');
+      const tx = parachain.tx.spinPolkadot.submitFinalityProof(currentSetId, proofHex);
       await signAndSendAndWait(parachain, tx, bridgeAccount, 'submitFinalityProof');
     });
   });
