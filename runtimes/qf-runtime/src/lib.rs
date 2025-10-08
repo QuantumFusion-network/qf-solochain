@@ -107,6 +107,9 @@ pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 /// Session length in blocks
 pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
 
+/// Initial asset ID in pallet-assets.
+pub const GENESIS_NEXT_ASSET_ID: Option<u32> = Some(1);
+
 /// The version information used to identify this runtime when compiled
 /// natively.
 #[cfg(feature = "std")]
