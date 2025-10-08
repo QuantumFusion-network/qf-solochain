@@ -1,6 +1,7 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import type { SubmittableExtrinsic } from '@polkadot/api/types';
 import { Keyring } from '@polkadot/keyring';
+import { hexToU8a, isHex } from '@polkadot/util';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import pino from 'pino';
 
@@ -10,6 +11,8 @@ const BRIDGE_URI = process.env.BRIDGE_URI ?? '//Alice';
 const LOG_LEVEL = process.env.LOG_LEVEL ?? 'info';
 
 const logger = pino({ level: LOG_LEVEL });
+const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 120_000);
+let shutdownHandler: ((signal?: string) => Promise<void>) | null = null;
 
 type AuthorityTuple = [string, bigint];
 
@@ -18,13 +21,19 @@ type BridgeApis = {
   parachain: ApiPromise;
 };
 
+function normalizeAuthorities(authorities: AuthorityTuple[]): AuthorityTuple[] {
+  return [...authorities].sort(([idA], [idB]) => idA.localeCompare(idB));
+}
+
 function authorityTuplesEqual(a: AuthorityTuple[], b: AuthorityTuple[]): boolean {
-  if (a.length !== b.length) {
+  const normalizedA = normalizeAuthorities(a);
+  const normalizedB = normalizeAuthorities(b);
+  if (normalizedA.length !== normalizedB.length) {
     return false;
   }
-  for (let i = 0; i < a.length; i += 1) {
-    const [idA, weightA] = a[i];
-    const [idB, weightB] = b[i];
+  for (let i = 0; i < normalizedA.length; i += 1) {
+    const [idA, weightA] = normalizedA[i];
+    const [idB, weightB] = normalizedB[i];
     if (idA !== idB || weightA !== weightB) {
       return false;
     }
@@ -32,9 +41,7 @@ function authorityTuplesEqual(a: AuthorityTuple[], b: AuthorityTuple[]): boolean
   return true;
 }
 
-function decodeAuthorityList(
-  raw: { toArray: () => unknown[] },
-): AuthorityTuple[] {
+function decodeAuthorityList(raw: { toArray: () => unknown[] }): AuthorityTuple[] {
   return raw.toArray().map((tuple) => {
     const [id, weight] = tuple as [{ toHex: () => string }, { toString: () => string }];
     return [id.toHex(), BigInt(weight.toString())];
@@ -45,7 +52,7 @@ async function fetchAuthorities(api: ApiPromise): Promise<AuthorityTuple[]> {
   const raw = (await api.call.grandpaApi.grandpaAuthorities()) as unknown as {
     toArray: () => unknown[];
   };
-  return decodeAuthorityList(raw);
+  return normalizeAuthorities(decodeAuthorityList(raw));
 }
 
 async function connectApis(): Promise<BridgeApis> {
@@ -55,7 +62,10 @@ async function connectApis(): Promise<BridgeApis> {
 }
 
 function formatAuthoritiesForParachain(authorities: AuthorityTuple[]) {
-  return authorities.map(([authorityId, weight]) => [authorityId, weight.toString()]);
+  return normalizeAuthorities(authorities).map(([authorityId, weight]) => [
+    authorityId,
+    weight.toString(),
+  ]);
 }
 
 async function signAndSendAndWait(
@@ -65,9 +75,22 @@ async function signAndSendAndWait(
   label: string,
 ) {
   return new Promise<void>((resolve, reject) => {
+    let unsub: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      if (unsub) {
+        unsub();
+      }
+      reject(new Error(`${label} timed out after ${TX_TIMEOUT_MS}ms`));
+    }, TX_TIMEOUT_MS);
+
     extrinsic
       .signAndSend(signer, { nonce: -1 }, (result) => {
         if (result.dispatchError) {
+          if (unsub) {
+            unsub();
+            unsub = undefined;
+          }
+          clearTimeout(timer);
           if (result.dispatchError.isModule) {
             const decoded = api.registry.findMetaError(result.dispatchError.asModule);
             reject(new Error(`${label} failed: ${decoded.section}.${decoded.name}`));
@@ -82,11 +105,22 @@ async function signAndSendAndWait(
         }
 
         if (result.status.isFinalized) {
+          if (unsub) {
+            unsub();
+            unsub = undefined;
+          }
+          clearTimeout(timer);
           logger.info({ hash: result.status.asFinalized.toHex() }, `${label} finalized`);
           resolve();
         }
       })
-      .catch(reject);
+      .then((unsubFn) => {
+        unsub = unsubFn;
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
   });
 }
 
@@ -104,10 +138,9 @@ async function ensureAuthoritySet(
   const desired = formatAuthoritiesForParachain(authorities);
 
   if (current) {
-    const existingTuples: AuthorityTuple[] = current.authorities.map(([idHex, weight]) => [
-      idHex,
-      BigInt(weight),
-    ]);
+    const existingTuples = normalizeAuthorities(
+      current.authorities.map(([idHex, weight]) => [idHex, BigInt(weight)]),
+    );
     if (current.setId === setId && authorityTuplesEqual(existingTuples, authorities)) {
       return;
     }
@@ -137,7 +170,43 @@ async function main() {
       .catch((err) => logger.error({ err }, 'Bridge task failed'));
   };
 
-  await fastchain.query.grandpa.currentSetId((setId: { toString: () => string }) => {
+  const subscriptions: Array<() => void> = [];
+  let shuttingDown = false;
+
+  const shutdown = async (signal?: string) => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    if (signal) {
+      logger.info({ signal }, 'Received shutdown signal');
+    }
+    while (subscriptions.length > 0) {
+      const unsub = subscriptions.pop();
+      if (unsub) {
+        try {
+          unsub();
+        } catch (err) {
+          logger.warn({ err }, 'Failed to unsubscribe');
+        }
+      }
+    }
+    await pending.catch((err) => logger.error({ err }, 'Pending task failed during shutdown'));
+    await Promise.allSettled([fastchain.disconnect(), parachain.disconnect()]);
+  };
+
+  shutdownHandler = shutdown;
+
+  const registerShutdown = (signal: 'SIGINT' | 'SIGTERM') => {
+    process.once(signal, () => {
+      shutdown(signal).finally(() => process.exit(0));
+    });
+  };
+
+  registerShutdown('SIGINT');
+  registerShutdown('SIGTERM');
+
+  const unsubSetId = (await fastchain.query.grandpa.currentSetId((setId: { toString: () => string }) => {
     enqueue(async () => {
       const newSetId = Number(setId.toString());
       const newAuthorities = await fetchAuthorities(fastchain);
@@ -150,24 +219,47 @@ async function main() {
       currentAuthorities = newAuthorities;
       await ensureAuthoritySet(parachain, bridgeAccount, currentSetId, currentAuthorities);
     });
-  });
+  })) as unknown as () => void;
+  subscriptions.push(unsubSetId);
 
-  await fastchain.rpc.grandpa.subscribeJustifications((notification: any) => {
+  const unsubJustifications = (await fastchain.rpc.grandpa.subscribeJustifications((notification: any) => {
     enqueue(async () => {
       const justification = notification?.justification ?? notification?.[1];
       if (!justification) {
         logger.warn('Received justification notification without payload');
         return;
       }
-      const proofHex = justification.toHex();
-      logger.info({ setId: currentSetId, proofLen: justification.length }, 'Forwarding finality proof');
-      const tx = parachain.tx.spinPolkadot.submitFinalityProof(currentSetId, proofHex);
+
+      let proofU8a: Uint8Array;
+      try {
+        if (typeof justification.toU8a === 'function') {
+          proofU8a = justification.toU8a();
+        } else if (justification instanceof Uint8Array) {
+          proofU8a = justification;
+        } else if (typeof justification === 'string' && isHex(justification)) {
+          proofU8a = hexToU8a(justification);
+        } else {
+          throw new Error('Unsupported justification payload');
+        }
+      } catch (err) {
+        logger.warn({ err }, 'Failed to parse justification payload');
+        return;
+      }
+
+      logger.info({ setId: currentSetId, proofLen: proofU8a.length }, 'Forwarding finality proof');
+      const tx = parachain.tx.spinPolkadot.submitFinalityProof(currentSetId, proofU8a);
       await signAndSendAndWait(parachain, tx, bridgeAccount, 'submitFinalityProof');
     });
-  });
+  })) as unknown as () => void;
+  subscriptions.push(unsubJustifications);
 }
 
 main().catch((err) => {
   logger.error({ err }, 'Bridge crashed');
+  const handler = shutdownHandler;
+  if (handler) {
+    handler().finally(() => process.exit(1));
+    return;
+  }
   process.exit(1);
 });
