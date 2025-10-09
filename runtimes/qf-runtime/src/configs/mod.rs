@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::SESSION_LENGTH;
+use crate::{GENESIS_NEXT_ASSET_ID, SESSION_LENGTH};
 
 // Local module imports
 use super::{
@@ -119,6 +119,16 @@ parameter_types! {
 	pub const RemoveItemsLimit: u32 = 1000;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_assets::BenchmarkHelper<codec::Compact<u32>> for AssetsBenchmarkHelper {
+	fn create_asset_id_parameter(id: u32) -> codec::Compact<u32> {
+		codec::Compact(GENESIS_NEXT_ASSET_ID.unwrap_or_default() + id)
+	}
+}
+
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
@@ -140,7 +150,7 @@ impl pallet_assets::Config for Runtime {
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type RemoveItemsLimit = RemoveItemsLimit;
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
+	type BenchmarkHelper = AssetsBenchmarkHelper;
 }
 
 impl pallet_authorship::Config for Runtime {

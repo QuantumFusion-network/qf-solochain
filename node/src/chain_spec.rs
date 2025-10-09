@@ -123,7 +123,7 @@ fn testnet_genesis(
 
 	serde_json::json!({
 		"assets": {
-			"nextAssetId": Some(1),
+			"nextAssetId": qf_runtime::GENESIS_NEXT_ASSET_ID,
 		},
 		"balances": {
 			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
