@@ -63,6 +63,7 @@ pallet-aura = { tag = "polkadot-stable2503-6", git = "https://github.com/parityt
 pallet-authorship = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-balances = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-grandpa = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
+pallet-multisig = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-revive = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-session = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 pallet-staking = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
