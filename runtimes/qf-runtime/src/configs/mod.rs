@@ -50,7 +50,10 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{GENESIS_NEXT_ASSET_ID, SESSION_LENGTH};
+use crate::SESSION_LENGTH;
+
+#[cfg(feature = "runtime-benchmarks")]
+use crate::GENESIS_NEXT_ASSET_ID;
 
 // Local module imports
 use super::{
