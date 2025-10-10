@@ -12566,6 +12566,7 @@ dependencies = [
  "pallet-balances",
  "pallet-faucet",
  "pallet-grandpa",
+ "pallet-multisig",
  "pallet-revive",
  "pallet-session",
  "pallet-spin",
