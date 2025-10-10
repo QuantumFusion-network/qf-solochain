@@ -355,6 +355,23 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
+	pub const DepositBase: Balance = 1 * UNIT;
+	pub const DepositFactor: Balance = 1 * UNIT;
+	pub const MaxSignatories: u32 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+	type BlockNumberProvider = frame_system::Pallet<Runtime>;
+}
+
+parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
 }
 

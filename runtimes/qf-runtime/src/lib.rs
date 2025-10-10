@@ -274,4 +274,7 @@ mod runtime {
 
 	#[runtime::pallet_index(17)]
 	pub type SpinAnchoring = pallet_spin_anchoring;
+
+	#[runtime::pallet_index(18)]
+	pub type Multisig = pallet_multisig;
 }
