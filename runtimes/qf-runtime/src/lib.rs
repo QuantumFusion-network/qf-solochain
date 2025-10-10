@@ -7,6 +7,7 @@ pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
+mod weights;
 
 extern crate alloc;
 use alloc::vec::Vec;
