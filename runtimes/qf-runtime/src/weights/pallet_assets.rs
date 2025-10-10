@@ -78,40 +78,50 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 	/// Storage: `System::Account` (r:1000 w:1000)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// The range of component `c` is `[0, 1000]`.
-	fn destroy_accounts(c: u32, ) -> Weight {
+	fn destroy_accounts(_c: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `109 + c * (208 ±0)`
 		//  Estimated: `3675 + c * (2609 ±0)`
 		// Minimum execution time: 8_749_000 picoseconds.
-		Weight::from_parts(9_008_000, 0)
-			.saturating_add(Weight::from_parts(0, 3675))
-			// Standard Error: 7_356
-			.saturating_add(Weight::from_parts(7_819_372, 0).saturating_mul(c.into()))
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(c.into())))
+		// Weight::from_parts(9_008_000, 0)
+		// 	.saturating_add(Weight::from_parts(0, 3675))
+		// 	// Standard Error: 7_356
+		// 	.saturating_add(Weight::from_parts(7_819_372, 0).saturating_mul(c.into()))
+		// 	.saturating_add(T::DbWeight::get().reads(2))
+		// 	.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(c.into())))
+		// 	.saturating_add(T::DbWeight::get().writes(1))
+		// 	.saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(c.into())))
+		// 	.saturating_add(Weight::from_parts(0, 2609).saturating_mul(c.into()))
+
+		// TODO(khssnv)
+		Weight::from_parts(10_000, 0)
+			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
-			.saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(c.into())))
-			.saturating_add(Weight::from_parts(0, 2609).saturating_mul(c.into()))
 	}
 	/// Storage: `Assets::Asset` (r:1 w:1)
 	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
 	/// Storage: `Assets::Approvals` (r:1001 w:1000)
 	/// Proof: `Assets::Approvals` (`max_values`: None, `max_size`: Some(148), added: 2623, mode: `MaxEncodedLen`)
 	/// The range of component `a` is `[0, 1000]`.
-	fn destroy_approvals(a: u32, ) -> Weight {
+	fn destroy_approvals(_a: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `437 + a * (86 ±0)`
 		//  Estimated: `3675 + a * (2623 ±0)`
 		// Minimum execution time: 9_710_000 picoseconds.
-		Weight::from_parts(9_926_000, 0)
-			.saturating_add(Weight::from_parts(0, 3675))
-			// Standard Error: 4_268
-			.saturating_add(Weight::from_parts(8_700_815, 0).saturating_mul(a.into()))
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(a.into())))
+		// Weight::from_parts(9_926_000, 0)
+		// 	.saturating_add(Weight::from_parts(0, 3675))
+		// 	// Standard Error: 4_268
+		// 	.saturating_add(Weight::from_parts(8_700_815, 0).saturating_mul(a.into()))
+		// 	.saturating_add(T::DbWeight::get().reads(2))
+		// 	.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(a.into())))
+		// 	.saturating_add(T::DbWeight::get().writes(1))
+		// 	.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(a.into())))
+		// 	.saturating_add(Weight::from_parts(0, 2623).saturating_mul(a.into()))
+
+		// TODO(khssnv)
+		Weight::from_parts(10_000, 0)
+			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
-			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(a.into())))
-			.saturating_add(Weight::from_parts(0, 2623).saturating_mul(a.into()))
 	}
 	/// Storage: `Assets::Asset` (r:1 w:1)
 	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
