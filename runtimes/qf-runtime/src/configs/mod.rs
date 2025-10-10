@@ -148,7 +148,7 @@ impl pallet_assets::Config for Runtime {
 	type Freezer = ();
 	type Holder = ();
 	type Extra = ();
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = crate::weights::pallet_assets::WeightInfo<Runtime>;
 	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime>;
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type RemoveItemsLimit = RemoveItemsLimit;
