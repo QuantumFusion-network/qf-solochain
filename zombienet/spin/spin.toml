@@ -6,7 +6,7 @@ args = ["--state-pruning archive"]
 [[relaychain.nodes]]
 name = "alice"
 balance = 1000000000000000000000000
-ws_port = 9944
+ws_port = 11144
 
 [[relaychain.nodes]]
 name = "bob"

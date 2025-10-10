@@ -63,6 +63,7 @@ polkadot-sdk = { workspace = true, default-features = false, features = [
 
 # Cumulus
 cumulus-pallet-parachain-system = { workspace = true }
+pallet-spin-polkadot = { workspace = true }
 
 [features]
 default = ["std"]
@@ -70,6 +71,7 @@ std = [
 	"codec/std",
 	"cumulus-pallet-parachain-system/std",
 	"log/std",
+	"pallet-spin-polkadot/std",
 	"polkadot-sdk/std",
 	"scale-info/std",
 	"serde_json/std",
