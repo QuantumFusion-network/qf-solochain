@@ -2,19 +2,42 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import type { SubmittableExtrinsic } from "@polkadot/api/types";
 import { Keyring } from "@polkadot/keyring";
 import { hexToU8a, isHex } from "@polkadot/util";
+import type { HexString } from "@polkadot/util/types";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
+import type {
+    ProviderInterface,
+    ProviderInterfaceCallback,
+} from "@polkadot/rpc-provider/types";
+import { Bytes, Option, Struct } from "@polkadot/types-codec";
+import type { ITuple } from "@polkadot/types-codec/types";
+import type {
+    AuthorityId,
+    AuthorityWeight,
+    AuthorityList,
+    Header,
+} from "@polkadot/types/interfaces";
 import pino from "pino";
 
-const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:9944";
+const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
 const BRIDGE_URI = process.env.BRIDGE_URI ?? "//Alice";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
+const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 
-const logger = pino({ level: LOG_LEVEL });
-const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 120_000);
+const logger = pino({
+    base: undefined,
+    level: LOG_LEVEL,
+    transport: {
+        target: "pino-pretty",
+        options: {
+            colorize: true,
+        },
+    },
+});
+
 let shutdownHandler: ((signal?: string) => Promise<void>) | null = null;
 
-type AuthorityTuple = [string, bigint];
+type AuthorityTuple = [authorityIdHex: string, weight: bigint];
 
 type BridgeApis = {
     fastchain: ApiPromise;
@@ -22,6 +45,8 @@ type BridgeApis = {
 };
 
 type Unsubscribe = () => void;
+
+// ---- helpers: authority comparison ----
 
 function normalizeAuthorities(authorities: AuthorityTuple[]): AuthorityTuple[] {
     return [...authorities].sort(([idA], [idB]) => idA.localeCompare(idB));
@@ -31,166 +56,125 @@ function authorityTuplesEqual(
     a: AuthorityTuple[],
     b: AuthorityTuple[],
 ): boolean {
-    const normalizedA = normalizeAuthorities(a);
-    const normalizedB = normalizeAuthorities(b);
-    if (normalizedA.length !== normalizedB.length) {
-        return false;
-    }
-    for (let i = 0; i < normalizedA.length; i += 1) {
-        const [idA, weightA] = normalizedA[i];
-        const [idB, weightB] = normalizedB[i];
-        if (idA !== idB || weightA !== weightB) {
-            return false;
-        }
+    const A = normalizeAuthorities(a);
+    const B = normalizeAuthorities(b);
+    if (A.length !== B.length) return false;
+    for (let i = 0; i < A.length; i++) {
+        if (A[i][0] !== B[i][0] || A[i][1] !== B[i][1]) return false;
     }
     return true;
 }
 
-function decodeAuthorityList(raw: {
-    toArray: () => unknown[];
-}): AuthorityTuple[] {
-    return raw.toArray().map((tuple) => {
-        const [id, weight] = tuple as [
-            { toHex: () => string },
-            { toString: () => string },
-        ];
-        return [id.toHex(), BigInt(weight.toString())];
-    });
+// ---- helpers: GRANDPA authorities decoding (typed) ----
+
+function decodeAuthorityList(raw: AuthorityList): AuthorityTuple[] {
+    // AuthorityList = Vec<ITuple<[AuthorityId, AuthorityWeight]>>
+    const tuples = raw.toArray() as ITuple<[AuthorityId, AuthorityWeight]>[];
+    return tuples.map(([id, weight]) => [
+        id.toHex(),
+        BigInt(weight.toString()),
+    ]);
 }
 
-function normalizeJustificationInput(input: unknown): Uint8Array | null {
-    if (!input) {
-        return null;
+// ---- helpers: provider and justification typing ----
+
+type JustificationLike = Bytes | Uint8Array | HexString;
+
+function pickJustification(input: unknown): JustificationLike | null {
+    if (!input) return null;
+    if (typeof input === "string") return input as HexString;
+    if (input instanceof Uint8Array) return input;
+    if (Array.isArray(input)) {
+        const [, payload] = input as [unknown, unknown];
+        return pickJustification(payload ?? input[0]);
     }
-    if (typeof (input as { toU8a?: () => Uint8Array }).toU8a === "function") {
-        return (input as { toU8a: () => Uint8Array }).toU8a();
-    }
-    if (input instanceof Uint8Array) {
-        return input;
-    }
-    if (typeof input === "string" && isHex(input)) {
-        return hexToU8a(input);
+    if (typeof input === "object") {
+        const nested = (input as { justification?: unknown }).justification;
+        if (nested !== undefined) return pickJustification(nested);
+        return input as JustificationLike;
     }
     return null;
 }
 
-function getRpcProvider(api: ApiPromise): {
-    subscribe?: (
-        section: string,
-        method: string,
-        params: unknown[],
-        cb: (...args: unknown[]) => void,
-    ) => Promise<string | number>;
-    unsubscribe?: (
-        section: string,
-        method: string,
-        subscriptionId: string | number,
-    ) => Promise<boolean>;
-    send?: (method: string, params: unknown[]) => Promise<unknown>;
-} {
-    const withRpcProvider = api as ApiPromise & {
-        rpcProvider?: unknown;
-        _rpcCore?: { provider?: unknown };
-    };
-    if (withRpcProvider.rpcProvider) {
-        return withRpcProvider.rpcProvider as {
-            subscribe?: (
-                section: string,
-                method: string,
-                params: unknown[],
-                cb: (...args: unknown[]) => void,
-            ) => Promise<string | number>;
-            unsubscribe?: (
-                section: string,
-                method: string,
-                subscriptionId: string | number,
-            ) => Promise<boolean>;
-            send?: (method: string, params: unknown[]) => Promise<unknown>;
-        };
+function justificationToU8a(
+    input: JustificationLike | null | undefined,
+): Uint8Array | null {
+    if (!input) return null;
+    if (typeof input === "string") {
+        return isHex(input) ? hexToU8a(input) : null;
     }
-    if (withRpcProvider._rpcCore?.provider) {
-        return withRpcProvider._rpcCore.provider as {
-            subscribe?: (
-                section: string,
-                method: string,
-                params: unknown[],
-                cb: (...args: unknown[]) => void,
-            ) => Promise<string | number>;
-            unsubscribe?: (
-                section: string,
-                method: string,
-                subscriptionId: string | number,
-            ) => Promise<boolean>;
-            send?: (method: string, params: unknown[]) => Promise<unknown>;
-        };
+    if (input instanceof Uint8Array) {
+        return input;
     }
-    return {};
+    // Bytes
+    return (input as Bytes).toU8a();
 }
 
-function extractJustificationPayload(notification: unknown): unknown {
-    if (!notification) {
-        return notification;
-    }
-    if (notification instanceof Uint8Array) {
-        return notification;
-    }
-    if (
-        typeof notification === "object" &&
-        notification !== null &&
-        !Array.isArray(notification)
-    ) {
-        if (
-            (notification as { justification?: unknown }).justification !== undefined
-        ) {
-            return (notification as { justification?: unknown }).justification;
-        }
-    }
-    if (Array.isArray(notification)) {
-        return notification[1] ?? notification[0] ?? notification;
-    }
-    return notification;
+function getRpcProvider(api: ApiPromise): ProviderInterface | null {
+    // provider is not part of the public API surface, so we cast narrowly
+    const withCore = api as unknown as {
+        _rpcCore?: { provider?: ProviderInterface };
+    };
+    return withCore._rpcCore?.provider ?? null;
 }
 
 async function subscribeJustificationStream(
     api: ApiPromise,
-    handler: (notification: unknown) => void,
+    handler: (justification: Bytes | Uint8Array) => void,
 ): Promise<Unsubscribe> {
+    // Preferred, typed path (decorated RPC)
     const decorated = (
-        api.rpc as ApiPromise["rpc"] & {
-            grandpa?: {
-                subscribeJustifications?: (
-                    cb: (notification: unknown) => void,
-                ) => Promise<Unsubscribe>;
-            };
+        api.rpc.grandpa as unknown as {
+            subscribeJustifications?: (
+                cb: (j: Bytes) => void,
+            ) => Promise<Unsubscribe>;
         }
-    ).grandpa?.subscribeJustifications;
+    ).subscribeJustifications;
 
     if (decorated) {
-        return (await decorated(handler)) as unknown as Unsubscribe;
+        return decorated((j: Bytes) => handler(j));
     }
 
+    // Raw provider fallback (JSON-RPC)
     const provider = getRpcProvider(api);
-    if (provider.subscribe && provider.unsubscribe) {
-        const subscriptionId = await provider.subscribe(
+    if (provider && provider.subscribe && provider.unsubscribe) {
+        const onMessage: ProviderInterfaceCallback = (error, result) => {
+            if (error) {
+                logger.warn(
+                    { err: formatError(error) },
+                    "Justification raw subscribe error",
+                );
+                return;
+            }
+            const u8a = justificationToU8a(pickJustification(result));
+            if (u8a) {
+                handler(u8a);
+            } else {
+                logger.warn(
+                    { result: describeJustification(result) },
+                    "Could not extract justification bytes",
+                );
+            }
+        };
+
+        const subId = await provider.subscribe(
             "grandpa",
             "subscribeJustifications",
             [],
-            handler,
+            onMessage,
         );
-        return () => {
-            provider
-                .unsubscribe?.(
-                    "grandpa",
-                    "unsubscribeJustifications",
-                    subscriptionId,
-                )
-                .catch((err) =>
-                    logger.warn(
-                        { err: formatError(err) },
-                        "Failed to unsubscribe from raw justification stream",
-                    ),
-                );
-        };
+
+        return () =>
+            provider.unsubscribe!(
+                "grandpa",
+                "unsubscribeJustifications",
+                subId,
+            ).catch((err) =>
+                logger.warn(
+                    { err: formatError(err) },
+                    "Failed to unsubscribe from raw justification stream",
+                ),
+            );
     }
 
     throw new Error("grandpa.subscribeJustifications RPC not available");
@@ -198,88 +182,35 @@ async function subscribeJustificationStream(
 
 async function fetchFinalityProofBytes(
     api: ApiPromise,
-    blockHash: { toHex?: () => string } | string,
+    blockHash: HexString | { toHex: () => HexString },
 ): Promise<Uint8Array | null> {
     const proveFinality = (
-        api.rpc as ApiPromise["rpc"] & {
-            grandpa?: {
-                proveFinality?: (hash: unknown) => Promise<{
-                    isNone: boolean;
-                    unwrap: () => {
-                        justification: { toU8a: () => Uint8Array };
-                    };
-                }>;
-            };
+        api.rpc.grandpa as unknown as {
+            proveFinality: (
+                hash: HexString | { toHex: () => HexString },
+            ) => Promise<Option<Struct & { justification: Bytes }>>;
         }
-    ).grandpa?.proveFinality;
+    ).proveFinality;
 
-    if (proveFinality) {
-        const result = await proveFinality(blockHash);
-        if ((result as { isNone?: boolean }).isNone) {
-            return null;
-        }
-        const proof = (
-            result as {
-                unwrap: () => { justification: { toU8a: () => Uint8Array } };
-            }
-        ).unwrap();
-        return proof.justification.toU8a();
-    }
-
-    const provider = getRpcProvider(api);
-    if (!provider.send) {
-        throw new Error("grandpa.proveFinality RPC not available");
-    }
-
-    const hashHex =
-        typeof blockHash === "string"
-            ? blockHash
-            : (blockHash.toHex?.() ?? String(blockHash));
-    const raw = (await provider.send("grandpa_proveFinality", [
-        hashHex,
-    ])) as null | { justification?: unknown };
-    if (!raw) {
-        return null;
-    }
-
-    const candidate = (raw as { justification?: unknown }).justification ?? raw;
-    const parsed = normalizeJustificationInput(candidate);
-    if (parsed) {
-        return parsed;
-    }
-
-    try {
-        const justification = (candidate as { toU8a?: () => Uint8Array }).toU8a
-            ? (candidate as { toU8a: () => Uint8Array }).toU8a()
-            : (
-                  api.createType("Bytes", candidate) as {
-                      toU8a: () => Uint8Array;
-                  }
-              ).toU8a();
-        return justification;
-    } catch (err) {
-        logger.warn({ err, hash: hashHex }, "Failed to decode finality proof");
-        return null;
-    }
+    const res = await proveFinality(blockHash);
+    if (res.isNone) return null;
+    const unwrapped = res.unwrap();
+    return unwrapped.justification.toU8a();
 }
 
+// ---- misc helpers ----
+
 function formatError(error: unknown) {
-    if (error instanceof Error) {
+    if (error instanceof Error)
         return { message: error.message, stack: error.stack };
-    }
     return { message: String(error) };
 }
 
 function describeJustification(notification: unknown): unknown {
-    if (!notification) {
-        return notification;
-    }
-    if (typeof notification === "string") {
-        return notification;
-    }
-    if (notification instanceof Uint8Array) {
+    if (!notification) return notification;
+    if (typeof notification === "string") return notification;
+    if (notification instanceof Uint8Array)
         return `Uint8Array(${notification.length})`;
-    }
     if (
         typeof (notification as { toHex?: () => string }).toHex === "function"
     ) {
@@ -290,7 +221,8 @@ function describeJustification(notification: unknown): unknown {
         }
     }
     if (
-        typeof (notification as { toJSON?: () => unknown }).toJSON === "function"
+        typeof (notification as { toJSON?: () => unknown }).toJSON ===
+        "function"
     ) {
         try {
             return (notification as { toJSON: () => unknown }).toJSON();
@@ -298,11 +230,11 @@ function describeJustification(notification: unknown): unknown {
             return { error: formatError(err) };
         }
     }
-    if (Array.isArray(notification)) {
-        return notification.map((item) => describeJustification(item));
-    }
+    if (Array.isArray(notification))
+        return notification.map(describeJustification);
     if (
-        typeof notification === "object" && notification !== null &&
+        typeof notification === "object" &&
+        notification !== null &&
         !(notification instanceof Error)
     ) {
         const summary: Record<string, unknown> = {};
@@ -314,21 +246,12 @@ function describeJustification(notification: unknown): unknown {
     return notification;
 }
 
-async function fetchAuthorities(api: ApiPromise): Promise<AuthorityTuple[]> {
-    const raw = (await api.call.grandpaApi.grandpaAuthorities()) as unknown as {
-        toArray: () => unknown[];
-    };
-    return normalizeAuthorities(decodeAuthorityList(raw));
-}
+// ---- chain helpers ----
 
-async function connectApis(): Promise<BridgeApis> {
-    const fastchain = await ApiPromise.create({
-        provider: new WsProvider(FASTCHAIN_WS),
-    });
-    const parachain = await ApiPromise.create({
-        provider: new WsProvider(PARACHAIN_WS),
-    });
-    return { fastchain, parachain };
+async function fetchAuthorities(api: ApiPromise): Promise<AuthorityTuple[]> {
+    const raw =
+        (await api.call.grandpaApi.grandpaAuthorities()) as unknown as AuthorityList;
+    return normalizeAuthorities(decodeAuthorityList(raw));
 }
 
 function formatAuthoritiesForParachain(authorities: AuthorityTuple[]) {
@@ -347,9 +270,7 @@ async function signAndSendAndWait(
     return new Promise<void>((resolve, reject) => {
         let unsub: (() => void) | undefined;
         const timer = setTimeout(() => {
-            if (unsub) {
-                unsub();
-            }
+            if (unsub) unsub();
             reject(new Error(`${label} timed out after ${TX_TIMEOUT_MS}ms`));
         }, TX_TIMEOUT_MS);
 
@@ -400,9 +321,7 @@ async function signAndSendAndWait(
                     resolve();
                 }
             })
-            .then((unsubFn) => {
-                unsub = unsubFn;
-            })
+            .then((u) => (unsub = u))
             .catch((err) => {
                 clearTimeout(timer);
                 reject(err);
@@ -421,14 +340,14 @@ async function ensureAuthoritySet(
         setId: number;
         authorities: [string, string][];
     };
+
     const desired = formatAuthoritiesForParachain(authorities);
 
     if (current) {
         const existingTuples = normalizeAuthorities(
-            current.authorities.map(([idHex, weight]) => [
-                idHex,
-                BigInt(weight),
-            ]),
+            current.authorities.map(
+                ([idHex, weight]) => [idHex, BigInt(weight)] as AuthorityTuple,
+            ),
         );
         if (
             current.setId === setId &&
@@ -449,7 +368,12 @@ async function ensureAuthoritySet(
 
 async function main() {
     await cryptoWaitReady();
-    const { fastchain, parachain } = await connectApis();
+    const fastchain = await ApiPromise.create({
+        provider: new WsProvider(FASTCHAIN_WS),
+    });
+    const parachain = await ApiPromise.create({
+        provider: new WsProvider(PARACHAIN_WS),
+    });
     const keyring = new Keyring({ type: "sr25519" });
     const bridgeAccount = keyring.addFromUri(BRIDGE_URI, {
         name: "spin-bridge",
@@ -479,30 +403,23 @@ async function main() {
             );
     };
 
-    const subscriptions: Array<() => void> = [];
+    const subscriptions: Unsubscribe[] = [];
     let shuttingDown = false;
 
     const shutdown = async (signal?: string) => {
-        if (shuttingDown) {
-            return;
-        }
+        if (shuttingDown) return;
         shuttingDown = true;
-        if (signal) {
-            logger.info({ signal }, "Received shutdown signal");
-        }
-        while (subscriptions.length > 0) {
+        if (signal) logger.info({ signal }, "Received shutdown signal");
+
+        while (subscriptions.length) {
             const unsub = subscriptions.pop();
-            if (unsub) {
-                try {
-                    unsub();
-                } catch (err) {
-                    logger.warn(
-                        { err: formatError(err) },
-                        "Failed to unsubscribe",
-                    );
-                }
+            try {
+                unsub && unsub();
+            } catch (err) {
+                logger.warn({ err: formatError(err) }, "Failed to unsubscribe");
             }
         }
+
         await pending.catch((err) =>
             logger.error(
                 { err: formatError(err) },
@@ -516,27 +433,24 @@ async function main() {
     };
 
     shutdownHandler = shutdown;
-
     const registerShutdown = (signal: "SIGINT" | "SIGTERM") => {
         process.once(signal, () => {
             shutdown(signal).finally(() => process.exit(0));
         });
     };
-
     registerShutdown("SIGINT");
     registerShutdown("SIGTERM");
 
     const unsubSetId = (await fastchain.query.grandpa.currentSetId(
-        (setId: { toString: () => string }) => {
+        (setId: { toString(): string }) => {
             enqueue(async () => {
                 const newSetId = Number(setId.toString());
                 const newAuthorities = await fetchAuthorities(fastchain);
                 const changed =
                     newSetId !== currentSetId ||
                     !authorityTuplesEqual(newAuthorities, currentAuthorities);
-                if (!changed) {
-                    return;
-                }
+                if (!changed) return;
+
                 currentSetId = newSetId;
                 currentAuthorities = newAuthorities;
                 await ensureAuthoritySet(
@@ -547,23 +461,23 @@ async function main() {
                 );
             });
         },
-    )) as unknown as () => void;
+    )) as unknown as Unsubscribe;
     subscriptions.push(unsubSetId);
 
     let proofSubscriptionEstablished = false;
     try {
         const unsubJustifications = await subscribeJustificationStream(
             fastchain,
-            (notification: unknown) => {
+            (justification: Bytes | Uint8Array) => {
                 enqueue(async () => {
-                    const justification = extractJustificationPayload(notification);
-                    const proofU8a = normalizeJustificationInput(justification);
+                    const proofU8a = justificationToU8a(justification);
                     if (!proofU8a) {
                         logger.warn(
                             {
-                                notification: describeJustification(notification),
+                                notification:
+                                    describeJustification(justification),
                             },
-                            "Received justification notification without payload",
+                            "Empty justification payload",
                         );
                         return;
                     }
@@ -603,66 +517,66 @@ async function main() {
 
         let finalityProofUnavailable = false;
         const unsubFinalized =
-            (await fastchain.rpc.chain.subscribeFinalizedHeads((header) => {
-                enqueue(async () => {
-                    if (finalityProofUnavailable) {
-                        return;
-                    }
-                    try {
-                        const proofU8a = await fetchFinalityProofBytes(
-                            fastchain,
-                            header.hash,
-                        );
-                        if (!proofU8a) {
-                            logger.warn(
+            (await fastchain.rpc.chain.subscribeFinalizedHeads(
+                (header: Header) => {
+                    enqueue(async () => {
+                        if (finalityProofUnavailable) return;
+                        try {
+                            const proofU8a = await fetchFinalityProofBytes(
+                                fastchain,
+                                header.hash,
+                            );
+                            if (!proofU8a) {
+                                logger.warn(
+                                    {
+                                        block: header.number.toString(),
+                                        hash: header.hash.toHex(),
+                                    },
+                                    "No justification returned for finalized block",
+                                );
+                                return;
+                            }
+                            logger.info(
                                 {
+                                    setId: currentSetId,
+                                    proofLen: proofU8a.length,
                                     block: header.number.toString(),
-                                    hash: header.hash.toHex(),
                                 },
-                                "No justification returned for finalized block",
+                                "Forwarding finality proof from proveFinality",
                             );
-                            return;
-                        }
-                        logger.info(
-                            {
-                                setId: currentSetId,
-                                proofLen: proofU8a.length,
-                                block: header.number.toString(),
-                            },
-                            "Forwarding finality proof from proveFinality",
-                        );
-                        const tx =
-                            parachain.tx.spinPolkadot.submitFinalityProof(
-                                currentSetId,
-                                proofU8a,
+                            const tx =
+                                parachain.tx.spinPolkadot.submitFinalityProof(
+                                    currentSetId,
+                                    proofU8a,
+                                );
+                            await signAndSendAndWait(
+                                parachain,
+                                tx,
+                                bridgeAccount,
+                                "submitFinalityProof",
                             );
-                        await signAndSendAndWait(
-                            parachain,
-                            tx,
-                            bridgeAccount,
-                            "submitFinalityProof",
-                        );
-                    } catch (error) {
-                        logger.error(
-                            { error: formatError(error) },
-                            "Failed to forward finality proof for finalized head",
-                        );
-                        if (
-                            !finalityProofUnavailable &&
-                            error instanceof Error &&
-                            (error.message.includes("Method not found") ||
-                                error.message.includes(
-                                    "grandpa.proveFinality RPC not available",
-                                ))
-                        ) {
-                            finalityProofUnavailable = true;
+                        } catch (error) {
                             logger.error(
-                                "grandpa_proveFinality RPC not enabled on fastchain; skipping further finality proof attempts",
+                                { error: formatError(error) },
+                                "Failed to forward finality proof for finalized head",
                             );
+                            if (
+                                !finalityProofUnavailable &&
+                                error instanceof Error &&
+                                (error.message.includes("Method not found") ||
+                                    error.message.includes(
+                                        "grandpa.proveFinality RPC not available",
+                                    ))
+                            ) {
+                                finalityProofUnavailable = true;
+                                logger.error(
+                                    "grandpa_proveFinality RPC not enabled on fastchain; skipping further finality proof attempts",
+                                );
+                            }
                         }
-                    }
-                });
-            })) as unknown as Unsubscribe;
+                    });
+                },
+            )) as unknown as Unsubscribe;
         subscriptions.push(unsubFinalized);
     }
 }
