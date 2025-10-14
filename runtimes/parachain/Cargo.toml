@@ -81,11 +81,13 @@ std = [
 runtime-benchmarks = [
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"hex-literal",
+	"pallet-spin-polkadot/runtime-benchmarks",
 	"polkadot-sdk/runtime-benchmarks",
 ]
 
 try-runtime = [
 	"cumulus-pallet-parachain-system/try-runtime",
+	"pallet-spin-polkadot/try-runtime",
 	"polkadot-sdk/try-runtime",
 ]
 
