@@ -315,7 +315,9 @@ mod runtime {
 	pub type CumulusXcm = cumulus_pallet_xcm;
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
-	#[runtime::pallet_index(34)]
+
+	// SPIN
+	#[runtime::pallet_index(50)]
 	pub type SpinPolkadot = pallet_spin_polkadot;
 }
 
