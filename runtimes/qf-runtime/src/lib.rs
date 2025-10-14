@@ -199,7 +199,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 ///
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
-type Migrations = (pallet_assets::migration::next_asset_id::SetNextAssetId<ConstU32<1>, Runtime>,);
+type Migrations = ();
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
