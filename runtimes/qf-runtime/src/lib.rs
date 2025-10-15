@@ -69,7 +69,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the runtime specification. A full node will not attempt to use its native
 	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
 	// `spec_version`, and `authoring_version` are the same between Wasm and native.
-	spec_version: 103,
+	spec_version: 104,
 	impl_version: 1,
 	apis: apis::RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -199,7 +199,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 ///
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
-type Migrations = (pallet_assets::migration::next_asset_id::SetNextAssetId<ConstU32<1>, Runtime>,);
+type Migrations = ();
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
