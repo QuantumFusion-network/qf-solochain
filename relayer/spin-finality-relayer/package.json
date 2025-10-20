@@ -1,5 +1,5 @@
 {
-    "name": "spin-bridge",
+    "name": "spin-finality-relayer",
     "version": "0.1.0",
     "private": true,
     "scripts": {

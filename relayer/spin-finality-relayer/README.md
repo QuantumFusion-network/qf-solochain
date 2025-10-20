@@ -1,4 +1,4 @@
-# Spin Bridge
+# SPIN Finality Relayer
 
 TypeScript utility that streams GRANDPA finality proofs from the FastChain node into the
 `spin-polkadot` pallet on the parachain. The flow is:
@@ -13,16 +13,16 @@ TypeScript utility that streams GRANDPA finality proofs from the FastChain node 
 ## Usage
 
 ```bash
-cd bridge/spin-bridge
+cd relayer/spin-finality-relayer
 pnpm install # or npm install / yarn install
-BRIDGE_URI=//Alice pnpm start
+RELAYER_URI=//Alice pnpm start
 ```
 
 Environment variables:
 
 - `FASTCHAIN_WS` – FastChain WS endpoint (default `ws://127.0.0.1:9944`).
 - `PARACHAIN_WS` – parachain WS endpoint (default `ws://127.0.0.1:9988`).
-- `BRIDGE_URI` – signing key for both the sudo authority-set update and
+- `RELAYER_URI` – signing key for both the sudo authority-set update and
   finality submissions (default `//Alice`).
 - `LOG_LEVEL` – pino log level (default `info`).
 

@@ -20,9 +20,9 @@ import pino from "pino";
 
 const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
-const BRIDGE_URI = process.env.BRIDGE_URI ?? "//Alice";
+const RELAYER_URI = process.env.RELAYER_URI ?? "//Alice";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
-const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
+const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 30_000);
 
 const logger = pino({
     base: undefined,
@@ -38,11 +38,6 @@ const logger = pino({
 let shutdownHandler: ((signal?: string) => Promise<void>) | null = null;
 
 type AuthorityTuple = [authorityIdHex: string, weight: bigint];
-
-type BridgeApis = {
-    fastchain: ApiPromise;
-    parachain: ApiPromise;
-};
 
 type Unsubscribe = () => void;
 
@@ -375,31 +370,26 @@ async function main() {
         provider: new WsProvider(PARACHAIN_WS),
     });
     const keyring = new Keyring({ type: "sr25519" });
-    const bridgeAccount = keyring.addFromUri(BRIDGE_URI, {
-        name: "spin-bridge",
+    const relayerAccount = keyring.addFromUri(RELAYER_URI, {
+        name: "spin-finality-relayer",
     });
     logger.info(
-        { FASTCHAIN_WS, PARACHAIN_WS, signer: bridgeAccount.address },
-        "Bridge starting",
+        { FASTCHAIN_WS, PARACHAIN_WS, signer: relayerAccount.address },
+        "Relayer starting",
     );
 
     let currentSetId = Number(
         (await fastchain.query.grandpa.currentSetId()).toString(),
     );
     let currentAuthorities = await fetchAuthorities(fastchain);
-    await ensureAuthoritySet(
-        parachain,
-        bridgeAccount,
-        currentSetId,
-        currentAuthorities,
-    );
+    await ensureAuthoritySet(parachain, relayerAccount, currentSetId, currentAuthorities);
 
     let pending = Promise.resolve();
     const enqueue = (task: () => Promise<void>) => {
         pending = pending
             .then(task)
             .catch((err) =>
-                logger.error({ err: formatError(err) }, "Bridge task failed"),
+                logger.error({ err: formatError(err) }, "Relayer task failed"),
             );
     };
 
@@ -455,7 +445,7 @@ async function main() {
                 currentAuthorities = newAuthorities;
                 await ensureAuthoritySet(
                     parachain,
-                    bridgeAccount,
+                    relayerAccount,
                     currentSetId,
                     currentAuthorities,
                 );
@@ -492,7 +482,7 @@ async function main() {
                     await signAndSendAndWait(
                         parachain,
                         tx,
-                        bridgeAccount,
+                        relayerAccount,
                         "submitFinalityProof",
                     );
                 });
@@ -552,7 +542,7 @@ async function main() {
                             await signAndSendAndWait(
                                 parachain,
                                 tx,
-                                bridgeAccount,
+                                relayerAccount,
                                 "submitFinalityProof",
                             );
                         } catch (error) {
@@ -582,7 +572,7 @@ async function main() {
 }
 
 main().catch((err) => {
-    logger.error({ err: formatError(err) }, "Bridge crashed");
+    logger.error({ err: formatError(err) }, "Relayer crashed");
     const handler = shutdownHandler;
     if (handler) {
         handler().finally(() => process.exit(1));
