@@ -134,6 +134,8 @@ impl pallet_assets::BenchmarkHelper<codec::Compact<u32>> for AssetsBenchmarkHelp
 	}
 }
 
+type AssetsCall = pallet_assets::Call<Runtime>;
+
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
@@ -172,7 +174,7 @@ parameter_types! {
 	pub const MaxPending: u32 = 32;
 }
 
-/// The type used to represent the kinds of proxying allowed.
+/// The type used to represent the kinds of proxying allowed. See also https://github.com/polkadot-fellows/runtimes/blob/5188726b6b/system-parachains/asset-hubs/asset-hub-polkadot/src/lib.rs#L499.
 #[derive(
 	Copy,
 	Clone,
@@ -188,8 +190,23 @@ parameter_types! {
 	scale_info::TypeInfo,
 )]
 pub enum ProxyType {
+	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
 	Any,
+	/// Can execute any call that does not transfer funds or assets.
 	NonTransfer,
+	/// Proxy with the ability to reject time-delay proxy announcements.
+	CancelProxy,
+	/// Assets proxy. Can execute any call from `assets`, **including asset transfers**.
+	Assets,
+	/// Owner proxy. Can execute calls related to asset ownership.
+	AssetOwner,
+	/// Asset manager. Can execute calls related to asset management.
+	AssetManager,
+	/// Allow to do governance.
+	Governance,
+	/// Allows access to staking related calls.
+	///
+	/// Contains the `Staking`, `Session`, `Utility` pallets.
 	Staking,
 }
 
@@ -205,23 +222,65 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			ProxyType::Any => true,
 			ProxyType::NonTransfer => !matches!(
 				c,
-				RuntimeCall::Assets(..) |
-					RuntimeCall::Balances(..) |
-					RuntimeCall::Faucet(..) |
-					RuntimeCall::Grandpa(..) |
-					RuntimeCall::Multisig(..) |
-					RuntimeCall::Proxy(..) |
-					RuntimeCall::Revive(..) |
-					RuntimeCall::Session(..) |
-					RuntimeCall::SpinAnchoring(..) |
-					RuntimeCall::Staking(..) |
-					RuntimeCall::System(..) |
+				RuntimeCall::System(..) |
 					RuntimeCall::Timestamp(..) |
-					RuntimeCall::Utility(..)
+					RuntimeCall::Staking(..) |
+					RuntimeCall::Session(..) |
+					RuntimeCall::Utility(..) |
+					RuntimeCall::Proxy(..) |
+					RuntimeCall::Multisig(..)
 			),
-			ProxyType::Staking => matches!(
+			ProxyType::Governance => matches!(c, RuntimeCall::Utility(..)),
+			ProxyType::Staking => {
+				matches!(
+					c,
+					RuntimeCall::Staking(..) | RuntimeCall::Session(..) | RuntimeCall::Utility(..)
+				)
+			},
+			ProxyType::CancelProxy => {
+				matches!(
+					c,
+					RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }) |
+						RuntimeCall::Utility { .. } |
+						RuntimeCall::Multisig { .. }
+				)
+			},
+			ProxyType::Assets => {
+				matches!(
+					c,
+					RuntimeCall::Assets { .. } |
+						RuntimeCall::Utility { .. } |
+						RuntimeCall::Multisig { .. }
+				)
+			},
+			ProxyType::AssetOwner => matches!(
 				c,
-				RuntimeCall::Staking(..) | RuntimeCall::Session(..) | RuntimeCall::Utility(..)
+				RuntimeCall::Assets(AssetsCall::create { .. }) |
+					RuntimeCall::Assets(AssetsCall::start_destroy { .. }) |
+					RuntimeCall::Assets(AssetsCall::destroy_accounts { .. }) |
+					RuntimeCall::Assets(AssetsCall::destroy_approvals { .. }) |
+					RuntimeCall::Assets(AssetsCall::finish_destroy { .. }) |
+					RuntimeCall::Assets(AssetsCall::transfer_ownership { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_team { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_metadata { .. }) |
+					RuntimeCall::Assets(AssetsCall::clear_metadata { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_min_balance { .. }) |
+					RuntimeCall::Utility { .. } |
+					RuntimeCall::Multisig { .. }
+			),
+			ProxyType::AssetManager => matches!(
+				c,
+				RuntimeCall::Assets(AssetsCall::mint { .. }) |
+					RuntimeCall::Assets(AssetsCall::burn { .. }) |
+					RuntimeCall::Assets(AssetsCall::freeze { .. }) |
+					RuntimeCall::Assets(AssetsCall::block { .. }) |
+					RuntimeCall::Assets(AssetsCall::thaw { .. }) |
+					RuntimeCall::Assets(AssetsCall::freeze_asset { .. }) |
+					RuntimeCall::Assets(AssetsCall::thaw_asset { .. }) |
+					RuntimeCall::Assets(AssetsCall::touch_other { .. }) |
+					RuntimeCall::Assets(AssetsCall::refund_other { .. }) |
+					RuntimeCall::Utility { .. } |
+					RuntimeCall::Multisig { .. }
 			),
 		}
 	}
@@ -231,6 +290,12 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			(x, y) if x == y => true,
 			(ProxyType::Any, _) => true,
 			(_, ProxyType::Any) => false,
+			(ProxyType::Assets, ProxyType::AssetOwner) => true,
+			(ProxyType::Assets, ProxyType::AssetManager) => true,
+			(
+				ProxyType::NonTransfer,
+				ProxyType::Assets | ProxyType::AssetOwner | ProxyType::AssetManager,
+			) => false,
 			(ProxyType::NonTransfer, _) => true,
 			_ => false,
 		}
