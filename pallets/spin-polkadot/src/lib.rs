@@ -28,8 +28,8 @@ pub mod pallet {
 
 	/// Metadata about the best FastChain block accepted on the parachain.
 	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, Default)]
-	pub struct FinalizedTarget<Hash> {
-		pub number: u32,
+	pub struct FinalizedTarget<T: Config, Hash> {
+		pub number: frame_system::pallet_prelude::BlockNumberFor<T>,
 		pub hash: Hash,
 	}
 
