@@ -1,6 +1,6 @@
 [package]
 name = "pallet-spin-polkadot"
-description = "QF Network pallet for validating FastChain finality proofs on the parachain."
+description = "QF Network pallet for validating fastchain finality proofs on the parachain."
 version = "0.1.0"
 license.workspace = true
 authors.workspace = true
