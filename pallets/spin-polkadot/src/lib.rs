@@ -48,7 +48,6 @@ pub mod pallet {
 
 	/// Highest FastChain block known to be finalized on the parachain.
 	#[pallet::storage]
-	#[pallet::getter(fn last_finalized)]
 	pub type LastFinalized<T: Config> =
 		StorageValue<_, FinalizedTarget<<HeaderFor<T> as HeaderT>::Hash>, ValueQuery>;
 
