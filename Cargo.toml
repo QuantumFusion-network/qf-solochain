@@ -47,6 +47,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 # Polkadot SDK
 cumulus-pallet-parachain-system = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 cumulus-primitives-aura = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
+finality-grandpa = { version = "0.16.3", default-features = false }
 frame = { package = "polkadot-sdk-frame", tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 frame-benchmarking = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 frame-benchmarking-cli = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }

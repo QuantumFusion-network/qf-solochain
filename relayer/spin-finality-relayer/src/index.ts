@@ -330,7 +330,7 @@ async function ensureAuthoritySet(
     setId: number,
     authorities: AuthorityTuple[],
 ) {
-    const currentRaw = await api.query.spinPolkadot.authoritySet();
+    const currentRaw = await api.query.spinPolkadot.fastchainAuthoritySet();
     const current = currentRaw.toJSON() as null | {
         setId: number;
         authorities: [string, string][];
@@ -382,7 +382,12 @@ async function main() {
         (await fastchain.query.grandpa.currentSetId()).toString(),
     );
     let currentAuthorities = await fetchAuthorities(fastchain);
-    await ensureAuthoritySet(parachain, relayerAccount, currentSetId, currentAuthorities);
+    await ensureAuthoritySet(
+        parachain,
+        relayerAccount,
+        currentSetId,
+        currentAuthorities,
+    );
 
     let pending = Promise.resolve();
     const enqueue = (task: () => Promise<void>) => {

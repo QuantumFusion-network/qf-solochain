@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use pallet::*;
+
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
 use finality_grandpa::Message as GrandpaMessage;
 use frame_support::{ensure, pallet_prelude::*};
 use frame_system::pallet_prelude::*;
@@ -27,10 +28,10 @@ pub mod pallet {
 	}
 
 	/// Metadata about the best FastChain block accepted on the parachain.
-	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, Default)]
-	pub struct FinalizedTarget<T: Config, Hash> {
-		pub number: frame_system::pallet_prelude::BlockNumberFor<T>,
-		pub hash: Hash,
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+	pub struct FinalizedTarget<B, H> {
+		pub number: BlockNumberFor<T>,
+		pub hash: <HeaderFor<T> as HeaderT>::Hash,
 	}
 
 	#[pallet::config]
@@ -40,20 +41,20 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
-	pub struct Pallet<T>(PhantomData<T>);
+	pub struct Pallet<T>(_);
 
 	/// Current GRANDPA authority set information.
 	#[pallet::storage]
-	pub type AuthoritySet<T: Config> = StorageValue<_, AuthoritySetData, OptionQuery>;
+	pub type FastchainAuthoritySet<T: Config> = StorageValue<_, AuthoritySetData>;
 
-	/// Highest FastChain block known to be finalized on the parachain.
+	/// Highest fastchain block known to be finalized on the parachain.
 	#[pallet::storage]
-	pub type LastFinalized<T: Config> =
-		StorageValue<_, FinalizedTarget<<HeaderFor<T> as HeaderT>::Hash>, ValueQuery>;
+	pub type LastFinalized<T: Config> = StorageValue<_, FinalizedTarget<T>>;
 
+	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
 	/// The most recent justification bytes accepted. This is informational only.
 	#[pallet::storage]
-	pub type LastJustification<T: Config> = StorageValue<_, Vec<u8>, OptionQuery>;
+	pub type LastJustification<T: Config> = StorageValue<_, Vec<u8>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -61,7 +62,7 @@ pub mod pallet {
 		/// The parachain accepted a new FastChain finality proof.
 		FinalityProofAccepted {
 			who: T::AccountId,
-			number: u32,
+			number: BlockNumberFor<T>,
 			hash: <HeaderFor<T> as HeaderT>::Hash,
 		},
 		/// The GRANDPA authority set was updated.
@@ -77,7 +78,7 @@ pub mod pallet {
 		UnknownAuthority,
 		BadSignature,
 		InsufficientWeight,
-		FinalityRegression,
+		AlreadyFinalized,
 		UnsupportedBlockNumber,
 		MismatchedTargets,
 		NoPrecommits,
@@ -98,7 +99,10 @@ pub mod pallet {
 			ensure_root(origin)?;
 			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
-			AuthoritySet::<T>::put(AuthoritySetData { set_id, authorities: authorities.clone() });
+			FastchainAuthoritySet::<T>::put(AuthoritySetData {
+				set_id,
+				authorities: authorities.clone(),
+			});
 
 			Self::deposit_event(Event::AuthoritySetUpdated {
 				set_id,
@@ -118,7 +122,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let authority_set =
-				AuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
+				FastchainAuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
 			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
 			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
@@ -129,14 +133,15 @@ pub mod pallet {
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
 			let target_hash = justification.commit.target_hash;
-			let target_number_u32: u32 = justification
+			let target_number: BlockNumberFor<T> = justification
 				.commit
 				.target_number
 				.try_into()
 				.map_err(|_| Error::<T>::UnsupportedBlockNumber)?;
 
-			let last = LastFinalized::<T>::get();
-			ensure!(target_number_u32 > last.number, Error::<T>::FinalityRegression);
+			if let Some(last) = LastFinalized::<T>::get() {
+				ensure!(target_number > last.number, Error::<T>::AlreadyFinalized);
+			}
 
 			let weight_map: BTreeMap<AuthorityId, AuthorityWeight> =
 				authority_set.authorities.iter().cloned().collect();
@@ -150,8 +155,8 @@ pub mod pallet {
 
 			for signed in &justification.commit.precommits {
 				ensure!(
-					signed.precommit.target_hash == target_hash &&
-						signed.precommit.target_number == justification.commit.target_number,
+					signed.precommit.target_hash == target_hash
+						&& signed.precommit.target_number == justification.commit.target_number,
 					Error::<T>::MismatchedTargets
 				);
 
@@ -176,19 +181,17 @@ pub mod pallet {
 			);
 
 			LastFinalized::<T>::put(FinalizedTarget::<_> {
-				number: target_number_u32,
+				number: target_number,
 				hash: target_hash,
 			});
 			LastJustification::<T>::put(proof);
 
 			Self::deposit_event(Event::FinalityProofAccepted {
 				who,
-				number: target_number_u32,
+				number: target_number,
 				hash: target_hash,
 			});
 			Ok(())
 		}
 	}
 }
-
-pub use pallet::*;
