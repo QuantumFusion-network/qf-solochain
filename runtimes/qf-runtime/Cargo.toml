@@ -113,6 +113,7 @@ std = [
 	"pallet-grandpa/std",
 	"pallet-revive/std",
 	"pallet-session/std",
+	"pallet-spin-anchoring/std",
 	"pallet-spin/std",
 	"pallet-staking-runtime-api/std",
 	"pallet-staking/std",
