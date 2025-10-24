@@ -30,7 +30,7 @@ jobs:
         run: |
           cd docker
           docker build --build-arg QF_REF=${{ inputs.ref }} --no-cache -f Dockerfile.x86_64_complete -t qf-solochain-complete:${{ github.sha }} .
-          docker tag qf-solochain-complete:${{ github.sha }} theqfnetworkadmin/qf-solochain-complete:${{ github.sha }}
+          docker tag qf-solochain-complete:${{ github.sha }} theqfnetwork/qf-solochain-complete:${{ github.sha }}
 
       - name: Push Docker Image to Docker Hub (signed)
         env:
@@ -38,4 +38,4 @@ jobs:
           DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DCT_REPO_PASSPHRASE }}
         run: |
-          docker push theqfnetworkadmin/qf-solochain-complete:${{ github.sha }}
+          docker push theqfnetwork/qf-solochain-complete:${{ github.sha }}
