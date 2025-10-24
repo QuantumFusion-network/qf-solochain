@@ -277,4 +277,7 @@ mod runtime {
 
 	#[runtime::pallet_index(18)]
 	pub type Multisig = pallet_multisig;
+
+	#[runtime::pallet_index(19)]
+	pub type Vesting = pallet_vesting;
 }
