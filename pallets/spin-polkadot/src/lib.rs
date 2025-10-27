@@ -18,7 +18,8 @@ pub mod pallet {
 	/// TODO(zotho): pick sane limits for our network
 	pub const MAX_VOTES_ANCESTRIES: u32 = 512;
 
-	/// Identical to `sp_consensus_grandpa::GrandpaJustification` but with bounded `votes_ancestries` vector.
+	/// Identical to `sp_consensus_grandpa::GrandpaJustification` but with bounded
+	/// `votes_ancestries` vector.
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(Debug))]
 	pub struct BoundedGrandpaJustification<H: HeaderT> {
@@ -161,8 +162,8 @@ pub mod pallet {
 
 			for signed in &justification.commit.precommits {
 				ensure!(
-					signed.precommit.target_hash == target_hash
-						&& signed.precommit.target_number == justification.commit.target_number,
+					signed.precommit.target_hash == target_hash &&
+						signed.precommit.target_number == justification.commit.target_number,
 					Error::<T>::MismatchedTargets
 				);
 
