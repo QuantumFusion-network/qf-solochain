@@ -29,9 +29,9 @@ pub mod pallet {
 
 	/// Metadata about the best FastChain block accepted on the parachain.
 	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
-	pub struct FinalizedTarget<B, H> {
-		pub number: BlockNumberFor<T>,
-		pub hash: <HeaderFor<T> as HeaderT>::Hash,
+	pub struct FinalizedTarget<BlockNumber, Hash> {
+		pub number: BlockNumber,
+		pub hash: Hash,
 	}
 
 	#[pallet::config]
@@ -49,12 +49,13 @@ pub mod pallet {
 
 	/// Highest fastchain block known to be finalized on the parachain.
 	#[pallet::storage]
-	pub type LastFinalized<T: Config> = StorageValue<_, FinalizedTarget<T>>;
+	pub type LastFinalized<T: Config> =
+		StorageValue<_, FinalizedTarget<BlockNumberFor<T>, <HeaderFor<T> as HeaderT>::Hash>>;
 
 	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
 	/// The most recent justification bytes accepted. This is informational only.
 	#[pallet::storage]
-	pub type LastJustification<T: Config> = StorageValue<_, Vec<u8>>;
+	pub type LastJustification<T: Config> = StorageValue<_, GrandpaJustification<HeaderFor<T>>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -126,9 +127,8 @@ pub mod pallet {
 			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
 			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
-			let justification: GrandpaJustification<HeaderFor<T>> =
-				GrandpaJustification::<HeaderFor<T>>::decode(&mut &proof[..])
-					.map_err(|_| Error::<T>::MalformedProof)?;
+			let justification = GrandpaJustification::<HeaderFor<T>>::decode(&mut &proof[..])
+				.map_err(|_| Error::<T>::MalformedProof)?;
 
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
@@ -180,11 +180,8 @@ pub mod pallet {
 				Error::<T>::InsufficientWeight
 			);
 
-			LastFinalized::<T>::put(FinalizedTarget::<_> {
-				number: target_number,
-				hash: target_hash,
-			});
-			LastJustification::<T>::put(proof);
+			LastFinalized::<T>::put(FinalizedTarget { number: target_number, hash: target_hash });
+			LastJustification::<T>::put(justification);
 
 			Self::deposit_event(Event::FinalityProofAccepted {
 				who,
