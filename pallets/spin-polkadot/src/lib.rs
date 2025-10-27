@@ -20,14 +20,14 @@ use sp_std::{
 pub mod pallet {
 	use super::*;
 
-	/// Stored configuration for the GRANDPA authority set that signs FastChain finality proofs.
+	/// Stored configuration for the GRANDPA authority set that signs fastchain finality proofs.
 	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
 	pub struct AuthoritySetData {
 		pub set_id: SetId,
 		pub authorities: AuthorityList,
 	}
 
-	/// Metadata about the best FastChain block accepted on the parachain.
+	/// Metadata about the best fastchain block accepted on the parachain.
 	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
 	pub struct FinalizedTarget<BlockNumber, Hash> {
 		pub number: BlockNumber,
@@ -60,7 +60,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// The parachain accepted a new FastChain finality proof.
+		/// The parachain accepted a new fastchain finality proof.
 		FinalityProofAccepted {
 			who: T::AccountId,
 			number: BlockNumberFor<T>,
@@ -87,7 +87,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set (or refresh) the GRANDPA authority set that the parachain trusts for FastChain.
+		/// Set (or refresh) the GRANDPA authority set that the parachain trusts for fastchain.
 		///
 		/// The call must be dispatched by `Root`.
 		#[pallet::call_index(0)]
@@ -112,13 +112,13 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Submit a SCALE-encoded `GrandpaJustification` produced by the FastChain node.
+		/// Submit a `GrandpaJustification` produced by the fastchain node.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::DbWeight::get().reads_writes(1, 2))]
 		pub fn submit_finality_proof(
 			origin: OriginFor<T>,
 			expected_set_id: SetId,
-			proof: Vec<u8>,
+			justification: GrandpaJustification<HeaderFor<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -126,9 +126,6 @@ pub mod pallet {
 				FastchainAuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
 			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
 			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
-
-			let justification = GrandpaJustification::<HeaderFor<T>>::decode(&mut &proof[..])
-				.map_err(|_| Error::<T>::MalformedProof)?;
 
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 

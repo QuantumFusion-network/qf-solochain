@@ -28,3 +28,21 @@ Environment variables:
 
 The script queues submissions sequentially and logs each accepted proof once the
 parachain extrinsic is finalized.
+
+## Docker
+
+# Build the image
+```bash
+docker build -t spin-finality-relayer ./relayer/spin-finality-relayer
+```
+
+```bash
+docker run --rm \
+  --network host \
+  -e FASTCHAIN_WS=ws://127.0.0.1:11144 \
+  -e PARACHAIN_WS=ws://127.0.0.1:9988 \
+  -e RELAYER_URI=//Alice \
+  -e LOG_LEVEL=debug \
+  --name spin-finality-relayer \
+  spin-finality-relayer
+```
