@@ -46,10 +46,12 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 
+	// TODO(zotho): remove `without_storage_info`
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
+	// TODO(zotho): Add MEL bound for `AuthoritySetData` https://github.com/QuantumFusion-network/spec/issues/629
 	/// Current GRANDPA authority set information.
 	#[pallet::storage]
 	pub type FastchainAuthoritySet<T: Config> = StorageValue<_, AuthoritySetData>;
@@ -75,14 +77,13 @@ pub mod pallet {
 			hash: <HeaderFor<T> as HeaderT>::Hash,
 		},
 		/// The GRANDPA authority set was updated.
-		AuthoritySetUpdated { set_id: SetId, authorities: u32 },
+		AuthoritySetUpdated { set_id: SetId, authorities: u64 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		AuthoritySetNotInitialized,
 		AuthoritySetMismatch,
-		MalformedProof,
 		EmptyAuthoritySet,
 		UnknownAuthority,
 		BadSignature,
@@ -91,6 +92,7 @@ pub mod pallet {
 		UnsupportedBlockNumber,
 		MismatchedTargets,
 		NoPrecommits,
+		ComputationOverflow,
 	}
 
 	#[pallet::call]
@@ -108,21 +110,21 @@ pub mod pallet {
 			ensure_root(origin)?;
 			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
-			FastchainAuthoritySet::<T>::put(AuthoritySetData {
-				set_id,
-				authorities: authorities.clone(),
-			});
+			let authorities_len =
+				u64::try_from(authorities.len()).map_err(|_| Error::<T>::ComputationOverflow)?;
+
+			FastchainAuthoritySet::<T>::put(AuthoritySetData { set_id, authorities });
 
 			Self::deposit_event(Event::AuthoritySetUpdated {
 				set_id,
-				authorities: authorities.len() as u32,
+				authorities: authorities_len,
 			});
 			Ok(())
 		}
 
 		/// Submit a `GrandpaJustification` produced by the fastchain node.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::DbWeight::get().reads_writes(1, 2))]
+		#[pallet::weight(T::DbWeight::get().reads_writes(2, 2))]
 		pub fn submit_finality_proof(
 			origin: OriginFor<T>,
 			expected_set_id: SetId,
@@ -130,29 +132,28 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let authority_set =
-				FastchainAuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
-			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
-			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
-
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
+			let authority_set =
+				FastchainAuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
+			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
+			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
+
+			// TODO(zotho): how do we verify that `target_hash` is hash of `target_number` block?
 			let target_hash = justification.commit.target_hash;
-			let target_number: BlockNumberFor<T> = justification
-				.commit
-				.target_number
-				.try_into()
-				.map_err(|_| Error::<T>::UnsupportedBlockNumber)?;
+			let target_number: BlockNumberFor<T> = justification.commit.target_number;
 
 			if let Some(last) = LastFinalized::<T>::get() {
 				ensure!(target_number > last.number, Error::<T>::AlreadyFinalized);
 			}
 
-			let weight_map: BTreeMap<AuthorityId, AuthorityWeight> =
-				authority_set.authorities.iter().cloned().collect();
-
-			let total_weight: u128 =
-				authority_set.authorities.iter().map(|(_, weight)| u128::from(*weight)).sum();
+			// TODO(zotho): do we have to compute the total every time?
+			let mut total_weight: u128 = 0;
+			for &(_, weight) in &authority_set.authorities {
+				total_weight = total_weight
+					.checked_add(u128::from(weight))
+					.ok_or(Error::<T>::ComputationOverflow)?;
+			}
 			ensure!(total_weight > 0, Error::<T>::EmptyAuthoritySet);
 
 			let mut seen = BTreeSet::new();
@@ -174,8 +175,13 @@ pub mod pallet {
 				);
 				ensure!(signature_ok, Error::<T>::BadSignature);
 
+				// TODO(zotho): only first seen here. do we need filtering?
 				if seen.insert(signed.id.clone()) {
-					let weight = weight_map.get(&signed.id).ok_or(Error::<T>::UnknownAuthority)?;
+					let weight = authority_set
+						.authorities
+						.iter()
+						.find_map(|(id, weight)| if *id == signed.id { Some(weight) } else { None })
+						.ok_or(Error::<T>::UnknownAuthority)?;
 					signed_weight = signed_weight.saturating_add(u128::from(*weight));
 				}
 			}
