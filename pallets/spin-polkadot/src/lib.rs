@@ -2,23 +2,30 @@
 
 pub use pallet::*;
 
-use codec::{Decode, Encode};
+use codec::{Decode, DecodeWithMemTracking, Encode};
 use finality_grandpa::Message as GrandpaMessage;
-use frame_support::{ensure, pallet_prelude::*};
+use frame_support::{ensure, pallet_prelude::*, BoundedVec};
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
-use sp_consensus_grandpa::{
-	self, AuthorityId, AuthorityList, AuthorityWeight, GrandpaJustification, SetId,
-};
+use sp_consensus_grandpa::{self, AuthorityList, SetId};
 use sp_runtime::traits::Header as HeaderT;
-use sp_std::{
-	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
-	vec::Vec,
-};
+use sp_std::collections::btree_set::BTreeSet;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+
+	/// TODO(zotho): pick sane limits for our network
+	pub const MAX_VOTES_ANCESTRIES: u32 = 512;
+
+	/// Identical to `sp_consensus_grandpa::GrandpaJustification` but with bounded `votes_ancestries` vector.
+	#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
+	#[cfg_attr(feature = "std", derive(Debug))]
+	pub struct BoundedGrandpaJustification<H: HeaderT> {
+		pub round: u64,
+		pub commit: sp_consensus_grandpa::Commit<H>,
+		pub votes_ancestries: BoundedVec<H, ConstU32<MAX_VOTES_ANCESTRIES>>,
+	}
 
 	/// Stored configuration for the GRANDPA authority set that signs fastchain finality proofs.
 	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
@@ -55,7 +62,8 @@ pub mod pallet {
 	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
 	/// The most recent justification bytes accepted. This is informational only.
 	#[pallet::storage]
-	pub type LastJustification<T: Config> = StorageValue<_, GrandpaJustification<HeaderFor<T>>>;
+	pub type LastJustification<T: Config> =
+		StorageValue<_, BoundedGrandpaJustification<HeaderFor<T>>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -118,7 +126,7 @@ pub mod pallet {
 		pub fn submit_finality_proof(
 			origin: OriginFor<T>,
 			expected_set_id: SetId,
-			justification: GrandpaJustification<HeaderFor<T>>,
+			justification: BoundedGrandpaJustification<HeaderFor<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
