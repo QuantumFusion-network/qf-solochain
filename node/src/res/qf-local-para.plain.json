@@ -1,17 +1,16 @@
 {
-  "name": "Local Testnet",
-  "id": "local_testnet",
+  "name": "Custom",
+  "id": "custom",
   "chainType": "Local",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": "template-local",
+  "protocolId": null,
   "properties": {
-    "ss58Format": 42,
     "tokenDecimals": 12,
     "tokenSymbol": "UNIT"
   },
   "relay_chain": "rococo-local",
-  "para_id": 4775,
+  "para_id": 1000,
   "codeSubstitutes": {},
   "genesis": {
     "runtimeGenesis": {
