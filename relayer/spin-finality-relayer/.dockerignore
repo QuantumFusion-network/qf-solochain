@@ -1,0 +1,7 @@
+node_modules
+dist
+.git
+Dockerfile
+npm-debug.log
+pnpm-debug.log
+.pnpm-store
