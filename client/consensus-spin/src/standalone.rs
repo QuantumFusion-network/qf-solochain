@@ -439,33 +439,33 @@ mod tests {
 		);
 	}
 
-	// #[test]
-	// fn authorities_call_works() {
-	//     let client = substrate_test_runtime_client::new();
+	#[test]
+	fn authorities_call_works() {
+		let client = substrate_test_runtime_client::new();
 
-	//     assert_eq!(client.chain_info().best_number, 0);
-	//     assert_eq!(
-	//         fetch_authorities_with_compatibility_mode(
-	//             &client,
-	//             client.chain_info().best_hash,
-	//             1,
-	//             &CompatibilityMode::None
-	//         )
-	//         .unwrap(),
-	//         vec![
-	//             Keyring::Alice.public().into(),
-	//             Keyring::Bob.public().into(),
-	//             Keyring::Charlie.public().into()
-	//         ]
-	//     );
+		assert_eq!(client.chain_info().best_number, 0);
+		assert_eq!(
+			fetch_authorities_with_compatibility_mode(
+				&client,
+				client.chain_info().best_hash,
+				1,
+				&CompatibilityMode::None
+			)
+			.unwrap(),
+			vec![
+				Keyring::Alice.public().into(),
+				Keyring::Bob.public().into(),
+				Keyring::Charlie.public().into()
+			]
+		);
 
-	//     assert_eq!(
-	//         fetch_aux_data(&client, client.chain_info().best_hash).unwrap(),
-	//         vec![
-	//             Keyring::Alice.public().into(),
-	//             Keyring::Bob.public().into(),
-	//             Keyring::Charlie.public().into()
-	//         ]
-	//     );
-	// }
+		assert_eq!(
+			fetch_authorities(&client, client.chain_info().best_hash).unwrap(),
+			vec![
+				Keyring::Alice.public().into(),
+				Keyring::Bob.public().into(),
+				Keyring::Charlie.public().into()
+			]
+		);
+	}
 }
