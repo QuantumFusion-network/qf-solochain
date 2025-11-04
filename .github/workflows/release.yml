@@ -17,9 +17,9 @@ jobs:
 
       - name: Check release version
         run: |
-          release_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
-          if [[ "${release_version}" != "${{ github.ref_name }}" ]]; then
-            echo "release version\t = ${node_version}"
+          node_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
+          if [[ "${node_version}" != "${{ github.ref_name }}" ]]; then
+            echo "node version\t = ${node_version}"
             echo "tag version\t = ${{ github.ref_name }}"
             echo "Please update release version!"
             exit 1
