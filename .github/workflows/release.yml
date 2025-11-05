@@ -15,13 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check release version
+      - name: Check node version
         run: |
-          release_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
-          if [[ "${release_version}" != "${{ github.ref_name }}" ]]; then
-            echo "release version\t = ${node_version}"
-            echo "tag version\t = ${{ github.ref_name }}"
-            echo "Please update release version!"
+          node_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
+          tag_version="${{ github.ref_name }}"
+          tag_version_no_v="${tag_version#v}"
+          if [[ "${node_version}" != "${tag_version_no_v}" ]]; then
+            echo "node version\t = ${node_version}"
+            echo "tag version\t = ${tag_version} (${tag_version_no_v})"
+            echo "Please update node version!"
             exit 1
           fi
 
