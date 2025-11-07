@@ -480,15 +480,26 @@ async function main() {
                         { setId: currentSetId, proofLen: proofU8a.length },
                         "Forwarding finality proof",
                     );
-                    const tx = parachain.tx.spinPolkadot.submitFinalityProof(
-                        currentSetId,
-                        proofU8a,
-                    );
+                    const parachainTx =
+                        parachain.tx.spinPolkadot.submitFinalityProof(
+                            currentSetId,
+                            proofU8a,
+                        );
                     await signAndSendAndWait(
                         parachain,
-                        tx,
+                        parachainTx,
                         relayerAccount,
                         "submitFinalityProof",
+                    );
+                    const fastchainTx =
+                        fastchain.tx.spinAnchoring.noteAnchorVerified(
+                            currentSetId,
+                        );
+                    await signAndSendAndWait(
+                        fastchain,
+                        fastchainTx,
+                        relayerAccount,
+                        "noteAnchorVerified",
                     );
                 });
             },
