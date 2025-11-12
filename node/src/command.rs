@@ -1,5 +1,5 @@
 use crate::{
-	benchmarking::{RemarkBuilder, TransferKeepAliveBuilder, inherent_benchmark_data},
+	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
 	cli::{Cli, Subcommand},
 	service,
@@ -12,7 +12,7 @@ use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Quantum Fusion QF Node".into()
+		"QF Network Fastchain".into()
 	}
 
 	fn impl_version() -> String {
@@ -28,11 +28,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"support.anonymous.an".into()
+		"https://github.com/QuantumFusion-network/qf-solochain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2024
 	}
 
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {

@@ -1,4 +1,4 @@
-// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) QF Network, 2025.
 // Copyright (C) Parity Technologies (UK) Ltd., until 2025.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,18 +9,18 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
-	BoundedSlice, BoundedVec, ConsensusEngineId, Parameter,
 	traits::{DisabledValidators, FindAuthor, Get, OnTimestampSet, OneSessionHandler},
+	BoundedSlice, BoundedVec, ConsensusEngineId, Parameter,
 };
 use log;
 use qfp_consensus_spin::{
-	AuthorityIndex, ConsensusLog, SPIN_ENGINE_ID, SessionLength as SessionLengthT, Slot,
-	SpinAuxData,
+	AuthorityIndex, ConsensusLog, SessionLength as SessionLengthT, Slot, SpinAuxData,
+	SPIN_ENGINE_ID,
 };
 use sp_runtime::{
-	RuntimeAppPublic,
 	generic::DigestItem,
 	traits::{IsMember, Member, SaturatedConversion, Saturating, Zero},
+	RuntimeAppPublic,
 };
 
 mod mock;

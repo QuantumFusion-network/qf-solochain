@@ -28,7 +28,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Parachain Collator Template".into()
+		"QF Network Bridging Gadget".into()
 	}
 
 	fn impl_version() -> String {
@@ -50,11 +50,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/polkadot-sdk/issues/new".into()
+		"https://github.com/QuantumFusion-network/qf-solochain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2020
+		2024
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -64,7 +64,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Parachain Collator Template".into()
+		"QF Network Bridging Gadget".into()
 	}
 
 	fn impl_version() -> String {
@@ -86,11 +86,11 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/polkadot-sdk/issues/new".into()
+		"https://github.com/QuantumFusion-network/qf-solochain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2020
+		2024
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {

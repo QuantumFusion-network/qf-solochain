@@ -1,6 +1,6 @@
 use crate::{
-	AccountId, BalancesConfig, CollatorSelectionConfig, EXISTENTIAL_DEPOSIT, ParachainInfoConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig,
+	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
+	RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig, EXISTENTIAL_DEPOSIT,
 };
 
 use alloc::{vec, vec::Vec};

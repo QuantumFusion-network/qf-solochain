@@ -7,17 +7,21 @@ pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
+mod weights;
 
 extern crate alloc;
 use alloc::vec::Vec;
+use pallet_revive::evm::runtime::EthExtra;
 use sp_runtime::{
-	Cow, MultiAddress, MultiSignature, generic, impl_opaque_keys,
+	generic, impl_opaque_keys,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	Cow, MultiAddress, MultiSignature,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+pub use frame_support::traits::ConstU32;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -63,11 +67,9 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("QF-runtime"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
-	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
-	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
-	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
-	//   the compatible custom types.
-	spec_version: 101,
+	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
+	// `spec_version`, and `authoring_version` are the same between Wasm and native.
+	spec_version: 105,
 	impl_version: 1,
 	apis: apis::RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -105,6 +107,9 @@ pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
 /// Session length in blocks
 pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
+/// Initial asset ID in pallet-assets.
+pub const GENESIS_NEXT_ASSET_ID: Option<u32> = Some(1);
 
 /// The version information used to identify this runtime when compiled
 /// natively.
@@ -161,9 +166,31 @@ pub type TxExtension = (
 	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct EthExtraImpl;
+
+impl EthExtra for EthExtraImpl {
+	type Config = Runtime;
+	type Extension = TxExtension;
+
+	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::Extension {
+		(
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::from(crate::generic::Era::Immortal),
+			frame_system::CheckNonce::<Runtime>::from(nonce),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip).into(),
+			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+		)
+	}
+}
+
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
+	pallet_revive::evm::runtime::UncheckedExtrinsic<Address, Signature, EthExtraImpl>;
 
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
@@ -224,12 +251,6 @@ mod runtime {
 	#[runtime::pallet_index(6)]
 	pub type Sudo = pallet_sudo;
 
-	#[runtime::pallet_index(7)]
-	pub type QFPolkaVM = pallet_qf_polkavm;
-
-	#[runtime::pallet_index(8)]
-	pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
-
 	#[runtime::pallet_index(9)]
 	pub type Faucet = pallet_faucet;
 
@@ -238,4 +259,25 @@ mod runtime {
 
 	#[runtime::pallet_index(11)]
 	pub type Session = pallet_session;
+
+	#[runtime::pallet_index(13)]
+	pub type Authorship = pallet_authorship;
+
+	#[runtime::pallet_index(14)]
+	pub type Revive = pallet_revive;
+
+	#[runtime::pallet_index(15)]
+	pub type Assets = pallet_assets;
+
+	#[runtime::pallet_index(16)]
+	pub type Utility = pallet_utility;
+
+	#[runtime::pallet_index(17)]
+	pub type SpinAnchoring = pallet_spin_anchoring;
+
+	#[runtime::pallet_index(18)]
+	pub type Multisig = pallet_multisig;
+
+	#[runtime::pallet_index(19)]
+	pub type Vesting = pallet_vesting;
 }

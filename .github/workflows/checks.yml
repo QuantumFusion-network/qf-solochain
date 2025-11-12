@@ -7,40 +7,74 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force running all checks'
+        required: false
+        default: 'false'
 
 jobs:
-  cargo-check:
-    name: Cargo Check
+  files-changed:
+    name: Detect what files changed
     runs-on: [self-hosted]
-
+    outputs:
+      markdown: ${{ steps.filter.outputs.markdown }}
+      rust: ${{ steps.filter.outputs.rust }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        # This is supposed to download submodules, but it doesn't actually work, so we're using
-        # `make vendor-clone` with `git clone ...` instead.
-        # with:
-        #   submodules: recursive
+
+      - name: Detect changed file types
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            markdown:
+              - .markdownlint.yaml
+              - '**/*.md'
+            rust:
+              - '**/*.lock'
+              - '**/*.rs'
+              - '**/*.toml'
+              - Makefile
+              - node/src/res/*.json
+
+  markdown:
+    if: needs.files-changed.outputs.markdown == 'true' || github.event.inputs.force == 'true' || github.ref == 'refs/heads/main'
+    needs: files-changed
+    name: Check Markdown
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       # Update files to resolve fixable issues:
-      # `markdownlint-cli2 "**/*.md" "#target" "#vendor" --config .markdownlint.yaml --fix`.
+      # `markdownlint-cli2 "**/*.md" "#target" --config .markdownlint.yaml --fix`.
       - name: Check Markdown
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
-          config: '.markdownlint.yaml'
-          globs: '**/*.md'
+          config: ".markdownlint.yaml"
+          globs: "**/*.md"
 
-      - run: |
-          make vendor-clone
+  rust:
+    if: needs.files-changed.outputs.rust == 'true' || github.event.inputs.force == 'true' || github.ref == 'refs/heads/main'
+    needs: files-changed
+    name: Check Rust
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup build environment
         run: |
+          set -euo pipefail
           sudo apt update
           sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           . "$HOME/.cargo/env"
           rustup install
-          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-full-linux-x86_64.gz \
+          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz \
             | gzip -d - | sudo install -m 755 /dev/stdin /usr/local/bin/taplo
 
       - name: Check TOML format
@@ -49,7 +83,11 @@ jobs:
 
       - name: Cargo fmt
         run: |
-          cargo fmt --all -- --check
+          cargo +nightly fmt --all -- --check
+
+      - name: Cargo clippy
+        run: |
+          cargo clippy --all-targets --locked --workspace --quiet
 
       - name: Check code
         run: |
@@ -57,4 +95,4 @@ jobs:
 
       - name: Tests
         run: |
-          cargo test -p pallet-qf-polkavm
+          cargo test --locked --workspace --no-fail-fast

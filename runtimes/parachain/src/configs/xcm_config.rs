@@ -9,7 +9,7 @@ use polkadot_sdk::{
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, Everything, Nothing},
+	traits::{ConstU32, Contains, Disabled, Everything, Nothing},
 	weights::Weight,
 };
 use frame_system::EnsureRoot;
@@ -151,6 +151,7 @@ impl xcm_executor::Config for XcmConfig {
 	type HrmpChannelAcceptedHandler = ();
 	type HrmpChannelClosingHandler = ();
 	type XcmRecorder = PolkadotXcm;
+	type XcmEventEmitter = PolkadotXcm; // TODO(khssnv): remove at `stable2506` or later?
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -193,6 +194,7 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
+	type AuthorizedAliasConsideration = Disabled; // TODO(khssnv): remove at `stable2506` or later?
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

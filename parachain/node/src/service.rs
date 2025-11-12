@@ -20,14 +20,14 @@ use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params a
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_service::{
+	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, ParachainHostFunctions,
-	StartRelayChainTasksParams, build_network, build_relay_chain_interface, prepare_node_config,
-	start_relay_chain_tasks,
+	StartRelayChainTasksParams,
 };
 #[docify::export(cumulus_primitives)]
 use cumulus_primitives_core::{
-	ParaId,
 	relay_chain::{CollatorPair, ValidationCode},
+	ParaId,
 };
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 
@@ -36,7 +36,7 @@ use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use prometheus_endpoint::Registry;
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
-use sc_executor::{DEFAULT_HEAP_ALLOC_STRATEGY, HeapAllocStrategy, WasmExecutor};
+use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
 use sc_network::NetworkBlock;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
@@ -220,6 +220,7 @@ fn start_consensus(
 		collator_service,
 		authoring_duration: Duration::from_millis(2000),
 		reinitialize: false,
+		max_pov_percentage: None, // TODO(khssnv): remove at `stable2506` or later?
 	};
 	let fut = aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _>(
 		params,
