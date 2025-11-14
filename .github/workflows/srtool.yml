@@ -18,10 +18,3 @@ jobs:
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > parachain-srtool-digest.json
           cat parachain-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
-      - name: Archive Runtime
-        uses: actions/upload-artifact@v2
-        with:
-          name: qf-parachain-runtime-${{ github.sha }}
-          path: |
-            ${{ steps.srtool_build.outputs.wasm }}
-            qf-parachain-runtime-srtool-digest.json
