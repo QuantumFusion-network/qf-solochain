@@ -102,6 +102,10 @@ pub const UNIT: Balance = 1_000_000_000_000_000_000;
 pub const MILLI_UNIT: Balance = 1_000_000_000_000_000;
 pub const MICRO_UNIT: Balance = 1_000_000_000_000;
 
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * MILLI_UNIT + (bytes as Balance) * MICRO_UNIT
+}
+
 /// Existential deposit.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
