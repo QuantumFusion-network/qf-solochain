@@ -22,7 +22,7 @@ const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
 const RELAYER_URI = process.env.RELAYER_URI ?? "//Alice";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
-const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 30_000);
+const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 
 const logger = pino({
     base: undefined,
@@ -464,6 +464,13 @@ async function main() {
         const unsubJustifications = await subscribeJustificationStream(
             fastchain,
             (justification: Bytes | Uint8Array) => {
+                const typedJustification = fastchain.registry.createType(
+                    "GrandpaJustification",
+                    justification,
+                ) as any;
+                const upTo =
+                    typedJustification.commit.targetNumber.toNumber() as number;
+                logger.info({ upTo }, "upTo");
                 enqueue(async () => {
                     const proofU8a = justificationToU8a(justification);
                     if (!proofU8a) {
@@ -477,18 +484,32 @@ async function main() {
                         return;
                     }
                     logger.info(
-                        { setId: currentSetId, proofLen: proofU8a.length },
+                        {
+                            setId: currentSetId,
+                            proofLen: proofU8a.length,
+                            upTo,
+                        },
                         "Forwarding finality proof",
                     );
-                    const tx = parachain.tx.spinPolkadot.submitFinalityProof(
-                        currentSetId,
-                        proofU8a,
-                    );
+                    const parachainTx =
+                        parachain.tx.spinPolkadot.submitFinalityProof(
+                            currentSetId,
+                            proofU8a,
+                        );
                     await signAndSendAndWait(
                         parachain,
-                        tx,
+                        parachainTx,
                         relayerAccount,
-                        "submitFinalityProof",
+                        `submitFinalityProof-${upTo}`,
+                    );
+                    const fastchainTx =
+                        fastchain.tx.spinAnchoring.noteAnchorVerified(upTo);
+                    const sudoCall = fastchain.tx.sudo.sudo(fastchainTx);
+                    await signAndSendAndWait(
+                        fastchain,
+                        sudoCall,
+                        relayerAccount,
+                        `noteAnchorVerified-${upTo}`,
                     );
                 });
             },
@@ -501,78 +522,6 @@ async function main() {
             { err: formatError(err) },
             "Justification stream unavailable; falling back to proveFinality",
         );
-    }
-
-    if (!proofSubscriptionEstablished) {
-        if (!fastchain.rpc.chain?.subscribeFinalizedHeads) {
-            throw new Error(
-                "Finalized heads subscription is unavailable on fastchain RPC",
-            );
-        }
-
-        let finalityProofUnavailable = false;
-        const unsubFinalized =
-            (await fastchain.rpc.chain.subscribeFinalizedHeads(
-                (header: Header) => {
-                    enqueue(async () => {
-                        if (finalityProofUnavailable) return;
-                        try {
-                            const proofU8a = await fetchFinalityProofBytes(
-                                fastchain,
-                                header.hash,
-                            );
-                            if (!proofU8a) {
-                                logger.warn(
-                                    {
-                                        block: header.number.toString(),
-                                        hash: header.hash.toHex(),
-                                    },
-                                    "No justification returned for finalized block",
-                                );
-                                return;
-                            }
-                            logger.info(
-                                {
-                                    setId: currentSetId,
-                                    proofLen: proofU8a.length,
-                                    block: header.number.toString(),
-                                },
-                                "Forwarding finality proof from proveFinality",
-                            );
-                            const tx =
-                                parachain.tx.spinPolkadot.submitFinalityProof(
-                                    currentSetId,
-                                    proofU8a,
-                                );
-                            await signAndSendAndWait(
-                                parachain,
-                                tx,
-                                relayerAccount,
-                                "submitFinalityProof",
-                            );
-                        } catch (error) {
-                            logger.error(
-                                { error: formatError(error) },
-                                "Failed to forward finality proof for finalized head",
-                            );
-                            if (
-                                !finalityProofUnavailable &&
-                                error instanceof Error &&
-                                (error.message.includes("Method not found") ||
-                                    error.message.includes(
-                                        "grandpa.proveFinality RPC not available",
-                                    ))
-                            ) {
-                                finalityProofUnavailable = true;
-                                logger.error(
-                                    "grandpa_proveFinality RPC not enabled on fastchain; skipping further finality proof attempts",
-                                );
-                            }
-                        }
-                    });
-                },
-            )) as unknown as Unsubscribe;
-        subscriptions.push(unsubFinalized);
     }
 }
 
