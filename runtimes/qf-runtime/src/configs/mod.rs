@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{MILLI_UNIT, SESSION_LENGTH, deposit};
+use crate::{deposit, MILLI_UNIT, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -59,7 +59,8 @@ use crate::GENESIS_NEXT_ASSET_ID;
 use super::{
 	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION, VERSION,
+	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
+	VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
