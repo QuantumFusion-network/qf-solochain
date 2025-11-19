@@ -7,8 +7,44 @@ on:
       - "v*"
 
 jobs:
+  srtool:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chain: ["fastchain", "parachain"]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Identify Rust toolchain version
+        id: rustc_version
+        run: |
+          RUSTC_VERSION=$(grep '^channel = ' rust-toolchain.toml | sed 's/channel = "\(.*\)"/\1/')
+          echo "value=$RUSTC_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.9.2
+        with:
+          chain: ${{ matrix.chain == 'fastchain' && 'qf-testnet-fastchain' || 'qf-testnet-parachain' }}
+          package: ${{ matrix.chain == 'fastchain' && 'qf-runtime' || 'qf-parachain-runtime' }}
+          tag: ${{ steps.rustc_version.outputs.value }}
+          runtime_dir: ${{ matrix.chain == 'fastchain' && 'runtimes/qf-runtime' || 'runtimes/parachain' }}
+
+      - name: Upload ${{ matrix.chain }} Wasm (compact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.chain }}-compact
+          path: ${{ steps.srtool_build.outputs.wasm_compressed }}
+
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-srtool-digest.json
+          cat ${{ matrix.chain }}-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
   release:
     name: Build binary and create GitHub release
+    needs: srtool
     runs-on: [self-hosted, Linux, X64]
 
     steps:
@@ -44,11 +80,21 @@ jobs:
         run: |
           make qf-node-release
 
-      - name: Prepare artifacts
+      - name: Prepare node artifact
         run: |
           mkdir -p artifacts
           cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
-          cp output/qf_runtime.compact.compressed.wasm artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-compact"
+          merge-multiple: true
+
+      - name: Rename runtime artifact
+        run: |
+          mv qf_runtime.compact.compressed.wasm artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm
+          mv qf_parachain_runtime.compact.compressed.wasm artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm
 
       - name: Generate checksums
         id: checksums
@@ -59,10 +105,15 @@ jobs:
           SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
           BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
 
+          SHA256_QFPARACHAIN=$(sha256sum artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+          BLAKE2_QFPARACHAIN=$(b2sum artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+
           echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
           echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
           echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
           echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
+          echo "sha256_qfparachain=$SHA256_QFPARACHAIN" >> $GITHUB_OUTPUT
+          echo "blake2_qfparachain=$BLAKE2_QFPARACHAIN" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
@@ -87,6 +138,10 @@ jobs:
             **qf_runtime-${{ github.ref_name }}.compact.compressed.wasm**
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
+
+            **qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm**
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfparachain }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfparachain }}
 
   publish-docker:
     name: Build and publish Docker image
