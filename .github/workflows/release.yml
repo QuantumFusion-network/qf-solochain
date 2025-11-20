@@ -13,7 +13,7 @@ jobs:
       matrix:
         chain: ["fastchain", "parachain"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Identify Rust toolchain version
         id: rustc_version
@@ -31,7 +31,7 @@ jobs:
           runtime_dir: ${{ matrix.chain == 'fastchain' && 'runtimes/qf-runtime' || 'runtimes/parachain' }}
 
       - name: Upload ${{ matrix.chain }} Wasm (compact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.chain }}-compact
           path: ${{ steps.srtool_build.outputs.wasm_compressed }}
@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Check node version
         run: |
@@ -86,7 +86,7 @@ jobs:
           cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
 
       - name: Download runtimes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: "*-compact"
           merge-multiple: true
@@ -149,7 +149,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
