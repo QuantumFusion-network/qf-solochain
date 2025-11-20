@@ -23,7 +23,7 @@ jobs:
 
       - name: Srtool build
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.9.2
+        uses: chevdor/srtool-actions@48e9baed50ca414936dfac59d34d8b9bbe581abd # v0.9.2
         with:
           chain: ${{ matrix.chain == 'fastchain' && 'qf-testnet-fastchain' || 'qf-testnet-parachain' }}
           package: ${{ matrix.chain == 'fastchain' && 'qf-runtime' || 'qf-parachain-runtime' }}
