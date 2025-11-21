@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{deposit, MILLI_UNIT, SESSION_LENGTH};
+use crate::{deposit, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -114,8 +114,8 @@ impl frame_system::Config for Runtime {
 
 parameter_types! {
 	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub const AssetAccountDeposit: Balance = deposit(1, 18);
-	pub const AssetDeposit: Balance = 200 * MILLI_UNIT; // TODO(khssnv): storage utilization-based deposit.
+	pub const AssetAccountDeposit: Balance = deposit(1, 16);
+	pub const AssetDeposit: Balance = deposit(1, 190);
 	pub const AssetsStringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = deposit(1, 68);
 	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
