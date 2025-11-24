@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{MICRO_UNIT, MILLI_UNIT, SESSION_LENGTH};
+use crate::{deposit, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -60,7 +60,7 @@ use super::{
 	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
 	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
-	UNIT, VERSION,
+	VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -113,12 +113,12 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ApprovalDeposit: Balance = 10 * MILLI_UNIT;
-	pub const AssetAccountDeposit: Balance = 200 * MILLI_UNIT;
-	pub const AssetDeposit: Balance = 200 * MILLI_UNIT; // TODO(khssnv): storage utilization-based deposit.
+	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
+	pub const AssetAccountDeposit: Balance = deposit(1, 16);
+	pub const AssetDeposit: Balance = deposit(1, 190);
 	pub const AssetsStringLimit: u32 = 50;
-	pub const MetadataDepositBase: Balance = 200 * MILLI_UNIT;
-	pub const MetadataDepositPerByte: Balance = 10 * MICRO_UNIT;
+	pub const MetadataDepositBase: Balance = deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
 	pub const RemoveItemsLimit: u32 = 1000;
 }
 
@@ -359,8 +359,8 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DepositBase: Balance = 1 * UNIT;
-	pub const DepositFactor: Balance = 1 * UNIT;
+	pub const DepositBase: Balance = deposit(1, 88);
+	pub const DepositFactor: Balance = deposit(0, 32);
 	pub const MaxSignatories: u32 = 100;
 }
 
@@ -410,8 +410,8 @@ impl pallet_faucet::Config for Runtime {
 
 // TODO(khssnv): revisit.
 parameter_types! {
-	pub const DepositPerItem: Balance = 0;
-	pub const DepositPerByte: Balance = 0;
+	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerByte: Balance = deposit(0, 1);
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
 	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
