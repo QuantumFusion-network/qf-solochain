@@ -425,7 +425,7 @@ impl pallet_revive::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type CallFilter = Nothing;
-	type DepositPerItem = DepositPerByte;
+	type DepositPerItem = DepositPerItem;
 	type DepositPerByte = DepositPerByte;
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
