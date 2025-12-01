@@ -29,9 +29,11 @@ hex-literal = { version = "0.4.1", default-features = false }
 image = { version = "0.24.7", default-features = false }
 jsonrpsee = { version = "0.24.7" }
 libc = "0.2.149"
+libsecp256k1 = { version = "0.7.0", default-features = false }
 log = { version = "0.4.22", default-features = false }
 parking_lot = { version = "0.12.1", default-features = false }
 paste = "1.0.15"
+rustc-hex = { version = "2.1.0", default-features = false }
 ruzstd = { version = "0.5.0", default-features = false }
 scale-info = { version = "2.11.1", default-features = false }
 schnellru = { version = "0.2.3" }
@@ -134,6 +136,7 @@ substrate-test-runtime-client = { tag = "polkadot-stable2503-6", git = "https://
 substrate-wasm-builder = { tag = "polkadot-stable2503-6", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false }
 
 # Local
+pallet-claims = { path = "pallets/claim", default-features = false }
 pallet-faucet = { path = "pallets/faucet", default-features = false }
 pallet-spin = { path = "pallets/spin", default-features = false }
 pallet-spin-anchoring = { path = "pallets/spin-anchoring", default-features = false }

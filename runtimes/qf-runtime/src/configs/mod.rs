@@ -358,6 +358,14 @@ impl pallet_balances::Config for Runtime {
 	type DoneSlashHandler = ();
 }
 
+impl pallet_claims::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+	type Prefix = Prefix;// TODO
+	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = weights::polkadot_runtime_common_claims::WeightInfo<Runtime>;// TODO
+}
+
 parameter_types! {
 	pub const DepositBase: Balance = deposit(1, 88);
 	pub const DepositFactor: Balance = deposit(0, 32);
