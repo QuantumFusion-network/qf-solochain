@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{deposit, SESSION_LENGTH};
+use crate::{SESSION_LENGTH, Vesting, deposit};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -62,6 +62,8 @@ use super::{
 	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
 	VERSION,
 };
+
+pub use pallet_claims::{ EthereumAddress, StatementKind };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
@@ -358,12 +360,16 @@ impl pallet_balances::Config for Runtime {
 	type DoneSlashHandler = ();
 }
 
+parameter_types! {
+	pub const Prefix: &'static [u8] = b"Pay Qf token to the qf network account:";
+}
+
 impl pallet_claims::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type VestingSchedule = Vesting;
-	type Prefix = Prefix;// TODO
+	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = weights::polkadot_runtime_common_claims::WeightInfo<Runtime>;// TODO
+	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
 
 parameter_types! {
