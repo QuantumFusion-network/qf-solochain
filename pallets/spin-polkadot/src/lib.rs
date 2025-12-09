@@ -43,9 +43,7 @@ pub mod pallet {
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-	}
+	pub trait Config: frame_system::Config {}
 
 	// TODO(zotho): remove `without_storage_info`
 	#[pallet::pallet]

@@ -322,6 +322,4 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_spin_polkadot::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+impl pallet_spin_polkadot::Config for Runtime {}
