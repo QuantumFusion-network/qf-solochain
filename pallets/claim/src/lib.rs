@@ -1,5 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-
 // Copyright (C) Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 

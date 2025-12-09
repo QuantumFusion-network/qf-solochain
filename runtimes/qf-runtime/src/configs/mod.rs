@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{SESSION_LENGTH, Vesting, deposit};
+use crate::{deposit, Vesting, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -63,7 +63,7 @@ use super::{
 	VERSION,
 };
 
-pub use pallet_claims::{ EthereumAddress, StatementKind };
+pub use pallet_claims::{EthereumAddress, StatementKind};
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
