@@ -63,7 +63,7 @@ impl_opaque_keys! {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("QF-runtime"),
+	spec_name: Cow::Borrowed("qf"),
 	impl_name: Cow::Borrowed("QF-runtime"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
