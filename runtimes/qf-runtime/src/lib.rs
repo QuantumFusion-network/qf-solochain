@@ -64,7 +64,7 @@ impl_opaque_keys! {
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("qf"),
-	impl_name: Cow::Borrowed("QF-runtime"),
+	impl_name: Cow::Borrowed("theqfnetwork"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
