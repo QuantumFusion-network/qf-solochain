@@ -20,7 +20,7 @@ frame-system = { workspace = true, default-features = false }
 libsecp256k1 = { workspace = true }
 
 pallet-balances = { workspace = true }
-pallet-vesting ={ workspace = true }
+pallet-vesting = { workspace = true }
 
 rustc-hex = { workspace = true }
 
@@ -42,10 +42,10 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
-    "libsecp256k1/std",
-    "pallet-balances/std",
-    "pallet-vesting/std",
-    "rustc-hex/std",
+	"libsecp256k1/std",
+	"pallet-balances/std",
+	"pallet-vesting/std",
+	"rustc-hex/std",
 	"scale-info/std",
 	"sp-core/std",
 	"sp-io/std",
