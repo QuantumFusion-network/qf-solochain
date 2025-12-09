@@ -171,7 +171,8 @@ pub mod pallet {
 					&signed.signature,
 					justification.round,
 					authority_set.set_id,
-				);
+				)
+				.is_valid();
 				ensure!(signature_ok, Error::<T>::BadSignature);
 
 				// TODO(zotho): only first seen here. do we need filtering?
