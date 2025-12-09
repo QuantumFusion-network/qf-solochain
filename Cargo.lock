@@ -12576,6 +12576,58 @@ dependencies = [
 
 [[package]]
 name = "qf-runtime"
+version = "0.8.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-election-provider-support",
+ "frame-executive",
+ "frame-metadata-hash-extension",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "pallet-assets",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-faucet",
+ "pallet-grandpa",
+ "pallet-multisig",
+ "pallet-revive",
+ "pallet-session",
+ "pallet-spin",
+ "pallet-spin-anchoring",
+ "pallet-staking",
+ "pallet-staking-reward-curve",
+ "pallet-staking-runtime-api",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-utility",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "qfp-consensus-spin",
+ "scale-info",
+ "sp-api",
+ "sp-block-builder",
+ "sp-consensus-grandpa",
+ "sp-core",
+ "sp-genesis-builder",
+ "sp-inherents",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-staking",
+ "sp-storage",
+ "sp-transaction-pool",
+ "sp-version",
+ "substrate-wasm-builder",
+]
+
+[[package]]
+name = "qf-testnet-runtime"
 version = "0.7.1"
 dependencies = [
  "frame-benchmarking",
