@@ -29,8 +29,8 @@ frame_benchmarking::define_benchmarks!(
 	[pallet_assets, Assets]
 	[pallet_balances, Balances]
 	[pallet_multisig, Multisig]
-	[pallet_timestamp, Timestamp]
 	[pallet_sudo, Sudo]
+	[pallet_timestamp, Timestamp]
 	[pallet_utility, Utility]
 	[pallet_vesting, Vesting]
 );
