@@ -191,7 +191,7 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_staking::StashOf<Self>;
+	type ValidatorIdOf = sp_runtime::traits::ConvertInto;
 	type ShouldEndSession = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
 	type NextSessionRotation = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
 	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
