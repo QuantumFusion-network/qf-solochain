@@ -63,16 +63,16 @@ impl_opaque_keys! {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("qf"),
-	impl_name: Cow::Borrowed("theqfnetwork"),
+	spec_name: Cow::Borrowed("QF-runtime"),
+	impl_name: Cow::Borrowed("QF-runtime"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
 	// `spec_version`, and `authoring_version` are the same between Wasm and native.
-	spec_version: 116,
-	impl_version: 0,
+	spec_version: 106,
+	impl_version: 1,
 	apis: apis::RUNTIME_API_VERSIONS,
-	transaction_version: 10,
+	transaction_version: 1,
 	system_version: 1,
 };
 
