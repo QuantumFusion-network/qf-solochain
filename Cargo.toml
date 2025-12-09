@@ -18,30 +18,30 @@ members = [
 ]
 
 [workspace.dependencies]
-async-trait = { version = "0.1.79" }
-clap = { version = "4.5.10" }
-codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
+async-trait = { version = "0.1.88" }
+clap = { version = "4.5.13" }
+codec = { version = "3.7.5", default-features = false, package = "parity-scale-codec" }
 color-print = { version = "0.3.4" }
 docify = { version = "0.2.9" }
-env_logger = { version = "0.11.3" }
-futures = { version = "0.3.30" }
+env_logger = { version = "0.11.2" }
+futures = { version = "0.3.31" }
 hex-literal = { version = "0.4.1", default-features = false }
 image = { version = "0.24.7", default-features = false }
-jsonrpsee = { version = "0.24.7" }
-libc = "0.2.149"
+jsonrpsee = { version = "0.24.3" }
+libc = { version = "0.2.155" }
 log = { version = "0.4.22", default-features = false }
 parking_lot = { version = "0.12.1", default-features = false }
-paste = "1.0.15"
+paste = { version = "1.0.15", default-features = false }
 ruzstd = { version = "0.5.0", default-features = false }
-scale-info = { version = "2.11.1", default-features = false }
+scale-info = { version = "2.11.6", default-features = false }
 schnellru = { version = "0.2.3" }
 serde = { version = "1.0.214", default-features = false }
-serde_json = { version = "1.0.124", default-features = false }
+serde_json = { version = "1.0.132", default-features = false }
 smallvec = { version = "1.11.0", default-features = false }
 tempfile = { version = "3.8.1" }
 thiserror = { version = "1.0.64" }
-tokio = { version = "1.40.0", default-features = false }
-tracing = { version = "0.1.40", default-features = false }
+tokio = { version = "1.45.0", default-features = false }
+tracing = { version = "0.1.37", default-features = false }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 # Polkadot SDK
