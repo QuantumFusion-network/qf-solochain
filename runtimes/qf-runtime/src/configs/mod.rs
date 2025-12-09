@@ -213,28 +213,24 @@ parameter_types! {
 	// Maximum winners that can be chosen as active validators
 	pub const MaxActiveValidators: u32 = 1000;
 
-	// TODO(khssnv): uncomment the block at `stable2506` or later?
 	// One page only, fill the whole page with the `MaxActiveValidators`.
-	// pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
+	pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
 	// Unbonded, thus the max backers per winner maps to the max electing voters limit.
-	// pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
+	pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
 }
 
 pub type OnChainAccuracy = sp_runtime::Perbill;
 
 pub struct OnChainSeqPhragmen;
 impl onchain::Config for OnChainSeqPhragmen {
-	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2506` or later?
+	type Sort = ConstBool<true>;
 	type System = Runtime;
 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
-
-	// TODO(khssnv): uncomment at `stable2506` or later?
-	// type MaxBackersPerWinner = MaxBackersPerWinner;
-	// type MaxWinnersPerPage = MaxWinnersPerPage;
-	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2506` or later?
+	type MaxBackersPerWinner = MaxBackersPerWinner;
+	type MaxWinnersPerPage = MaxWinnersPerPage;
 }
 
 pallet_staking_reward_curve::build! {
