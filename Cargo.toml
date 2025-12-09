@@ -17,6 +17,8 @@ members = [
 	"runtimes/*",
 ]
 
+exclude = ["runtimes/qf-testnet-runtime"]
+
 [workspace.dependencies]
 async-trait = { version = "0.1.88" }
 clap = { version = "4.5.13" }
