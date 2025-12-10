@@ -21,11 +21,20 @@ pub mod pallet {
 	/// Identical to `sp_consensus_grandpa::GrandpaJustification` but with bounded
 	/// `votes_ancestries` vector.
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
-	#[cfg_attr(feature = "std", derive(Debug))]
 	pub struct BoundedGrandpaJustification<H: HeaderT> {
 		pub round: u64,
 		pub commit: sp_consensus_grandpa::Commit<H>,
 		pub votes_ancestries: BoundedVec<H, ConstU32<MAX_VOTES_ANCESTRIES>>,
+	}
+
+	impl<H: HeaderT> core::fmt::Debug for BoundedGrandpaJustification<H> {
+		fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+			f.debug_struct("BoundedGrandpaJustification")
+				.field("round", &self.round)
+				.field("commit", &"<commit>") // TODO: replace the placeholder
+				.field("votes_ancestries", &self.votes_ancestries.len())
+				.finish()
+		}
 	}
 
 	/// Stored configuration for the GRANDPA authority set that signs fastchain finality proofs.
