@@ -25,20 +25,17 @@
 
 // External crates imports
 use alloc::{vec, vec::Vec};
-use codec::Encode;
 use frame_support::{
-	dispatch::DispatchInfo,
 	genesis_builder_helper::{build_state, get_preset},
 	weights::Weight,
 };
-use frame_system::limits::BlockWeights;
 use pallet_grandpa::AuthorityId as GrandpaId;
 use pallet_revive::impl_runtime_apis_plus_revive;
 use qfp_consensus_spin::{sr25519::AuthorityId as SpinId, SpinAuxData};
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, U256};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-	traits::{Block as BlockT, NumberFor, TransactionExtension},
+	traits::{Block as BlockT, NumberFor},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -46,10 +43,9 @@ use sp_version::RuntimeVersion;
 
 // Local module imports
 use super::{
-	configs::RuntimeBlockWeights, AccountId, Balance, Block, BlockNumber, EthExtra, EthExtraImpl,
-	Executive, Grandpa, InherentDataExt, Nonce, Revive, Runtime, RuntimeCall, RuntimeGenesisConfig,
-	RuntimeOrigin, SessionKeys, Spin, Staking, System, TransactionPayment, UncheckedExtrinsic,
-	VERSION,
+	AccountId, Balance, Block, BlockNumber, EthExtraImpl, Executive, Grandpa, InherentDataExt,
+	Nonce, Runtime, RuntimeCall, RuntimeGenesisConfig, SessionKeys, Spin, Staking, System,
+	TransactionPayment, VERSION,
 };
 
 impl_runtime_apis_plus_revive!(
