@@ -48,9 +48,6 @@ pallet-transaction-payment = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
 
-# QF pallets
-pallet-faucet = { workspace = true }
-
 # primitives
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }

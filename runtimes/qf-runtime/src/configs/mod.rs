@@ -385,18 +385,6 @@ impl pallet_sudo::Config for Runtime {
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-	pub const FaucetAmount: u64 = 2;
-	pub const LockPeriod: u32 = 3600; // ~3h
-}
-
-impl pallet_faucet::Config for Runtime {
-	type Currency = Balances;
-	type FaucetAmount = FaucetAmount;
-	type LockPeriod = LockPeriod;
-	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
-}
-
 // TODO(khssnv): revisit.
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
