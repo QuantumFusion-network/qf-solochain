@@ -218,6 +218,8 @@ fn start_consensus(
 		collator_service,
 		authoring_duration: Duration::from_millis(2000),
 		reinitialize: false,
+		// TODO(khssnv): remove at `polkadot-stable2512` or later?
+		// See also https://github.com/paritytech/polkadot-sdk/issues/6020.
 		max_pov_percentage: None,
 	};
 	let fut = aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _>(
