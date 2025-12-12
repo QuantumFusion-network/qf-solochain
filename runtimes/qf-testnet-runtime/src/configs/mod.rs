@@ -162,7 +162,6 @@ impl pallet_authorship::Config for Runtime {
 }
 
 impl pallet_spin::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = SpinId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<32>;
@@ -401,7 +400,6 @@ parameter_types! {
 }
 
 impl pallet_faucet::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type FaucetAmount = FaucetAmount;
 	type LockPeriod = LockPeriod;
@@ -463,9 +461,7 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_spin_anchoring::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+impl pallet_spin_anchoring::Config for Runtime {}
 
 parameter_types! {
 	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =

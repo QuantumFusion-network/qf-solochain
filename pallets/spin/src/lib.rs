@@ -52,9 +52,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: pallet_timestamp::Config + frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The identifier type for an authority.
 		type AuthorityId: Member
 			+ Parameter
