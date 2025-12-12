@@ -63,8 +63,6 @@ use super::{
 	VERSION,
 };
 
-pub use pallet_claims::{EthereumAddress, StatementKind};
-
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {

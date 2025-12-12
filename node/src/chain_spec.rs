@@ -1,5 +1,5 @@
+use pallet_claims::{EthereumAddress, StatementKind};
 use qf_runtime::{
-	configs::{EthereumAddress, StatementKind},
 	AccountId, Balance, BlockNumber, SessionKeys, Signature, GENESIS_NEXT_ASSET_ID, UNIT,
 	WASM_BINARY,
 };
