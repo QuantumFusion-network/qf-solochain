@@ -67,7 +67,6 @@ substrate-frame-rpc-system = { workspace = true, default-features = true }
 frame-benchmarking-cli = { workspace = true, default-features = true }
 
 # Local Dependencies
-pallet-claims = { workspace = true, default-features = true }
 qf-runtime = { workspace = true }
 [build-dependencies]
 substrate-build-script-utils = { workspace = true, default-features = true }
@@ -75,7 +74,6 @@ substrate-build-script-utils = { workspace = true, default-features = true }
 [features]
 default = ["std"]
 std = [
-	"pallet-claims/std",
 	"pallet-staking/std",
 	"qf-runtime/std",
 ]
@@ -83,7 +81,6 @@ std = [
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-claims/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"qf-runtime/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
@@ -93,7 +90,6 @@ runtime-benchmarks = [
 # in the near future.
 try-runtime = [
 	"frame-system/try-runtime",
-	"pallet-claims/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"qf-runtime/try-runtime",

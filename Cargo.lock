@@ -13065,7 +13065,6 @@ dependencies = [
  "frame-system",
  "futures",
  "jsonrpsee",
- "pallet-claims",
  "pallet-staking",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
