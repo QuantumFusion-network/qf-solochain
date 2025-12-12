@@ -165,21 +165,6 @@ fn testnet_genesis(
 		"vesting": {
 			"vesting": Vec::<(AccountId, BlockNumber, BlockNumber, Balance)>::new(),
 		},
-		"claims": {
-			"claims": Vec::<(EthereumAddress, Balance, Option<AccountId>, Option<StatementKind>)>::from([(
-					EthereumAddress([0xe2, 0xcf, 0x7b, 0xec, 0xc8, 0x47, 0xd1, 0x1b, 0x35, 0xb7, 0x1d, 0x20, 0x5b, 0x64, 0x6c, 0xf8, 0xd0, 0xbc, 0xd6, 0x37]),
-					100_000_000_000_000_000_000,
-					None,
-					None
-			)]),
-			// "vesting": Vec::<(EthereumAddress, (Balance, Balance, BlockNumber))>::from([(
-			// 	EthereumAddress([0xe2, 0xcf, 0x7b, 0xec, 0xc8, 0x47, 0xd1, 0x1b, 0x35, 0xb7, 0x1d, 0x20, 0x5b, 0x64, 0x6c, 0xf8, 0xd0, 0xbc, 0xd6, 0x37]),
-			// 	(
-			// 		100_000_000_000_000_000_000, // Locked amount
-			// 		100_000_000_000_000_000_000, // Per block Unlocking
-			// 		600 // Unlocking BlockNumber
-			// 	))]),
-		},
 	})
 }
 
