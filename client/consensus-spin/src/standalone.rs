@@ -19,7 +19,7 @@ use sp_consensus_slots::Slot;
 use sp_core::crypto::{ByteArray, Pair};
 use sp_keystore::KeystorePtr;
 use sp_runtime::{
-	traits::{Block as BlockT, Header, NumberFor, Zero},
+	traits::{Block as BlockT, Header, NumberFor, SaturatedConversion, Zero},
 	DigestItem,
 };
 
@@ -37,7 +37,7 @@ where
 	A: Codec,
 	B: BlockT,
 	C: ProvideRuntimeApi<B> + UsageProvider<B>,
-	C::Api: SpinApi<B, A>,
+	C::Api: SpinApi<B, A, NumberFor<B>>,
 {
 	slot_duration_at(client, client.usage_info().chain.best_hash)
 }
@@ -49,7 +49,7 @@ where
 	A: Codec,
 	B: BlockT,
 	C: ProvideRuntimeApi<B>,
-	C::Api: SpinApi<B, A>,
+	C::Api: SpinApi<B, A, NumberFor<B>>,
 {
 	client.runtime_api().slot_duration(block_hash).map_err(|err| err.into())
 }
@@ -57,19 +57,19 @@ where
 /// Get the slot author for given block along with authorities.
 ///
 /// Session increment is assumed to be done by the runtime
-pub fn slot_author<P: Pair>(
+pub fn slot_author<B: BlockT, P: Pair>(
 	slot: Slot,
-	session_length: SessionLength,
+	session_length: SessionLength<NumberFor<B>>,
 	authorities: &[AuthorityId<P>],
 ) -> Option<&AuthorityId<P>> {
 	if authorities.is_empty() {
 		return None;
 	}
-	assert!(session_length != 0, "session_length can not be zero; qed");
+	assert!(!session_length.is_zero(), "session_length can not be zero; qed");
 
-	let session_idx = *slot / session_length as u64;
+	let session_idx = (*slot).saturated_into::<u64>() / session_length.saturated_into::<u64>();
 
-	let idx = session_idx as u64 % (authorities.len() as u64);
+	let idx = session_idx % (authorities.len() as u64);
 	assert!(
 		idx <= usize::MAX as u64,
 		"It is impossible to have a vector with length beyond the address space; qed",
@@ -86,13 +86,13 @@ pub fn slot_author<P: Pair>(
 ///
 /// This returns `None` if the slot author is not locally controlled, and `Some`
 /// if it is, with the public key of the slot author.
-pub async fn claim_slot<P: Pair>(
+pub async fn claim_slot<B: BlockT, P: Pair>(
 	slot: Slot,
-	aux_data: &SpinAuxData<AuthorityId<P>>,
+	aux_data: &SpinAuxData<AuthorityId<P>, NumberFor<B>>,
 	keystore: &KeystorePtr,
 ) -> Option<P::Public> {
 	let (authorities, session_length) = aux_data;
-	let expected_author = slot_author::<P>(slot, *session_length, authorities);
+	let expected_author = slot_author::<B, P>(slot, *session_length, authorities);
 	expected_author.and_then(|p| {
 		// TODO: add SPIN key type
 		if keystore.has_keys(&[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)]) {
@@ -198,12 +198,12 @@ pub fn fetch_authorities_with_compatibility_mode<A, B, C>(
 	parent_hash: B::Hash,
 	context_block_number: NumberFor<B>,
 	compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<SpinAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A, NumberFor<B>>, ConsensusError>
 where
 	A: Codec + Debug,
 	B: BlockT,
 	C: ProvideRuntimeApi<B>,
-	C::Api: SpinApi<B, A>,
+	C::Api: SpinApi<B, A, NumberFor<B>>,
 {
 	let runtime_api = client.runtime_api();
 
@@ -237,12 +237,12 @@ where
 pub fn fetch_aux_data<A, B, C>(
 	client: &C,
 	parent_hash: B::Hash,
-) -> Result<SpinAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A, NumberFor<B>>, ConsensusError>
 where
 	A: Codec + Debug,
 	B: BlockT,
 	C: ProvideRuntimeApi<B>,
-	C::Api: SpinApi<B, A>,
+	C::Api: SpinApi<B, A, NumberFor<B>>,
 {
 	client
 		.runtime_api()
@@ -291,7 +291,7 @@ pub enum SealVerificationError<Header> {
 pub fn check_header_slot_and_seal<B: BlockT, P: Pair>(
 	slot_now: Slot,
 	mut header: B::Header,
-	aux_data: &SpinAuxData<AuthorityId<P>>,
+	aux_data: &SpinAuxData<AuthorityId<P>, NumberFor<B>>,
 ) -> Result<(B::Header, Slot, DigestItem), SealVerificationError<B::Header>>
 where
 	P::Signature: Codec,
@@ -311,7 +311,7 @@ where
 	} else {
 		// check the signature is valid under the expected authority and
 		// chain state.
-		let expected_author = slot_author::<P>(slot, *session_length, &authorities)
+		let expected_author = slot_author::<B, P>(slot, *session_length, &authorities)
 			.ok_or(SealVerificationError::SlotAuthorNotFound)?;
 
 		let pre_hash = header.hash();

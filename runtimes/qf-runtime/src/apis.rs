@@ -118,12 +118,12 @@ impl_runtime_apis_plus_revive!(
 		}
 	}
 
-	impl qfp_consensus_spin::SpinApi<Block, SpinId> for Runtime {
+	impl qfp_consensus_spin::SpinApi<Block, SpinId, NumberFor<Block>> for Runtime {
 		fn slot_duration() -> qfp_consensus_spin::SlotDuration {
 			qfp_consensus_spin::SlotDuration::from_millis(Spin::slot_duration())
 		}
 
-		fn aux_data() -> SpinAuxData<SpinId> {
+		fn aux_data() -> SpinAuxData<SpinId, NumberFor<Block>> {
 			Spin::aux_data()
 		}
 	}
