@@ -233,52 +233,49 @@ mod runtime {
 	)]
 	pub struct Runtime;
 
+	// Basic
 	#[runtime::pallet_index(0)]
 	pub type System = frame_system;
-
 	#[runtime::pallet_index(1)]
 	pub type Timestamp = pallet_timestamp;
-
-	/// Aura was used at index 2
-	#[runtime::pallet_index(12)]
-	pub type Spin = pallet_spin;
-
-	#[runtime::pallet_index(3)]
-	pub type Grandpa = pallet_grandpa;
-
-	#[runtime::pallet_index(4)]
-	pub type Balances = pallet_balances;
-
-	#[runtime::pallet_index(5)]
-	pub type TransactionPayment = pallet_transaction_payment;
-
-	#[runtime::pallet_index(6)]
-	pub type Sudo = pallet_sudo;
-
-	#[runtime::pallet_index(10)]
-	pub type Staking = pallet_staking;
-
-	#[runtime::pallet_index(11)]
-	pub type Session = pallet_session;
-
-	#[runtime::pallet_index(13)]
-	pub type Authorship = pallet_authorship;
-
-	#[runtime::pallet_index(14)]
-	pub type Revive = pallet_revive;
-
-	#[runtime::pallet_index(15)]
-	pub type Assets = pallet_assets;
-
-	#[runtime::pallet_index(16)]
+	#[runtime::pallet_index(2)]
 	pub type Utility = pallet_utility;
-
-	#[runtime::pallet_index(17)]
-	pub type SpinAnchoring = pallet_spin_anchoring;
-
-	#[runtime::pallet_index(18)]
+	#[runtime::pallet_index(3)]
 	pub type Multisig = pallet_multisig;
 
-	#[runtime::pallet_index(19)]
+	// Monetary
+	#[runtime::pallet_index(10)]
+	pub type Balances = pallet_balances;
+	#[runtime::pallet_index(11)]
+	pub type TransactionPayment = pallet_transaction_payment;
+	#[runtime::pallet_index(12)]
 	pub type Vesting = pallet_vesting;
+
+	// Consensus
+	#[runtime::pallet_index(20)]
+	pub type Authorship = pallet_authorship;
+	#[runtime::pallet_index(21)]
+	pub type Session = pallet_session;
+	#[runtime::pallet_index(22)]
+	pub type Grandpa = pallet_grandpa;
+	#[runtime::pallet_index(23)]
+	pub type Spin = pallet_spin;
+	#[runtime::pallet_index(24)]
+	pub type SpinAnchoring = pallet_spin_anchoring;
+
+	// Staking
+	#[runtime::pallet_index(40)]
+	pub type Staking = pallet_staking;
+
+	// Governance
+	#[runtime::pallet_index(51)]
+	pub type Sudo = pallet_sudo;
+
+	// Smart contracts
+	#[runtime::pallet_index(70)]
+	pub type Revive = pallet_revive;
+
+	// Assets
+	#[runtime::pallet_index(80)]
+	pub type Assets = pallet_assets;
 }
