@@ -140,7 +140,7 @@ pub type Nonce = u32;
 pub type Hash = sp_core::H256;
 
 /// An index to a block.
-pub type BlockNumber = u32;
+pub type BlockNumber = u64;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
