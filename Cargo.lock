@@ -9166,20 +9166,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-faucet"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-glutton"
 version = "29.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk.git?tag=polkadot-stable2509-2#7304752b47858f2cd601b35d0eb734ad4ccbbc48"
@@ -13147,7 +13133,6 @@ dependencies = [
  "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
- "pallet-faucet",
  "pallet-grandpa",
  "pallet-multisig",
  "pallet-revive",
