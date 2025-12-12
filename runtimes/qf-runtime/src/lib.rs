@@ -255,9 +255,6 @@ mod runtime {
 	#[runtime::pallet_index(6)]
 	pub type Sudo = pallet_sudo;
 
-	#[runtime::pallet_index(9)]
-	pub type Faucet = pallet_faucet;
-
 	#[runtime::pallet_index(10)]
 	pub type Staking = pallet_staking;
 

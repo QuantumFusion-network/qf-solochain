@@ -64,7 +64,6 @@ impl DisabledValidators for MockDisabledValidators {
 
 pub(super) const DEFAULT_SESSION_LENGTH: u32 = 4;
 impl pallet_spin::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = AuthorityId;
 	type DisabledValidators = MockDisabledValidators;
 	type MaxAuthorities = ConstU32<10>;
