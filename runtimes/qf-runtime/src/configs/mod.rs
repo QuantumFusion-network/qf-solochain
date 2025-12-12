@@ -349,7 +349,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Prefix: &'static [u8] = b"Pay Qf token to the qf network account:";
+	pub const Prefix: &'static [u8] = b"Pay QF token to the QF Network account:";
 }
 
 impl pallet_claims::Config for Runtime {
