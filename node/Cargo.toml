@@ -67,11 +67,8 @@ substrate-frame-rpc-system = { workspace = true, default-features = true }
 frame-benchmarking-cli = { workspace = true, default-features = true }
 
 # Local Dependencies
-qf-runtime = { workspace = true }
-
-# Polkadot claim app
 pallet-claims = { workspace = true, default-features = true }
-
+qf-runtime = { workspace = true }
 [build-dependencies]
 substrate-build-script-utils = { workspace = true, default-features = true }
 
