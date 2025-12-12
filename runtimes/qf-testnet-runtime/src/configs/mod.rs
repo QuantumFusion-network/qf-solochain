@@ -358,18 +358,6 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Prefix: &'static [u8] = b"Pay Qf token to the qf network account:";
-}
-
-impl pallet_claims::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type VestingSchedule = Vesting;
-	type Prefix = Prefix;
-	type MoveClaimOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
-}
-
-parameter_types! {
 	pub const DepositBase: Balance = deposit(1, 88);
 	pub const DepositFactor: Balance = deposit(0, 32);
 	pub const MaxSignatories: u32 = 100;
