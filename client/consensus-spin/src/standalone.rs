@@ -67,7 +67,7 @@ pub fn slot_author<B: BlockT, P: Pair>(
 	}
 	assert!(!session_length.is_zero(), "session_length can not be zero; qed");
 
-	let session_idx = (*slot).saturated_into::<u64>() / session_length.saturated_into::<u64>();
+	let session_idx = *slot / session_length.saturated_into::<u64>();
 
 	let idx = session_idx % (authorities.len() as u64);
 	assert!(
