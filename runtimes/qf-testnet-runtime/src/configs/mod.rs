@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{deposit, Vesting, SESSION_LENGTH};
+use crate::{deposit, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
