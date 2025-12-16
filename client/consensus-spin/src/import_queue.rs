@@ -42,7 +42,7 @@ fn check_header<C, B: BlockT, P: Pair>(
 	slot_now: Slot,
 	header: B::Header,
 	hash: B::Hash,
-	aux_data: &SpinAuxData<AuthorityId<P>>,
+	aux_data: &SpinAuxData<AuthorityId<P>, NumberFor<B>>,
 	check_for_equivocation: CheckForEquivocation,
 ) -> Result<CheckedHeader<B::Header, (Slot, DigestItem)>, Error<B>>
 where
@@ -57,7 +57,7 @@ where
 		Ok((header, slot, seal)) => {
 			let (authorities, session_index) = aux_data;
 			let expected_author =
-				crate::standalone::slot_author::<P>(slot, *session_index, &authorities);
+				crate::standalone::slot_author::<B, P>(slot, *session_index, &authorities);
 			let should_equiv_check = check_for_equivocation.check_for_equivocation();
 			if let (true, Some(expected)) = (should_equiv_check, expected_author) {
 				if let Some(equivocation_proof) =
@@ -154,7 +154,7 @@ where
 impl<B: BlockT, C, P, CIDP> Verifier<B> for SpinVerifier<C, P, CIDP, NumberFor<B>>
 where
 	C: ProvideRuntimeApi<B> + Send + Sync + sc_client_api::backend::AuxStore,
-	C::Api: BlockBuilderApi<B> + SpinApi<B, AuthorityId<P>> + ApiExt<B>,
+	C::Api: BlockBuilderApi<B> + SpinApi<B, AuthorityId<P>, NumberFor<B>> + ApiExt<B>,
 	P: Pair,
 	P::Public: Codec + Debug,
 	P::Signature: Codec,
@@ -341,7 +341,8 @@ pub fn import_queue<P, Block, I, C, S, CIDP>(
 ) -> Result<DefaultImportQueue<Block>, sp_consensus::Error>
 where
 	Block: BlockT,
-	C::Api: BlockBuilderApi<Block> + SpinApi<Block, AuthorityId<P>> + ApiExt<Block>,
+	C::Api:
+		BlockBuilderApi<Block> + SpinApi<Block, AuthorityId<P>, NumberFor<Block>> + ApiExt<Block>,
 	C: 'static
 		+ ProvideRuntimeApi<Block>
 		+ BlockOf
