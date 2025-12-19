@@ -11,32 +11,20 @@ on:
         default: 'main'
 
 jobs:
-  build_docker:
-    name: Build and Publish Docker Image
+  build_container:
+    name: Build and Publish Container Image
     runs-on: [qf-runner-pool]
+    container:
+      image: quay.io/buildah/stable
+      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           ref: ${{inputs.ref}}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Tag Docker Image
-        env:
-          DOCKER_BUILDKIT: 1
+      - name: Build and Push
         run: |
-          docker build --no-cache -f docker/Dockerfile.x86_64_testing -t qf-solochain-complete:${{ github.sha }} .
-          docker tag qf-solochain-complete:${{ github.sha }} theqfnetwork/qf-solochain-complete:${{ github.sha }}
-
-      - name: Push Docker Image to Docker Hub (signed)
-        env:
-          DOCKER_CONTENT_TRUST: "1"
-          DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DCT_REPO_PASSPHRASE }}
-        run: |
-          docker push theqfnetwork/qf-solochain-complete:${{ github.sha }}
+          buildah build -f docker/Dockerfile.x86_64_testing -t qf-solochain-complete:${{ github.sha }} .
+          buildah login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }} docker.io
+          buildah push qf-solochain-complete:${{ github.sha }} docker://docker.io/theqfnetwork/qf-solochain-complete:${{ github.sha }}
