@@ -250,6 +250,8 @@ mod runtime {
 	pub type TransactionPayment = pallet_transaction_payment;
 	#[runtime::pallet_index(12)]
 	pub type Vesting = pallet_vesting;
+	#[runtime::pallet_index(13)]
+	pub type Claims = pallet_claims;
 
 	// Consensus
 	#[runtime::pallet_index(20)]

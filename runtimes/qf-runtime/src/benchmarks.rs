@@ -33,4 +33,5 @@ frame_benchmarking::define_benchmarks!(
 	[pallet_timestamp, Timestamp]
 	[pallet_utility, Utility]
 	[pallet_vesting, Vesting]
+	[pallet_claims, Claims]
 );

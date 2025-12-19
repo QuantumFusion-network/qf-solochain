@@ -50,7 +50,7 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 
-use crate::{deposit, SESSION_LENGTH};
+use crate::{deposit, Vesting, SESSION_LENGTH};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
@@ -345,6 +345,18 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type DoneSlashHandler = ();
+}
+
+parameter_types! {
+	pub const Prefix: &'static [u8] = b"Pay QF token to the QF Network account:";
+}
+
+impl pallet_claims::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+	type Prefix = Prefix;
+	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
 
 parameter_types! {

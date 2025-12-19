@@ -8823,6 +8823,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-claims"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-balances",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-collator-selection"
 version = "24.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk.git?tag=polkadot-stable2509-2#7304752b47858f2cd601b35d0eb734ad4ccbbc48"
@@ -13133,6 +13154,7 @@ dependencies = [
  "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-claims",
  "pallet-grandpa",
  "pallet-multisig",
  "pallet-revive",

@@ -87,6 +87,9 @@ frame-system-benchmarking = { optional = true, workspace = true }
 pallet-spin-anchoring = { workspace = true }
 pallet-spin = { workspace = true }
 
+# Polkadot Claim app
+pallet-claims = { workspace = true }
+
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
 
@@ -109,6 +112,7 @@ std = [
 	"pallet-assets/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
+	"pallet-claims/std",
 	"pallet-grandpa/std",
 	"pallet-multisig/std",
 	"pallet-revive/std",
@@ -149,6 +153,7 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
+	"pallet-claims/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-revive/runtime-benchmarks",
@@ -169,6 +174,7 @@ try-runtime = [
 	"pallet-assets/try-runtime",
 	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
+	"pallet-claims/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-revive/try-runtime",
