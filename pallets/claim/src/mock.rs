@@ -23,11 +23,19 @@ use secp_utils::*;
 // The testing primitives are very useful for avoiding having to work with signatures
 // or public keys. `u64` is used as the `AccountId` and no `Signature`s are required.
 use crate as claims;
-use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::WithdrawReasons};
-use pallet_balances;
-use sp_runtime::{traits::Identity, BuildStorage};
+use frame_support::{
+	derive_impl, ord_parameter_types, parameter_types,
+	traits::{
+		fungible::{Inspect, Mutate},
+		tokens::{Fortitude, Precision, Preservation},
+		Imbalance, WithdrawReasons,
+	},
+};
+use pallet_balances::{self, PositiveImbalance};
+use sp_runtime::{traits::Identity, BuildStorage, DispatchError, TokenError};
 
 type Block = frame_system::mocking::MockBlock<Test>;
+const CHARLIE: u64 = 0;
 
 frame_support::construct_runtime!(
 	pub enum Test
@@ -78,11 +86,32 @@ ord_parameter_types! {
 	pub const Six: u64 = 6;
 }
 
+pub struct TokenImbalance;
+impl TokenImbalanceTrait<PositiveImbalance<Test>> for TokenImbalance {
+	fn on_unbalanced(amount: PositiveImbalance<Test>) -> sp_runtime::DispatchResult {
+		if Balances::reducible_balance(&CHARLIE, Preservation::Expendable, Fortitude::Force) <
+			amount.peek()
+		{
+			return Err(DispatchError::Token(TokenError::FundsUnavailable));
+		}
+		Balances::burn_from(
+			&CHARLIE,
+			amount.peek(),
+			Preservation::Expendable,
+			Precision::Exact,
+			Fortitude::Force,
+		)
+		.unwrap();
+		Ok(())
+	}
+}
+
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = frame_system::EnsureSignedBy<Six, u64>;
+	type TokenImbalance = TokenImbalance;
 	type WeightInfo = TestWeightInfo;
 }
 
@@ -101,23 +130,38 @@ pub fn eve() -> libsecp256k1::SecretKey {
 pub fn frank() -> libsecp256k1::SecretKey {
 	libsecp256k1::SecretKey::parse(&keccak_256(b"Frank")).unwrap()
 }
+pub fn charlie() -> libsecp256k1::SecretKey {
+	libsecp256k1::SecretKey::parse(&keccak_256(b"Charlie")).unwrap()
+}
+pub fn gave() -> libsecp256k1::SecretKey {
+	libsecp256k1::SecretKey::parse(&keccak_256(b"Gave")).unwrap()
+}
+pub fn mark() -> libsecp256k1::SecretKey {
+	libsecp256k1::SecretKey::parse(&keccak_256(b"Mark")).unwrap()
+}
 
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	// We use default for brevity, but you can configure as desired if needed.
-	pallet_balances::GenesisConfig::<Test>::default()
-		.assimilate_storage(&mut t)
-		.unwrap();
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(CHARLIE, 566u64)],
+		dev_accounts: None,
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 	claims::GenesisConfig::<Test> {
 		claims: vec![
 			(eth(&alice()), 100, None, None),
 			(eth(&dave()), 200, None, Some(StatementKind::Regular)),
 			(eth(&eve()), 300, Some(42), Some(StatementKind::Saft)),
 			(eth(&frank()), 400, Some(43), None),
+			(eth(&charlie()), 600, None, None),
+			(eth(&gave()), 66, None, None),
+			(eth(&mark()), 566, None, None),
 		],
-		vesting: vec![(eth(&alice()), (50, 10, 1))],
+		vesting: vec![(eth(&alice()), (50, 10, 1)), (eth(&gave()), (30, 10, 1))],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -125,5 +169,5 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub fn total_claims() -> u64 {
-	100 + 200 + 300 + 400
+	100 + 66 + 200 + 300 + 400 + 600 + 566
 }

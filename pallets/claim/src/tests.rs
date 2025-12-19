@@ -665,3 +665,61 @@ fn validate_unsigned_works() {
 		);
 	});
 }
+
+#[test]
+fn claim_with_no_total_issue_changing() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Balances::free_balance(42), 0);
+		assert_eq!(Balances::free_balance(0), 566);
+		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_ok!(claims::mock::Claims::claim(
+			RuntimeOrigin::none(),
+			42,
+			sig::<Test>(&gave(), &42u64.encode(), &[][..])
+		));
+		assert_eq!(Balances::free_balance(&42), 66);
+		assert_eq!(Balances::free_balance(&0), 500);
+		assert_eq!(claims::mock::Vesting::vesting_balance(&42), Some(30));
+		assert_eq!(claims::Total::<Test>::get(), total_claims() - 66);
+		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
+	});
+}
+
+#[test]
+fn claim_with_no_total_issue_changing_with_exact_amount() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Balances::free_balance(42), 0);
+		assert_eq!(Balances::free_balance(0), 566);
+		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_ok!(claims::mock::Claims::claim(
+			RuntimeOrigin::none(),
+			42,
+			sig::<Test>(&mark(), &42u64.encode(), &[][..])
+		));
+		assert_eq!(Balances::free_balance(&42), 566);
+		assert_eq!(Balances::free_balance(&0), 0);
+		assert_eq!(claims::Total::<Test>::get(), total_claims() - 566);
+		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
+	});
+}
+
+#[test]
+fn claim_with_no_total_issue_changing_claims_more_then_slashing_account_has() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Balances::free_balance(42), 0);
+		assert_eq!(Balances::free_balance(0), 566);
+		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_noop!(
+			claims::mock::Claims::claim(
+				RuntimeOrigin::none(),
+				42,
+				sig::<Test>(&charlie(), &42u64.encode(), &[][..])
+			),
+			TokenError::FundsUnavailable
+		);
+		assert_eq!(Balances::free_balance(&42), 0);
+		assert_eq!(Balances::free_balance(&0), 566);
+		assert_eq!(claims::Total::<Test>::get(), total_claims());
+		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
+	});
+}

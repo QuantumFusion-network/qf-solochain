@@ -28,25 +28,30 @@ use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, Se
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
+		fungible::{Inspect, Mutate},
+		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
-		Nothing, VariantCountOf, WithdrawReasons,
+		Imbalance, Nothing, VariantCountOf, WithdrawReasons,
 	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
 		IdentityFee, Weight,
 	},
+	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
+use pallet_balances::PositiveImbalance;
+use pallet_claims::TokenImbalanceTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
 	curve::PiecewiseLinear,
-	traits::{ConvertInto, One, OpaqueKeys},
-	Perbill,
+	traits::{AccountIdConversion, ConvertInto, One, OpaqueKeys},
+	DispatchError, Perbill, TokenError,
 };
 use sp_version::RuntimeVersion;
 
@@ -349,6 +354,30 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
 	pub const Prefix: &'static [u8] = b"Pay QF token to the QF Network account:";
+	pub const ClaimPalletAccountId: PalletId = PalletId(*b"claim/pt");
+}
+
+pub struct TokenImbalance;
+impl TokenImbalanceTrait<PositiveImbalance<Runtime>> for TokenImbalance {
+	fn on_unbalanced(amount: PositiveImbalance<Runtime>) -> sp_runtime::DispatchResult {
+		if Balances::reducible_balance(
+			&ClaimPalletAccountId::get().into_account_truncating(),
+			Preservation::Expendable,
+			Fortitude::Force,
+		) < amount.peek()
+		{
+			return Err(DispatchError::Token(TokenError::FundsUnavailable));
+		}
+		Balances::burn_from(
+			&ClaimPalletAccountId::get().into_account_truncating(),
+			amount.peek(),
+			Preservation::Expendable,
+			Precision::Exact,
+			Fortitude::Force,
+		)
+		.unwrap();
+		Ok(())
+	}
 }
 
 impl pallet_claims::Config for Runtime {
@@ -356,6 +385,7 @@ impl pallet_claims::Config for Runtime {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type TokenImbalance = TokenImbalance;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
 
