@@ -273,6 +273,7 @@ mod runtime {
 	)]
 	pub struct Runtime;
 
+	// Basic
 	#[runtime::pallet_index(0)]
 	pub type System = frame_system;
 	#[runtime::pallet_index(1)]
@@ -284,7 +285,7 @@ mod runtime {
 	#[runtime::pallet_index(4)]
 	pub type WeightReclaim = cumulus_pallet_weight_reclaim;
 
-	// Monetary stuff.
+	// Monetary
 	#[runtime::pallet_index(10)]
 	pub type Balances = pallet_balances;
 	#[runtime::pallet_index(11)]
@@ -294,7 +295,7 @@ mod runtime {
 	#[runtime::pallet_index(15)]
 	pub type Sudo = pallet_sudo;
 
-	// Collator support. The order of these 4 are important and shall not change.
+	// Collator support. The order of these 4 are important and shall not change
 	#[runtime::pallet_index(20)]
 	pub type Authorship = pallet_authorship;
 	#[runtime::pallet_index(21)]
@@ -306,14 +307,14 @@ mod runtime {
 	#[runtime::pallet_index(24)]
 	pub type AuraExt = cumulus_pallet_aura_ext;
 
-	// XCM helpers.
-	#[runtime::pallet_index(30)]
+	// XCM helpers
+	#[runtime::pallet_index(40)]
 	pub type XcmpQueue = cumulus_pallet_xcmp_queue;
-	#[runtime::pallet_index(31)]
+	#[runtime::pallet_index(41)]
 	pub type PolkadotXcm = pallet_xcm;
-	#[runtime::pallet_index(32)]
+	#[runtime::pallet_index(42)]
 	pub type CumulusXcm = cumulus_pallet_xcm;
-	#[runtime::pallet_index(33)]
+	#[runtime::pallet_index(43)]
 	pub type MessageQueue = pallet_message_queue;
 
 	// SPIN
