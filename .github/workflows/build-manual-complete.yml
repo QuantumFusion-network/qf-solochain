@@ -16,20 +16,19 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           ref: ${{inputs.ref}}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Tag Docker Image
         run: |
-          cd docker
-          docker build --build-arg QF_REF=${{ inputs.ref }} --no-cache -f Dockerfile.x86_64_complete -t qf-solochain-complete:${{ github.sha }} .
+          docker build --no-cache -f docker/Dockerfile.x86_64_testing -t qf-solochain-complete:${{ github.sha }} .
           docker tag qf-solochain-complete:${{ github.sha }} theqfnetwork/qf-solochain-complete:${{ github.sha }}
 
       - name: Push Docker Image to Docker Hub (signed)

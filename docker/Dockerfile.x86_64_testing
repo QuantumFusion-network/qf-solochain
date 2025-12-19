@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1
+
+# 1. Base Stage: Setup Rust and common tools
+
+FROM rust:1.84-slim-bookworm AS base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang \
+    libclang-dev \
+    protobuf-compiler \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cargo install cargo-chef && \
+    rustup target add wasm32-unknown-unknown
+
+WORKDIR /opt/qf-solochain
+
+# 2. Planner Stage: Create the recipe to speed up builds
+
+FROM base AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# 3. Builder Stage: Compile dependencies & binary
+
+COPY --from=planner /opt/qf-solochain/recipe.json recipe.json
+
+# Build dependencies only (Cached Layer)
+# If Cargo.lock hasn't changed, this step finishes instantly
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY . .
+
+# Build the node
+# --locked ensures strictly reproducible builds based on Cargo.lock
+RUN cargo build --release --locked --bin qf-node --bin qf-parachain-node
+
+
+# 4. Runtime Stage
+
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    # Added for debugging:
+    net-tools iputils-ping nano less dnsutils \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/qf-solochain
+
+COPY --from=builder /opt/qf-solochain/target/release/qf-node /usr/local/bin/qf-node
+COPY --from=builder /opt/qf-solochain/target/release/qf-parachain-node /usr/local/bin/qf-parachain-node
+
+LABEL org.opencontainers.image.authors="QF Network <admin@qfnetwork.xyz>"
+LABEL org.opencontainers.image.source="https://github.com/QuantumFusion-network/qf-solochain"
+LABEL org.opencontainers.image.revision="${QF_REF}"
+
+# No ENTRYPOINT or CMD - will be provided by docker-compose
