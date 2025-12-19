@@ -28,8 +28,8 @@ use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, Se
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
-		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Get, Nothing,
-		VariantCountOf, WithdrawReasons,
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
+		Nothing, VariantCountOf, WithdrawReasons,
 	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -167,7 +167,7 @@ impl pallet_spin::Config for Runtime {
 	type MaxAuthorities = ConstU32<32>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
 	type SlotDuration = pallet_spin::MinimumPeriodTimesTwo<Runtime>;
-	type DefaultSessionLength = ConstU32<SESSION_LENGTH>;
+	type DefaultSessionLength = ConstU64<SESSION_LENGTH>;
 }
 
 pub const LEADER_TENURES_PER_SESSION: u32 = 30;
@@ -178,8 +178,7 @@ pub struct SessionPeriodLength<T>(core::marker::PhantomData<T>);
 impl<T: pallet_spin::Config> Get<BlockNumberFor<T>> for SessionPeriodLength<T> {
 	fn get() -> BlockNumberFor<T> {
 		pallet_spin::SessionLength::<T>::get()
-			.saturating_mul(LEADER_TENURES_PER_SESSION)
-			.into()
+			.defensive_saturating_mul(LEADER_TENURES_PER_SESSION.into())
 	}
 }
 
