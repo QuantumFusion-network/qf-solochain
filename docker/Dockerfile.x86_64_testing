@@ -10,9 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     protobuf-compiler \
     build-essential \
     git \
+    pkg-config \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install cargo-chef && \
+RUN cargo install cargo-chef --version 0.1.71 --locked && \
     rustup target add wasm32-unknown-unknown
 
 WORKDIR /opt/qf-solochain
