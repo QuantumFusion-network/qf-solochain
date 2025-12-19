@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and Tag Docker Image
         run: |
-          docker build --no-cache -f docker/Dockerfile.x86_64_testing -t qf-solochain-complete:${{ github.sha }} .
+          docker build --no-cache -f docker/Dockerfile.x86_64_complete -t qf-solochain-complete:${{ github.sha }} .
           docker tag qf-solochain-complete:${{ github.sha }} theqfnetwork/qf-solochain-complete:${{ github.sha }}
 
       - name: Push Docker Image to Docker Hub (signed)
