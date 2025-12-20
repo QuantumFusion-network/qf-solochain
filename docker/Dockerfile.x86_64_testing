@@ -27,6 +27,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # 3. Builder Stage: Compile dependencies & binary
 
+FROM base AS builder
+
 COPY --from=planner /opt/qf-solochain/recipe.json recipe.json
 
 # Build dependencies only (Cached Layer)

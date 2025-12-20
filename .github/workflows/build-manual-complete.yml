@@ -1,6 +1,6 @@
 name: "QF-SOLOCHAIN: Manual Build and Publish Docker"
 
-run-name: Manual Build and Publish Docker - ${{ github.sha }}
+run-name: Manual Build and Publish Docker
 
 on:
   workflow_dispatch:
@@ -13,10 +13,12 @@ on:
 jobs:
   build_container:
     name: Build and Publish Container Image
-    runs-on: [qf-runner-pool]
+    runs-on: qf-runner-pool
+    env:
+      STORAGE_DRIVER: fuse-overlayfs
+#      BUILDAH_ISOLATION: chroot
     container:
       image: quay.io/buildah/stable
-      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
