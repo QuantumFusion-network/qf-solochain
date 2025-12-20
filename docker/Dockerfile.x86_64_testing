@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# 1. Base Stage: Setup Rust and common tools
-
-FROM rust:1.84-slim-bookworm AS base
+FROM rust:1.84-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     clang \
@@ -15,26 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install cargo-chef --version 0.1.71 --locked && \
-    rustup target add wasm32-unknown-unknown
+RUN rustup target add wasm32-unknown-unknown
 
 WORKDIR /opt/qf-solochain
-
-# 2. Planner Stage: Create the recipe to speed up builds
-
-FROM base AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# 3. Builder Stage: Compile dependencies & binary
-
-FROM base AS builder
-
-COPY --from=planner /opt/qf-solochain/recipe.json recipe.json
-
-# Build dependencies only (Cached Layer)
-# If Cargo.lock hasn't changed, this step finishes instantly
-RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
 
@@ -42,10 +23,8 @@ COPY . .
 # --locked ensures strictly reproducible builds based on Cargo.lock
 RUN cargo build --release --locked --bin qf-node --bin qf-parachain-node
 
-
-# 4. Runtime Stage
-
 FROM debian:bookworm-slim AS runtime
+
 ARG QF_REF
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
