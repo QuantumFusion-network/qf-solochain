@@ -1,6 +1,4 @@
-name: "QF-SOLOCHAIN: Manual Build and Publish Docker"
-
-run-name: Manual Build and Publish Docker
+name: Manual Build a Test Version
 
 on:
   workflow_dispatch:
@@ -14,19 +12,34 @@ jobs:
   build_container:
     name: Build and Publish Container Image
     runs-on: qf-runner-pool
-    env:
-      STORAGE_DRIVER: fuse-overlayfs
-#      BUILDAH_ISOLATION: chroot
-    container:
-      image: quay.io/buildah/stable
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           ref: ${{inputs.ref}}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and Push
         run: |
-          buildah build -f docker/Dockerfile.x86_64_testing -t qf-solochain-complete:${{ github.sha }} .
-          buildah login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }} docker.io
-          buildah push qf-solochain-complete:${{ github.sha }} docker://docker.io/theqfnetwork/qf-solochain-complete:${{ github.sha }}
+          IMAGE_TAG="theqfnetwork/qf-solochain-complete:${{ github.sha }}"
+          
+          docker build --no-cache -f docker/Dockerfile.x86_64_testing -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+          
+          # Result
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE_TAG)
+
+          echo "## :white_check_mark: Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`$DIGEST\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Run Command" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker run $DIGEST" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
