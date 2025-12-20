@@ -6,6 +6,7 @@ FROM rust:1.84-slim-bookworm AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     clang \
+    cmake \
     libclang-dev \
     protobuf-compiler \
     build-essential \
@@ -45,6 +46,7 @@ RUN cargo build --release --locked --bin qf-node --bin qf-parachain-node
 # 4. Runtime Stage
 
 FROM debian:bookworm-slim AS runtime
+ARG QF_REF
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \

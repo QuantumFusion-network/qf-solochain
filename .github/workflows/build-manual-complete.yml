@@ -28,7 +28,13 @@ jobs:
         run: |
           IMAGE_TAG="theqfnetwork/qf-solochain-complete:${{ github.sha }}"
           
-          docker build --no-cache -f docker/Dockerfile.x86_64_testing -t $IMAGE_TAG .
+          docker build \
+          --no-cache \
+          --build-arg QF_REF=${{ inputs.ref }} \
+          -f docker/Dockerfile.x86_64_testing \
+          -t $IMAGE_TAG \
+          .
+          
           docker push $IMAGE_TAG
           
           # Result
