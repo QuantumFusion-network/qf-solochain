@@ -41,7 +41,6 @@ impl SubstrateCli for Cli {
 			"" | "local" => Box::new(chain_spec::local_testnet_config()?),
 			"qf-devnet" => Box::new(chain_spec::qf_devnet_config()?),
 			"qf-testnet" => Box::new(chain_spec::qf_testnet_config()?),
-			"qf-mainnet" => Box::new(chain_spec::qf_mainnet_config()?),
 			path =>
 				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 		})
