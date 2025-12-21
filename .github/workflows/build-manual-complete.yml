@@ -50,7 +50,7 @@ jobs:
           build-args: |
             QF_REF=${{ inputs.ref }}
           cache-from: type=registry,ref=ghcr.io/${{ steps.repo.outputs.lowercase }}:build-cache
-          cache-to: type=registry,ref=ghcr.io/${{ steps.repo.outputs.lowercase }}:build-cache,mode=min,compression=zstd
+          cache-to: type=registry,ref=ghcr.io/${{ steps.repo.outputs.lowercase }}:build-cache,mode=max,compression=zstd
 
       - name: Write Summary
         run: |
