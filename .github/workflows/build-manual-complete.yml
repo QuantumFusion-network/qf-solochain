@@ -34,6 +34,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Prepare lowercase repository name
+        id: repo
+        run: |
+          echo "lowercase=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
+
       - name: Build and Push
         id: docker_build
         uses: docker/build-push-action@v6
@@ -44,8 +49,8 @@ jobs:
           tags: theqfnetwork/qf-solochain-complete:${{ github.sha }}
           build-args: |
             QF_REF=${{ inputs.ref }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max,compression=zstd
+          cache-from: type=registry,ref=ghcr.io/${{ steps.repo.outputs.lowercase }}:build-cache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.repo.outputs.lowercase }}:build-cache,mode=max,compression=zstd
 
       - name: Write Summary
         run: |
