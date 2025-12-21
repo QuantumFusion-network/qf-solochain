@@ -12,11 +12,21 @@ jobs:
   build_container:
     name: Build and Publish Container Image
     runs-on: qf-runner-pool
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           ref: ${{inputs.ref}}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -25,21 +35,23 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Push
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.x86_64_testing
+          push: true
+          tags: theqfnetwork/qf-solochain-complete:${{ github.sha }}
+          build-args: |
+            QF_REF=${{ inputs.ref }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max,compression=zstd
+
+      - name: Write Summary
         run: |
           IMAGE_TAG="theqfnetwork/qf-solochain-complete:${{ github.sha }}"
+          DIGEST="${{ steps.docker_build.outputs.digest }}"
           
-          docker build \
-          --no-cache \
-          --build-arg QF_REF=${{ inputs.ref }} \
-          -f docker/Dockerfile.x86_64_testing \
-          -t $IMAGE_TAG \
-          .
-          
-          docker push $IMAGE_TAG
-          
-          # Result
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE_TAG)
-
           echo "## :white_check_mark: Build Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
