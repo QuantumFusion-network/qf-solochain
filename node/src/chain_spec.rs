@@ -1,5 +1,6 @@
 use qf_runtime::{
-	AccountId, Balance, BlockNumber, GENESIS_NEXT_ASSET_ID, SessionKeys, Signature, UNIT, WASM_BINARY, configs::ClaimPalletAccountId
+	configs::ClaimPalletAccountId, AccountId, Balance, BlockNumber, SessionKeys, Signature,
+	GENESIS_NEXT_ASSET_ID, UNIT, WASM_BINARY,
 };
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
