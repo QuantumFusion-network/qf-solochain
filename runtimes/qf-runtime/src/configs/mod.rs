@@ -357,10 +357,13 @@ parameter_types! {
 }
 
 pub struct Compensate;
+
 impl CompensateTrait<Balance> for Compensate {
 	fn burn_from(amount: Balance) -> sp_runtime::DispatchResult {
+		let who = ClaimPalletAccountId::get().into_account_truncating();
+
 		Balances::burn_from(
-			&ClaimPalletAccountId::get().into_account_truncating(),
+			&who,
 			amount,
 			Preservation::Expendable,
 			Precision::Exact,
