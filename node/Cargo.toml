@@ -1,7 +1,7 @@
 [package]
 name = "qf-node"
 description = "QF Network solochain node"
-version = "0.1.22"
+version = "0.1.23"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
