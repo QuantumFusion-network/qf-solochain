@@ -300,7 +300,7 @@ impl pallet_staking::Config for Runtime {
 	/// Limits how many eras of unbonding can exist in flight
 	type MaxControllersInDeprecationBatch = ConstU32<5900>;
 	/// Number of eras to keep in on‐chain history (for rewards, points, exposures, etc.)
-	type HistoryDepth = ConstU32<32>;
+	type HistoryDepth = ConstU32<128>; // 30 minutes per session * 3 sessions per era * 128 eras = 8 days
 	type EventListeners = ();
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
