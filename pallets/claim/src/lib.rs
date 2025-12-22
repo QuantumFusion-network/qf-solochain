@@ -226,7 +226,7 @@ pub mod pallet {
 		type MoveClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// This type provide possibility to make some actions, which depends on positive imbalance
 		/// from minted tokens
-		type TokenImbalance: TokenImbalanceTrait<PositiveImbalanceOf<Self>>; // TODO maybe Negative, will see later
+		type TokenImbalance: TokenImbalanceTrait<PositiveImbalanceOf<Self>>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -599,7 +599,6 @@ impl<T: Config> Pallet<T> {
 		Some(res)
 	}
 
-	// TODO place TokenImbalance here
 	fn process_claim(signer: EthereumAddress, dest: T::AccountId) -> sp_runtime::DispatchResult {
 		let balance_due = Claims::<T>::get(&signer).ok_or(Error::<T>::SignerHasNoClaim)?;
 
