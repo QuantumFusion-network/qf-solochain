@@ -1,12 +1,11 @@
 use qf_runtime::{
-	AccountId, Balance, BlockNumber, SessionKeys, Signature, GENESIS_NEXT_ASSET_ID, UNIT,
-	WASM_BINARY,
+	AccountId, Balance, BlockNumber, GENESIS_NEXT_ASSET_ID, SessionKeys, Signature, UNIT, WASM_BINARY, configs::ClaimPalletAccountId
 };
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -66,6 +65,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+			ClaimPalletAccountId::get().into_account_truncating(),
 		],
 		true,
 	))
@@ -105,6 +105,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+			ClaimPalletAccountId::get().into_account_truncating(),
 		],
 		true,
 	))

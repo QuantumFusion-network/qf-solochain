@@ -26,13 +26,13 @@ use crate as claims;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
 	traits::{
-		fungible::{Inspect, Mutate},
+		fungible::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
 		Imbalance, WithdrawReasons,
 	},
 };
 use pallet_balances::{self, PositiveImbalance};
-use sp_runtime::{traits::Identity, BuildStorage, DispatchError, TokenError};
+use sp_runtime::{traits::Identity, BuildStorage};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 const CHARLIE: u64 = 0;
@@ -86,22 +86,16 @@ ord_parameter_types! {
 	pub const Six: u64 = 6;
 }
 
-pub struct TokenImbalance;
-impl TokenImbalanceTrait<PositiveImbalance<Test>> for TokenImbalance {
+pub struct Compensate;
+impl CompensateTrait<PositiveImbalance<Test>> for Compensate {
 	fn on_unbalanced(amount: PositiveImbalance<Test>) -> sp_runtime::DispatchResult {
-		if Balances::reducible_balance(&CHARLIE, Preservation::Expendable, Fortitude::Force) <
-			amount.peek()
-		{
-			return Err(DispatchError::Token(TokenError::FundsUnavailable));
-		}
 		Balances::burn_from(
 			&CHARLIE,
 			amount.peek(),
 			Preservation::Expendable,
 			Precision::Exact,
 			Fortitude::Force,
-		)
-		.unwrap();
+		)?;
 		Ok(())
 	}
 }
@@ -111,7 +105,7 @@ impl Config for Test {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = frame_system::EnsureSignedBy<Six, u64>;
-	type TokenImbalance = TokenImbalance;
+	type Compensate = Compensate;
 	type WeightInfo = TestWeightInfo;
 }
 

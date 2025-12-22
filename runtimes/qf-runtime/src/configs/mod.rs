@@ -28,7 +28,7 @@ use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, Se
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
-		fungible::{Inspect, Mutate},
+		fungible::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
 		Imbalance, Nothing, VariantCountOf, WithdrawReasons,
@@ -45,13 +45,13 @@ use frame_system::{
 	EnsureRoot, EnsureSigned,
 };
 use pallet_balances::PositiveImbalance;
-use pallet_claims::TokenImbalanceTrait;
+use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
 	curve::PiecewiseLinear,
 	traits::{AccountIdConversion, ConvertInto, One, OpaqueKeys},
-	DispatchError, Perbill, TokenError,
+	Perbill,
 };
 use sp_version::RuntimeVersion;
 
@@ -357,25 +357,16 @@ parameter_types! {
 	pub const ClaimPalletAccountId: PalletId = PalletId(*b"claim/pt");
 }
 
-pub struct TokenImbalance;
-impl TokenImbalanceTrait<PositiveImbalance<Runtime>> for TokenImbalance {
+pub struct Compensate;
+impl CompensateTrait<PositiveImbalance<Runtime>> for Compensate {
 	fn on_unbalanced(amount: PositiveImbalance<Runtime>) -> sp_runtime::DispatchResult {
-		if Balances::reducible_balance(
-			&ClaimPalletAccountId::get().into_account_truncating(),
-			Preservation::Expendable,
-			Fortitude::Force,
-		) < amount.peek()
-		{
-			return Err(DispatchError::Token(TokenError::FundsUnavailable));
-		}
 		Balances::burn_from(
 			&ClaimPalletAccountId::get().into_account_truncating(),
 			amount.peek(),
 			Preservation::Expendable,
 			Precision::Exact,
 			Fortitude::Force,
-		)
-		.unwrap();
+		)?;
 		Ok(())
 	}
 }
@@ -385,7 +376,7 @@ impl pallet_claims::Config for Runtime {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
-	type TokenImbalance = TokenImbalance;
+	type Compensate = Compensate;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
 

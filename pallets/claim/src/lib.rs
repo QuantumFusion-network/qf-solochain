@@ -33,7 +33,7 @@ use frame_support::{
 pub use pallet::*;
 mod traits;
 mod types;
-pub use traits::TokenImbalanceTrait;
+pub use traits::CompensateTrait;
 pub use types::ValidityError;
 //use polkadot_primitives::ValidityError;
 use scale_info::TypeInfo;
@@ -226,7 +226,7 @@ pub mod pallet {
 		type MoveClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// This type provide possibility to make some actions, which depends on positive imbalance
 		/// from minted tokens
-		type TokenImbalance: TokenImbalanceTrait<PositiveImbalanceOf<Self>>;
+		type Compensate: CompensateTrait<PositiveImbalanceOf<Self>>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -612,7 +612,7 @@ impl<T: Config> Pallet<T> {
 
 		// We first need to deposit the balance to ensure that the account exists.
 		let tokens_minted = CurrencyOf::<T>::deposit_creating(&dest, balance_due);
-		T::TokenImbalance::on_unbalanced(tokens_minted)?;
+		T::Compensate::on_unbalanced(tokens_minted)?;
 
 		// Check if this claim should have a vesting schedule.
 		if let Some(vs) = vesting {
