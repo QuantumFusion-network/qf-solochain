@@ -1,11 +1,11 @@
 use sp_runtime::DispatchResult;
 
-pub trait CompensateTrait<Imbalance> {
-	fn on_unbalanced(amount: Imbalance) -> DispatchResult;
+pub trait CompensateTrait<Balance> {
+	fn burn_from(amount: Balance) -> DispatchResult;
 }
 
-impl<Imbalance> CompensateTrait<Imbalance> for () {
-	fn on_unbalanced(_amount: Imbalance) -> DispatchResult {
+impl<Balance> CompensateTrait<Balance> for () {
+	fn burn_from(_amount: Balance) -> DispatchResult {
 		Ok(())
 	}
 }

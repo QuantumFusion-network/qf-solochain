@@ -28,10 +28,10 @@ use frame_support::{
 	traits::{
 		fungible::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
-		Imbalance, WithdrawReasons,
+		WithdrawReasons,
 	},
 };
-use pallet_balances::{self, PositiveImbalance};
+use pallet_balances;
 use sp_runtime::{traits::Identity, BuildStorage};
 
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -87,11 +87,11 @@ ord_parameter_types! {
 }
 
 pub struct Compensate;
-impl CompensateTrait<PositiveImbalance<Test>> for Compensate {
-	fn on_unbalanced(amount: PositiveImbalance<Test>) -> sp_runtime::DispatchResult {
+impl CompensateTrait<u64> for Compensate {
+	fn burn_from(amount: u64) -> sp_runtime::DispatchResult {
 		Balances::burn_from(
 			&CHARLIE,
-			amount.peek(),
+			amount,
 			Preservation::Expendable,
 			Precision::Exact,
 			Fortitude::Force,

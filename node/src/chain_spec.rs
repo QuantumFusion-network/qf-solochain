@@ -66,7 +66,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			ClaimPalletAccountId::get().into_account_truncating(),
 		],
 		true,
 	))
@@ -106,7 +105,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-			ClaimPalletAccountId::get().into_account_truncating(),
 		],
 		true,
 	))
@@ -131,7 +129,7 @@ fn testnet_genesis(
 			"nextAssetId": GENESIS_NEXT_ASSET_ID,
 		},
 		"balances": {
-			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>().push((ClaimPalletAccountId::get().into_account_truncating(), 0)),
 		},
 		"session": {
 			"keys": initial_authorities

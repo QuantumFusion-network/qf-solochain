@@ -31,7 +31,7 @@ use frame_support::{
 		fungible::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
-		Imbalance, Nothing, VariantCountOf, WithdrawReasons,
+		Nothing, VariantCountOf, WithdrawReasons,
 	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -44,7 +44,6 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
-use pallet_balances::PositiveImbalance;
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
@@ -358,11 +357,11 @@ parameter_types! {
 }
 
 pub struct Compensate;
-impl CompensateTrait<PositiveImbalance<Runtime>> for Compensate {
-	fn on_unbalanced(amount: PositiveImbalance<Runtime>) -> sp_runtime::DispatchResult {
+impl CompensateTrait<Balance> for Compensate {
+	fn burn_from(amount: Balance) -> sp_runtime::DispatchResult {
 		Balances::burn_from(
 			&ClaimPalletAccountId::get().into_account_truncating(),
-			amount.peek(),
+			amount,
 			Preservation::Expendable,
 			Precision::Exact,
 			Fortitude::Force,
