@@ -221,6 +221,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type Prefix: Get<&'static [u8]>;
 		type MoveClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+		type MintClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// This type provide possibility to make some actions, which depends on positive imbalance
 		/// from minted tokens
 		type Compensate: CompensateTrait<BalanceOf<Self>>;
@@ -385,7 +386,7 @@ pub mod pallet {
 			vesting_schedule: Option<(BalanceOf<T>, BalanceOf<T>, BlockNumberFor<T>)>,
 			statement: Option<StatementKind>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MintClaimOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
 
 			Total::<T>::mutate(|t| *t += value);
 			Claims::<T>::insert(who, value);

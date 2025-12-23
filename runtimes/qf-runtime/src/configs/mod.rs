@@ -378,6 +378,7 @@ impl pallet_claims::Config for Runtime {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type MintClaimOrigin = EnsureRoot<AccountId>; // TODO (artemiksion): Change origin
 	type Compensate = Compensate;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
