@@ -28,6 +28,8 @@ use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, Se
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
+		fungible::Mutate,
+		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
 		Nothing, VariantCountOf, WithdrawReasons,
 	},
@@ -35,17 +37,19 @@ use frame_support::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
 		IdentityFee, Weight,
 	},
+	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
+use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
 	curve::PiecewiseLinear,
-	traits::{ConvertInto, One, OpaqueKeys},
+	traits::{AccountIdConversion, ConvertInto, One, OpaqueKeys},
 	Perbill,
 };
 use sp_version::RuntimeVersion;
@@ -349,6 +353,24 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
 	pub const Prefix: &'static [u8] = b"Pay QF token to the QF Network account:";
+	pub const ClaimPalletAccountId: PalletId = PalletId(*b"claim/pt");
+}
+
+pub struct Compensate;
+
+impl CompensateTrait<Balance> for Compensate {
+	fn burn_from(amount: Balance) -> sp_runtime::DispatchResult {
+		let who = ClaimPalletAccountId::get().into_account_truncating();
+
+		Balances::burn_from(
+			&who,
+			amount,
+			Preservation::Expendable,
+			Precision::Exact,
+			Fortitude::Force,
+		)?;
+		Ok(())
+	}
 }
 
 impl pallet_claims::Config for Runtime {
@@ -356,6 +378,7 @@ impl pallet_claims::Config for Runtime {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type Compensate = Compensate;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
 

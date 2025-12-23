@@ -1,12 +1,12 @@
 use qf_runtime::{
-	AccountId, Balance, BlockNumber, SessionKeys, Signature, GENESIS_NEXT_ASSET_ID, UNIT,
-	WASM_BINARY,
+	configs::ClaimPalletAccountId, AccountId, Balance, BlockNumber, SessionKeys, Signature,
+	GENESIS_NEXT_ASSET_ID, UNIT, WASM_BINARY,
 };
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -129,7 +129,7 @@ fn testnet_genesis(
 			"nextAssetId": GENESIS_NEXT_ASSET_ID,
 		},
 		"balances": {
-			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>().push((ClaimPalletAccountId::get().into_account_truncating(), 0)),
 		},
 		"session": {
 			"keys": initial_authorities

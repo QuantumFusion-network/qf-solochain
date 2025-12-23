@@ -26,12 +26,14 @@ use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use core::fmt::Debug;
 use frame_support::{
 	ensure,
-	traits::{Currency, Get, IsSubType, VestingSchedule},
+	traits::{Currency, Get, Imbalance, IsSubType, VestingSchedule},
 	weights::Weight,
 	DefaultNoBound,
 };
 pub use pallet::*;
+mod traits;
 mod types;
+pub use traits::CompensateTrait;
 pub use types::ValidityError;
 //use polkadot_primitives::ValidityError;
 use scale_info::TypeInfo;
@@ -219,6 +221,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type Prefix: Get<&'static [u8]>;
 		type MoveClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+		/// This type provide possibility to make some actions, which depends on positive imbalance
+		/// from minted tokens
+		type Compensate: CompensateTrait<BalanceOf<Self>>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -603,7 +608,8 @@ impl<T: Config> Pallet<T> {
 		}
 
 		// We first need to deposit the balance to ensure that the account exists.
-		let _ = CurrencyOf::<T>::deposit_creating(&dest, balance_due);
+		let tokens_minted = CurrencyOf::<T>::deposit_creating(&dest, balance_due);
+		T::Compensate::burn_from(tokens_minted.peek())?;
 
 		// Check if this claim should have a vesting schedule.
 		if let Some(vs) = vesting {
