@@ -537,13 +537,11 @@ fn claiming_with_mint_claim_origin() {
 		// New total
 		assert_eq!(claims::Total::<Test>::get(), total_claims() + 200);
 
-		assert_ok!(
-			claims::mock::Claims::claim(
-				RuntimeOrigin::none(),
-				69,
-				sig::<Test>(&bob(), &69u64.encode(), &[][..])
-			)
-		);
+		assert_ok!(claims::mock::Claims::claim(
+			RuntimeOrigin::none(),
+			69,
+			sig::<Test>(&bob(), &69u64.encode(), &[][..])
+		));
 	});
 }
 
