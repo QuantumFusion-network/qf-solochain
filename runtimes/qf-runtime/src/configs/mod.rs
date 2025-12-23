@@ -24,9 +24,10 @@
 // For more information, please refer to <http://unlicense.org>
 
 // Substrate and Polkadot dependencies
+use alloc::vec;
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
-	derive_impl, parameter_types,
+	derive_impl, ord_parameter_types, parameter_types,
 	traits::{
 		fungible::Mutate,
 		tokens::{Fortitude, Precision, Preservation},
@@ -42,7 +43,7 @@ use frame_support::{
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
-	EnsureRoot, EnsureSigned,
+	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
@@ -373,12 +374,17 @@ impl CompensateTrait<Balance> for Compensate {
 	}
 }
 
+ord_parameter_types! {
+	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
+	pub const MintClaimOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
+}
+
 impl pallet_claims::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = EnsureRoot<AccountId>;
-	type MintClaimOrigin = EnsureRoot<AccountId>; // TODO (artemiksion): Change origin
+	type MintClaimOrigin = EnsureSignedBy<MintClaimOrigin, AccountId>; // TODO (artemiksion): Change origin
 	type Compensate = Compensate;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
