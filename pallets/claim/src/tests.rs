@@ -546,6 +546,26 @@ fn claiming_with_mint_claim_origin() {
 }
 
 #[test]
+fn claiming_with_no_mint_claim_origin() {
+	new_test_ext().execute_with(|| {
+		CurrencyOf::<Test>::make_free_balance_be(&69, total_claims());
+		assert_eq!(Balances::free_balance(69), total_claims());
+		assert_noop!(
+			claims::mock::Claims::mint_claim(
+				RuntimeOrigin::signed(Eight::get()), // MintClaimOrigin != Eight
+				eth(&bob()),
+				200,
+				None,
+				None
+			),
+			BadOrigin
+		);
+		// New total
+		assert_eq!(claims::Total::<Test>::get(), total_claims());
+	});
+}
+
+#[test]
 fn non_sender_sig_doesnt_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(42), 0);
