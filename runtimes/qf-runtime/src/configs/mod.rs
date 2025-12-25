@@ -28,10 +28,10 @@ use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, Se
 use frame_support::{
 	derive_impl, parameter_types,
 	traits::{
-		fungible::Mutate,
+		fungible::{Balanced, Credit, Mutate},
 		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
-		Nothing, VariantCountOf, WithdrawReasons,
+		Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons,
 	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -403,9 +403,46 @@ parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
 }
 
+/// Logic for the author to get a portion of fees.
+pub struct ToAuthor<R>(core::marker::PhantomData<R>);
+
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for ToAuthor<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+{
+	fn on_nonzero_unbalanced(
+		amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
+	) {
+		if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+			let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+		}
+	}
+}
+
+pub struct BurnFeesAndTipToAuthor<R>(core::marker::PhantomData<R>);
+
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for BurnFeesAndTipToAuthor<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+{
+	fn on_unbalanceds(
+		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+	) {
+		if let Some(fees) = fees_then_tips.next() {
+			// for fees, 100% to void
+			drop(fees);
+
+			if let Some(tips) = fees_then_tips.next() {
+				// for tips, if any, 100% to author
+				<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(tips);
+			}
+		}
+	}
+}
+
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = FungibleAdapter<Balances, ()>;
+	type OnChargeTransaction = FungibleAdapter<Balances, BurnFeesAndTipToAuthor<Runtime>>;
 	type OperationalFeeMultiplier = ConstU8<5>;
 	type WeightToFee = IdentityFee<Balance>;
 	type LengthToFee = IdentityFee<Balance>;
