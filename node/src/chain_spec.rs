@@ -129,7 +129,7 @@ fn testnet_genesis(
 			"nextAssetId": GENESIS_NEXT_ASSET_ID,
 		},
 		"balances": {
-			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>().push((ClaimPalletAccountId::get().into_account_truncating(), 0)),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).chain(vec![(ClaimPalletAccountId::get().into_account_truncating(), ENDOWMENT)]).collect::<Vec<_>>(),
 		},
 		"session": {
 			"keys": initial_authorities
