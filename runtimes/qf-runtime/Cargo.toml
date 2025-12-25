@@ -23,6 +23,7 @@ scale-info = { features = [
 	"derive",
 	"serde",
 ], workspace = true }
+hex-literal = { workspace = true, default-features = true }
 
 # frame
 frame-support = { features = ["experimental"], workspace = true }

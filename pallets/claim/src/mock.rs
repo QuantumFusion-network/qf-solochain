@@ -84,6 +84,8 @@ parameter_types! {
 }
 ord_parameter_types! {
 	pub const Six: u64 = 6;
+	pub const Seven: u64 = 7;
+	pub const Eight: u64 = 8;
 }
 
 pub struct Compensate;
@@ -105,6 +107,7 @@ impl Config for Test {
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
 	type MoveClaimOrigin = frame_system::EnsureSignedBy<Six, u64>;
+	type MintClaimOrigin = frame_system::EnsureSignedBy<Seven, u64>;
 	type Compensate = Compensate;
 	type WeightInfo = TestWeightInfo;
 }

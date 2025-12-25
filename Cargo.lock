@@ -13151,6 +13151,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal",
  "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
