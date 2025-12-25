@@ -1,0 +1,121 @@
+{
+  "name": "QF Mainnet",
+  "id": "qf_mainnet",
+  "chainType": "Live",
+  "bootNodes": [
+    "/dns4/validator.eu.mainnet.qfnode.net/tcp/30333/p2p/12D3KooWRFGM6TPKGV1Y98vbsxV9N7cgu9Sbhm5rFzdyZr3FoGLf",
+    "/dns4/validator.us.mainnet.qfnode.net/tcp/30333/p2p/12D3KooWMw3zybA1RuhGddVBt36o3iEjj6QFvsKUgZM4wXrQ6cCh",
+    "/dns4/validator.as.mainnet.qfnode.net/tcp/30333/p2p/12D3KooWM3bJvRiSXSp8M9XdHmVHN1BscvEZYLy1S75BDEFfcGrE"
+  ],
+  "telemetryEndpoints": null,
+  "protocolId": "qf-main",
+  "properties": {
+    "ss58Format": 42,
+    "tokenDecimals": 18,
+    "tokenSymbol": "QF"
+  },
+  "codeSubstitutes": {},
+  "genesis": {
+    "runtimeGenesis": {
+      "code": "0x00",
+      "patch": {
+        "assets": {
+          "nextAssetId": 1
+        },
+        "balances": {
+          "balances": [
+            [
+              "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+              200000000000000000000000
+            ],
+            [
+              "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+              200000000000000000000000
+            ],
+            [
+              "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
+              200000000000000000000000
+            ],
+            [
+              "5EYCAe5g847pC4nvyjiy3aa95FjLGKVJXQNFD8jzGUxGTn2t",
+              100000000000000000000000000
+            ],
+            [
+              "5HN6UToRyceP5rN3T6jyUU7Xmw3nzi1vmiMf1zVBgwMMpdYc",
+              100000000000000000000
+            ]
+          ]
+        },
+        "session": {
+          "keys": [
+            [
+              "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+              "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+              {
+                "grandpa": "5Ce6k9uhw1JmzkxA917xjEqCCWPtPvHNY3rN3ZCy2NCnwoub",
+                "spin": "5FZvFKe8uUeD1p7EE94HjtViaoj2nqVej51v3QSXFYsV196g"
+              }
+            ],
+            [
+              "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+              "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+              {
+                "grandpa": "5CHUidXs9xdMsvGJVTDZcQPemFDAFn6zdGMgW8p8NWj91rJx",
+                "spin": "5G9oQiZTJqZGbHoLv9TVjGUsbyrkYFCwf8RkXoFP97HecsZQ"
+              }
+            ],
+            [
+              "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
+              "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
+              {
+                "grandpa": "5Ed7PtjMok7jpu1Poprkb8t2k1QYuWTBzmZDmZCk92Jsy9MN",
+                "spin": "5HgHf515P8LuASdM7dUeiWtH2WyMhoYPuqa3pT75bAg4gtUu"
+              }
+            ]
+          ]
+        },
+        "staking": {
+          "forceEra": "NotForcing",
+          "invulnerables": [
+            "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+            "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+            "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP"
+          ],
+          "minimumValidatorCount": 3,
+          "slashRewardFraction": 100000000,
+          "stakers": [
+            [
+              "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+              "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+              "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+              100000000000000000000000,
+              "Validator"
+            ],
+            [
+              "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
+              "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
+              100000000000000000000000,
+              "Validator"
+            ]
+          ],
+          "validatorCount": 3,
+          "maxValidatorCount": 200,
+          "maxNominatorCount": 50000,
+          "minValidatorBond": 100000000000000000000000,
+          "minNominatorBond": 100000000000000000000
+        },
+        "sudo": {
+          "key": "5HN6UToRyceP5rN3T6jyUU7Xmw3nzi1vmiMf1zVBgwMMpdYc"
+        },
+        "vesting": {
+          "vesting": []
+        }
+      }
+    }
+  }
+}
