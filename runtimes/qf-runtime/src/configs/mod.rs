@@ -353,7 +353,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Prefix: &'static [u8] = b"Pay QF token to the QF Network account:";
+	pub const Prefix: &'static [u8] = b"Pay QFs to the QF Network account: ";
 	pub const ClaimPalletAccountId: PalletId = PalletId(*b"claim/pt");
 }
 
