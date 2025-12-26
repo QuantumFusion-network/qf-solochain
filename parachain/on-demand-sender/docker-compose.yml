@@ -1,0 +1,6 @@
+services:
+  on-demand-sender:
+    image: theqfnetwork/on-demand-sender:latest
+    restart: unless-stopped
+    env_file:
+      - .env
