@@ -13057,7 +13057,7 @@ dependencies = [
 
 [[package]]
 name = "qf-node"
-version = "0.1.25"
+version = "0.1.26"
 dependencies = [
  "clap",
  "frame-benchmarking-cli",
@@ -13104,7 +13104,7 @@ dependencies = [
 
 [[package]]
 name = "qf-parachain-node"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "color-print",
@@ -13123,7 +13123,7 @@ dependencies = [
 
 [[package]]
 name = "qf-parachain-runtime"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "docify",
