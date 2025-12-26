@@ -1,7 +1,7 @@
 [package]
 name = "qf-parachain-node"
 description = "QF Parachain Client Node"
-version = "0.1.0"
+version = "0.1.1"
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
