@@ -24,29 +24,41 @@
 // For more information, please refer to <http://unlicense.org>
 
 // Substrate and Polkadot dependencies
+use alloc::vec;
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
-	derive_impl, parameter_types,
-	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Nothing, VariantCountOf},
+	derive_impl, ord_parameter_types, parameter_types,
+	traits::{
+		fungible::{Balanced, Credit, Mutate},
+		tokens::{Fortitude, Precision, Preservation},
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
+		Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons,
+	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
 		IdentityFee, Weight,
 	},
+	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot, EnsureSigned,
+	pallet_prelude::BlockNumberFor,
+	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
+use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sp_runtime::{
 	curve::PiecewiseLinear,
-	traits::{One, OpaqueKeys},
+	traits::{AccountIdConversion, ConvertInto, One, OpaqueKeys},
 	Perbill,
 };
 use sp_version::RuntimeVersion;
 
-use crate::{MILLI_UNIT, SESSION_LENGTH};
+use crate::{deposit, Vesting, SESSION_LENGTH};
+
+#[cfg(feature = "runtime-benchmarks")]
+use crate::GENESIS_NEXT_ASSET_ID;
 
 // Local module imports
 use super::{
@@ -105,24 +117,77 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+parameter_types! {
+	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
+	pub const AssetAccountDeposit: Balance = deposit(1, 16);
+	pub const AssetDeposit: Balance = deposit(1, 190);
+	pub const AssetsStringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+	pub const RemoveItemsLimit: u32 = 1000;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_assets::BenchmarkHelper<codec::Compact<u32>> for AssetsBenchmarkHelper {
+	fn create_asset_id_parameter(id: u32) -> codec::Compact<u32> {
+		codec::Compact(GENESIS_NEXT_ASSET_ID.unwrap_or_default() + id)
+	}
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = u32;
+	type AssetIdParameter = codec::Compact<u32>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Holder = ();
+	type Extra = ();
+	type WeightInfo = crate::weights::pallet_assets::WeightInfo<Runtime>;
+	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime>;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type RemoveItemsLimit = RemoveItemsLimit;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetsBenchmarkHelper;
+}
+
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
 	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?
 }
 
 impl pallet_spin::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = SpinId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<32>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
 	type SlotDuration = pallet_spin::MinimumPeriodTimesTwo<Runtime>;
-	type DefaultSessionLength = ConstU32<SESSION_LENGTH>;
+	type DefaultSessionLength = ConstU64<SESSION_LENGTH>;
+}
+
+pub const LEADER_TENURES_PER_SESSION: u32 = 30;
+
+/// Provides dynamic session length to reflect changes in leader's tenure duration
+pub struct SessionPeriodLength<T>(core::marker::PhantomData<T>);
+
+impl<T: pallet_spin::Config> Get<BlockNumberFor<T>> for SessionPeriodLength<T> {
+	fn get() -> BlockNumberFor<T> {
+		pallet_spin::SessionLength::<T>::get()
+			.defensive_saturating_mul(LEADER_TENURES_PER_SESSION.into())
+	}
 }
 
 parameter_types! {
-	/// Session period - 30 leadership tenures
-	pub const Period: BlockNumber = 30 * SESSION_LENGTH;
 	/// Offset – 0 blocks
 	pub const Offset: BlockNumber = 0;
 }
@@ -130,15 +195,16 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_staking::StashOf<Self>;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+	type ValidatorIdOf = sp_runtime::traits::ConvertInto;
+	type ShouldEndSession = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
+	type NextSessionRotation = pallet_session::PeriodicSessions<SessionPeriodLength<Self>, Offset>;
 	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
 	type DisablingStrategy = pallet_session::disabling::UpToLimitWithReEnablingDisablingStrategy;
-
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 	type SessionManager = Staking;
+	type Currency = Balances;
+	type KeyDeposit = ();
 }
 
 parameter_types! {
@@ -151,38 +217,34 @@ parameter_types! {
 	// Maximum winners that can be chosen as active validators
 	pub const MaxActiveValidators: u32 = 1000;
 
-	// TODO(khssnv): uncomment the block at `stable2506` or later?
 	// One page only, fill the whole page with the `MaxActiveValidators`.
-	// pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
+	pub const MaxWinnersPerPage: u32 = MaxActiveValidators::get();
 	// Unbonded, thus the max backers per winner maps to the max electing voters limit.
-	// pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
+	pub const MaxBackersPerWinner: u32 = MaxElectingVoters::get();
 }
 
 pub type OnChainAccuracy = sp_runtime::Perbill;
 
 pub struct OnChainSeqPhragmen;
 impl onchain::Config for OnChainSeqPhragmen {
-	// type Sort = ConstBool<true>; // TODO(khssnv): uncomment at `stable2506` or later?
+	type Sort = ConstBool<true>;
 	type System = Runtime;
 	type Solver = SequentialPhragmen<AccountId, OnChainAccuracy>;
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type Bounds = ElectionBounds;
-
-	// TODO(khssnv): uncomment at `stable2506` or later?
-	// type MaxBackersPerWinner = MaxBackersPerWinner;
-	// type MaxWinnersPerPage = MaxWinnersPerPage;
-	type MaxWinners = MaxActiveValidators; // TODO(khssnv): remove at `stable2506` or later?
+	type MaxBackersPerWinner = MaxBackersPerWinner;
+	type MaxWinnersPerPage = MaxWinnersPerPage;
 }
 
 pallet_staking_reward_curve::build! {
 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
-		min_inflation: 0_025_000,
+		min_inflation: 0_010_000,
 		max_inflation: 0_100_000,
-		ideal_stake: 0_500_000,
-		falloff: 0_050_000,
-		max_piece_count: 40,
-		test_precision: 0_005_000,
+		ideal_stake: 0_300_000,
+		falloff: 0_100_000,
+		max_piece_count: 100,
+		test_precision: 0_001_000,
 	);
 }
 
@@ -226,8 +288,7 @@ impl pallet_staking::Config for Runtime {
 	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
 	type NextNewSession = Session;
 	type MaxExposurePageSize = ConstU32<64>;
-	/// Maximum number of active validators allowed
-	// type MaxValidatorSet = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506` or later?
+	type MaxValidatorSet = ConstU32<100>;
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
@@ -239,15 +300,10 @@ impl pallet_staking::Config for Runtime {
 	/// Limits how many eras of unbonding can exist in flight
 	type MaxControllersInDeprecationBatch = ConstU32<5900>;
 	/// Number of eras to keep in on‐chain history (for rewards, points, exposures, etc.)
-	type HistoryDepth = ConstU32<32>;
+	type HistoryDepth = ConstU32<128>; // 30 minutes per session * 3 sessions per era * 128 eras = 8 days
 	type EventListeners = ();
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
-	/// Maximum number of invulnerable validators
-	// type MaxInvulnerables = ConstU32<20>; // TODO(khssnv): uncomment at `stable2506` or later?
-	/// Maximum number of validators that can be marked disabled at once,
-	/// limiting how many can be chilled or forced out in a batch
-	// type MaxDisabledValidators = ConstU32<100>; // TODO(khssnv): uncomment at `stable2506`?
 	type Filter = Nothing;
 }
 
@@ -273,6 +329,10 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
+}
+
 impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ();
@@ -282,7 +342,7 @@ impl pallet_balances::Config for Runtime {
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
-	type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type FreezeIdentifier = RuntimeFreezeReason;
@@ -293,12 +353,103 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
+	pub const Prefix: &'static [u8] = b"Pay QFs to the QF Network account: ";
+	pub const ClaimPalletAccountId: PalletId = PalletId(*b"claim/pt");
+}
+
+pub struct Compensate;
+
+impl CompensateTrait<Balance> for Compensate {
+	fn burn_from(amount: Balance) -> sp_runtime::DispatchResult {
+		let who = ClaimPalletAccountId::get().into_account_truncating();
+
+		Balances::burn_from(
+			&who,
+			amount,
+			Preservation::Expendable,
+			Precision::Exact,
+			Fortitude::Force,
+		)?;
+		Ok(())
+	}
+}
+
+ord_parameter_types! {
+	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
+	pub const MintClaimOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
+}
+
+impl pallet_claims::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+	type Prefix = Prefix;
+	type MoveClaimOrigin = EnsureRoot<AccountId>;
+	type MintClaimOrigin = EnsureSignedBy<MintClaimOrigin, AccountId>; // TODO (artemiksion): Change origin
+	type Compensate = Compensate;
+	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const DepositBase: Balance = deposit(1, 88);
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u32 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+	type BlockNumberProvider = frame_system::Pallet<Runtime>;
+}
+
+parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
+}
+
+/// Logic for the author to get a portion of fees.
+pub struct ToAuthor<R>(core::marker::PhantomData<R>);
+
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for ToAuthor<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+{
+	fn on_nonzero_unbalanced(
+		amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
+	) {
+		if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+			let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+		}
+	}
+}
+
+pub struct BurnFeesAndTipToAuthor<R>(core::marker::PhantomData<R>);
+
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for BurnFeesAndTipToAuthor<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+{
+	fn on_unbalanceds(
+		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+	) {
+		if let Some(fees) = fees_then_tips.next() {
+			// for fees, 100% to void
+			drop(fees);
+
+			if let Some(tips) = fees_then_tips.next() {
+				// for tips, if any, 100% to author
+				<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(tips);
+			}
+		}
+	}
 }
 
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = FungibleAdapter<Balances, ()>;
+	type OnChargeTransaction = FungibleAdapter<Balances, BurnFeesAndTipToAuthor<Runtime>>;
 	type OperationalFeeMultiplier = ConstU8<5>;
 	type WeightToFee = IdentityFee<Balance>;
 	type LengthToFee = IdentityFee<Balance>;
@@ -312,60 +463,10 @@ impl pallet_sudo::Config for Runtime {
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-	pub const PolkaVmMaxCodeLen: u32 = 131072;
-	pub const PolkaVmMaxCodeVersion: u64 = u64::MAX;
-	pub const PolkaVmMaxUserDataLen: u32 = 2048;
-	pub const PolkaVmMaxGasLimit: u64 = 2097152;
-	pub const PolkaVmMaxStorageKeySize: u32 = 256;
-	pub const PolkaVmMaxStorageSlots: u32 = 4;
-	pub const PolkaVmMaxLogLen: u32 = 1024;
-	pub const PolkaVmMinGasPrice: u64 = 1;
-	pub const PolkaVmMinStorageDepositLimit: u64 = 0;
-	pub const PolkaVmStorageSize: u32 = 2048;
-	pub const PolkaVmStorageSlotPrice: u128 = 1 * MILLI_UNIT;
-}
-
-impl pallet_qf_polkavm::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxCodeLen = PolkaVmMaxCodeLen;
-	type MaxCodeVersion = PolkaVmMaxCodeVersion;
-	type MaxUserDataLen = PolkaVmMaxUserDataLen;
-	type MaxGasLimit = PolkaVmMaxGasLimit;
-	type MaxStorageKeySize = PolkaVmMaxStorageKeySize;
-	type MaxStorageSlots = PolkaVmMaxStorageSlots;
-	type MaxLogLen = PolkaVmMaxLogLen;
-	type MinGasPrice = PolkaVmMinGasPrice;
-	type MinStorageDepositLimit = PolkaVmMinStorageDepositLimit;
-	type StorageSize = PolkaVmStorageSize;
-	type StorageSlotPrice = PolkaVmStorageSlotPrice;
-	type Currency = Balances;
-	type WeightInfo = pallet_qf_polkavm::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_qf_polkavm_dev::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxCodeLen = PolkaVmMaxCodeLen;
-	type WeightInfo = pallet_qf_polkavm_dev::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const FaucetAmount: u64 = 2;
-	pub const LockPeriod: u32 = 3600; // ~3h
-}
-
-impl pallet_faucet::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type FaucetAmount = FaucetAmount;
-	type LockPeriod = LockPeriod;
-	type WeightInfo = pallet_faucet::weights::SubstrateWeight<Runtime>;
-}
-
 // TODO(khssnv): revisit.
 parameter_types! {
-	pub const DepositPerItem: Balance = 0;
-	pub const DepositPerByte: Balance = 0;
+	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerByte: Balance = deposit(0, 1);
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
 	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
@@ -378,12 +479,10 @@ impl pallet_revive::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type CallFilter = Nothing;
-	type DepositPerItem = DepositPerByte;
+	type DepositPerItem = DepositPerItem;
 	type DepositPerByte = DepositPerByte;
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = RuntimeMemory;
 	type PVFMemory = PVFMemory;
@@ -392,11 +491,12 @@ impl pallet_revive::Config for Runtime {
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
-	type Xcm = ();
 	type ChainId = ChainId;
 	type NativeToEthRatio = NativeToEthRatio;
 	type EthGasEncoder = ();
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
+	type Precompiles = ();
+	type AllowEVMBytecode = ConstBool<false>;
 }
 
 impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
@@ -408,4 +508,38 @@ impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
 			_ => Err(()),
 		}
 	}
+}
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PalletsOrigin = super::OriginCaller;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
+ord_parameter_types! {
+	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
+	pub const RelayerOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
+}
+
+impl pallet_spin_anchoring::Config for Runtime {
+	type RelayerOrigin = EnsureSignedBy<RelayerOrigin, AccountId>;
+}
+
+parameter_types! {
+	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+}
+
+impl pallet_vesting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type BlockNumberToBalance = ConvertInto;
+	type MinVestedTransfer = ExistentialDeposit;
+	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
+	type BlockNumberProvider = System;
+	// `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
+	// highest number of schedules that encodes less than 2^10.
+	const MAX_VESTING_SCHEDULES: u32 = 28;
 }

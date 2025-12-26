@@ -62,15 +62,14 @@ impl DisabledValidators for MockDisabledValidators {
 	}
 }
 
-pub(super) const DEFAULT_SESSION_LENGTH: u32 = 4;
+pub(super) const DEFAULT_SESSION_LENGTH: u64 = 4;
 impl pallet_spin::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = AuthorityId;
 	type DisabledValidators = MockDisabledValidators;
 	type MaxAuthorities = ConstU32<10>;
 	type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
 	type SlotDuration = ConstU64<SLOT_DURATION>;
-	type DefaultSessionLength = ConstU32<DEFAULT_SESSION_LENGTH>;
+	type DefaultSessionLength = ConstU64<DEFAULT_SESSION_LENGTH>;
 }
 
 fn build_ext(authorities: Vec<u64>) -> sp_io::TestExternalities {

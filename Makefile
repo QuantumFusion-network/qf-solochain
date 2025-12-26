@@ -1,20 +1,9 @@
 GUEST_RUST_FLAGS="-C relocation-model=pie -C link-arg=--emit-relocs -C link-arg=--unique --remap-path-prefix=$(pwd)= --remap-path-prefix=$HOME=~"
 
-vendor-clone:
-	git clone --depth=1 --branch v0.21.0 https://github.com/paritytech/polkavm.git vendor/polkavm
-
-tools: polkatool chain-spec-builder
-
-pvm-prog-%:
-	cd pvm_prog; RUSTFLAGS=$(GUEST_RUST_FLAGS) cargo build -q --release --bin qf-pvm-$* -p qf-pvm-$*
-	mkdir -p output
-	polkatool link --run-only-if-newer -s pvm_prog/target/riscv32emac-unknown-none-polkavm/release/qf-pvm-$* -o output/qf-pvm-$*.polkavm
+tools: chain-spec-builder
 
 chain-spec-builder:
 	cargo install --git https://github.com/paritytech/polkadot-sdk --force staging-chain-spec-builder
-
-polkatool:
-	cargo install --path vendor/polkavm/tools/polkatool
 
 qf-run: qf-node-release
 	output/qf-node --dev --tmp --rpc-cors all
@@ -33,12 +22,9 @@ qf-node: qf-runtime
 	cp target/debug/qf-node output/qf-node
 
 qf-runtime:
-	cargo build -p qf-runtime
+	cargo build -p qf-runtime --release
 	mkdir -p output
-	cp target/debug/wbuild/qf-runtime/qf_runtime.wasm output
-
-polkavm-pallet:
-	cargo build -p pallet-qf-polkavm-dev
+	cp target/release/wbuild/qf-runtime/qf_runtime.* output
 
 fmt:
 	cargo +nightly fmt --all

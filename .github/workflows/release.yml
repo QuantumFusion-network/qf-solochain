@@ -1,0 +1,183 @@
+name: "Build, create release, and publish container image"
+
+run-name: "Release - ${{ github.ref_name }}"
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  srtool:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        chain: ["fastchain", "parachain"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Identify Rust toolchain version
+        id: rustc_version
+        run: |
+          RUSTC_VERSION=$(grep '^channel = ' rust-toolchain.toml | sed 's/channel = "\(.*\)"/\1/')
+          echo "value=$RUSTC_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@48e9baed50ca414936dfac59d34d8b9bbe581abd # v0.9.2
+        with:
+          chain: ${{ matrix.chain == 'fastchain' && 'qf-testnet-fastchain' || 'qf-testnet-parachain' }}
+          package: ${{ matrix.chain == 'fastchain' && 'qf-runtime' || 'qf-parachain-runtime' }}
+          tag: ${{ steps.rustc_version.outputs.value }}
+          runtime_dir: ${{ matrix.chain == 'fastchain' && 'runtimes/qf-runtime' || 'runtimes/parachain' }}
+
+      - name: Upload ${{ matrix.chain }} Wasm (compact)
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.chain }}-compact
+          path: ${{ steps.srtool_build.outputs.wasm_compressed }}
+
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-srtool-digest.json
+          cat ${{ matrix.chain }}-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
+  release:
+    name: Build binary and create GitHub release
+    needs: srtool
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check node version
+        run: |
+          node_version=$(awk '/version/ {gsub(/"/,""); print $3}' node/Cargo.toml)
+          tag_version="${{ github.ref_name }}"
+          tag_version_no_v="${tag_version#v}"
+          if [[ "${node_version}" != "${tag_version_no_v}" ]]; then
+            echo "node version\t = ${node_version}"
+            echo "tag version\t = ${tag_version} (${tag_version_no_v})"
+            echo "Please update node version!"
+            exit 1
+          fi
+
+      - name: Setup build environment
+        run: |
+          sudo apt update
+          sudo apt install -y gcc g++ make curl git protobuf-compiler libclang-dev
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.84.1 -y
+
+          . "$HOME/.cargo/env"
+
+          rustup target add wasm32-unknown-unknown --toolchain 1.84.1-x86_64-unknown-linux-gnu
+          rustup component add rust-src --toolchain 1.84.1-x86_64-unknown-linux-gnu
+
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build project
+        run: |
+          make qf-node-release
+
+      - name: Prepare node artifact
+        run: |
+          mkdir -p artifacts
+          cp output/qf-node artifacts/qf-node-${{ github.ref_name }}
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v6
+        with:
+          pattern: "*-compact"
+          merge-multiple: true
+
+      - name: Rename runtime artifact
+        run: |
+          mv qf_runtime.compact.compressed.wasm artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm
+          mv qf_parachain_runtime.compact.compressed.wasm artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm
+
+      - name: Generate checksums
+        id: checksums
+        run: |
+          SHA256_QFNODE=$(sha256sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+          BLAKE2_QFNODE=$(b2sum artifacts/qf-node-${{ github.ref_name }} | cut -d ' ' -f1)
+
+          SHA256_QFRUNTIME=$(sha256sum artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+          BLAKE2_QFRUNTIME=$(b2sum artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+
+          SHA256_QFPARACHAIN=$(sha256sum artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+          BLAKE2_QFPARACHAIN=$(b2sum artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm | cut -d ' ' -f1)
+
+          echo "sha256_qfnode=$SHA256_QFNODE" >> $GITHUB_OUTPUT
+          echo "blake2_qfnode=$BLAKE2_QFNODE" >> $GITHUB_OUTPUT
+          echo "sha256_qfruntime=$SHA256_QFRUNTIME" >> $GITHUB_OUTPUT
+          echo "blake2_qfruntime=$BLAKE2_QFRUNTIME" >> $GITHUB_OUTPUT
+          echo "sha256_qfparachain=$SHA256_QFPARACHAIN" >> $GITHUB_OUTPUT
+          echo "blake2_qfparachain=$BLAKE2_QFPARACHAIN" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/qf-node-${{ github.ref_name }}
+            artifacts/qf_runtime-${{ github.ref_name }}.compact.compressed.wasm
+            artifacts/qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm
+          generate_release_notes: true
+          append_body: true
+          body: |
+            ## Checksums
+            **qf-node-${{ github.ref_name }}**
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfnode }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfnode }}
+
+            **qf_runtime-${{ github.ref_name }}.compact.compressed.wasm**
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfruntime }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfruntime }}
+
+            **qf_parachain_runtime-${{ github.ref_name }}.compact.compressed.wasm**
+            sha256 hash: ${{ steps.checksums.outputs.sha256_qfparachain }}
+            Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfparachain }}
+
+  publish-docker:
+    name: Build and publish Docker image
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and tag Docker image
+        run: |
+          cd docker
+          docker build --no-cache -f Dockerfile.x86_64 -t qf-node:${{ github.ref_name }} .
+          docker tag qf-node:${{ github.ref_name }} theqfnetwork/qf-node:${{ github.ref_name }}
+          docker tag qf-node:${{ github.ref_name }} theqfnetwork/qf-node:latest
+
+      - name: Push Docker image to Docker Hub (signed)
+        env:
+          DOCKER_CONTENT_TRUST: "1"
+          DOCKER_CONTENT_TRUST_ROOT_PASSPHRASE: ${{ secrets.DCT_ROOT_PASSPHRASE }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DCT_REPO_PASSPHRASE }}
+        run: |
+          docker push theqfnetwork/qf-node:${{ github.ref_name }}
+          docker push theqfnetwork/qf-node:latest
+
+#  release:
+#    name: Release
+#    runs-on: [self-hosted, Linux, X64]
+#    needs: [build_binary, build_docker]
+#
+#    steps:
+#      - name: Run Release Playbook
+#        run: ansible-playbook -i ~/infra-proto/hosts ~/infra-proto/roles/cd/tasks/release.yml

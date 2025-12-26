@@ -1,0 +1,16 @@
+# Ignore build artifacts
+target/
+**/*.rs.bk
+
+# Ignore git metadata
+.git*
+
+# Ignore documentation and large test setups
+docs/
+zombienet/
+AGENTS.md
+SPIN.md
+CONTEXT.md
+Logo.jpg
+
+docker/

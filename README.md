@@ -2,7 +2,7 @@
 
 ![Logo](Logo.jpg)
 
-# Quantum Fusion
+# QF Network
 
 [![License](https://img.shields.io/github/license/QuantumFusion-network/qf-solochain?color=green)](https://github.com/QuantumFusion-network/qf-solochain/blob/main/LICENSE)
 <br>
@@ -10,7 +10,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/QuantumFusion-network/qf-solochain)
 ![GitHub last commit](https://img.shields.io/github/last-commit/QuantumFusion-network/qf-solochain)
 <br>
-[![Twitter URL](https://img.shields.io/twitter/follow/QuantumFusion_?style=social)](https://x.com/QuantumFusion_)
+[![Twitter URL](https://img.shields.io/twitter/follow/theqfnetwork?style=social)](https://x.com/theqfnetwork)
 
 </div>
 
@@ -59,30 +59,6 @@ See [docs/executables_and_runtimes.md](docs/executables_and_runtimes.md).
 
 See [zombienet/README.md](zombienet/README.md).
 
-## Compiling Smart Contracts for PolkaVM
-
-First install build tools.
-
-1. Install [Rust toolchain targeting RISC-V RV32E](https://github.com/paritytech/rustc-rv32e-toolchain).
-1. Install [bun](https://bun.sh), npm, or yarn to use [Chopsticks](https://github.com/AcalaNetwork/chopsticks) to run
-   the blockchain node.
-1. Install polkatool[^1] (for relinking the standard RV32E ELF to a PolkaVM blob) and chain-spec-builder[^2](for building
-   the chain spec from a wasm).
-
-    ```console
-    make tools
-    ```
-
-To compile a program, run `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For
-example, `make pvm-prog-calc`. The `.polkavm` file will be generated in `output/`.
-
-After that you can use the `make run` to run the node. Then go to UI Polkadot.js and call the extrinsic `qfPolkaVM`.
-Then run functions:
-
-- `upload(programBlob)` and upload the `.polkavm` blob
-- `execute(a, b, op)` with the two numbers (`a`, `b`) you want to calculate and select the type of operation `op` with 0
-- sum, 1 - sub, 2 - mul.
-
 ## Makefile commands
 
 - Build the node: `make qf-node`
@@ -90,14 +66,11 @@ Then run functions:
 - Build the node and run it: `make qf-run`
 - Build the node and run it with wasm file from `output`: `make qf-run-wasm`
 - Build the runtime: `make qf-runtime`
-- Build the pallet: `make polkavm-pallet`
 - Linting: `make clippy`
 - Formatting: `make fmt`
 - Run tests: `make qf-test`
 - Check all: `make check`
 - Make chain spec: `make qf-chainspec`
-- Make PolkaVM blob: `make pvm-prog-<progname>` where `<progname>` is the name of the program to be compiled. For example
-  `make pvm-prog-calc`
 
 ## Contributing
 
@@ -114,6 +87,3 @@ By contributing, you agree to adhere to our [Contributor Covenant Code of Conduc
 a respectful and inclusive environment.
 
 We appreciate your support and look forward to your contributions! 🚀
-
-[^1]: <https://forum.polkadot.network/t/announcing-polkavm-a-new-risc-v-based-vm-for-smart-contracts-and-possibly-more/3811#the-compilation-pipeline-7> "The compilation pipeline".
-[^2]: <https://github.com/paritytech/polkadot-sdk/tree/master/substrate/bin/utils/chain-spec-builder> "chain-spec-builder".

@@ -1,5 +1,4 @@
-//! Service and ServiceFactory implementation. Specialized wrapper over
-//! substrate service.
+//! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // std
 use std::{sync::Arc, time::Duration};
@@ -13,12 +12,12 @@ use qf_parachain_runtime::{
 use polkadot_sdk::*;
 
 // Cumulus Imports
+use cumulus_client_bootnodes::{start_bootnode_tasks, StartBootnodeTasksParams};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 #[docify::export(lookahead_collator)]
 use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params as AuraParams};
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
-use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, ParachainHostFunctions,
@@ -27,7 +26,7 @@ use cumulus_client_service::{
 #[docify::export(cumulus_primitives)]
 use cumulus_primitives_core::{
 	relay_chain::{CollatorPair, ValidationCode},
-	ParaId,
+	GetParachainInfo, ParaId,
 };
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 
@@ -37,10 +36,11 @@ use prometheus_endpoint::Registry;
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
-use sc_network::NetworkBlock;
+use sc_network::{NetworkBackend, NetworkBlock};
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
+use sp_api::ProvideRuntimeApi;
 use sp_keystore::KeystorePtr;
 
 #[docify::export(wasm_executor)]
@@ -64,8 +64,8 @@ pub type Service = PartialComponents<
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
-/// Use this macro if you don't actually need the full service, but just the
-/// builder in order to be able to perform chain operations.
+/// Use this macro if you don't actually need the full service, but just the builder in order to
+/// be able to perform chain operations.
 #[docify::export(component_instantiation)]
 pub fn new_partial(config: &Configuration) -> Result<Service, sc_service::Error> {
 	let telemetry = config
@@ -185,15 +185,13 @@ fn start_consensus(
 	overseer_handle: OverseerHandle,
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 ) -> Result<(), sc_service::Error> {
-	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+	let proposer = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
 		transaction_pool,
 		prometheus_registry,
 		telemetry.clone(),
 	);
-
-	let proposer = Proposer::new(proposer_factory);
 
 	let collator_service = CollatorService::new(
 		client.clone(),
@@ -220,7 +218,9 @@ fn start_consensus(
 		collator_service,
 		authoring_duration: Duration::from_millis(2000),
 		reinitialize: false,
-		max_pov_percentage: None, // TODO(khssnv): remove at `stable2506` or later?
+		// TODO(khssnv): remove at `polkadot-stable2512` or later?
+		// See also https://github.com/paritytech/polkadot-sdk/issues/6020.
+		max_pov_percentage: None,
 	};
 	let fut = aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _, _>(
 		params,
@@ -230,14 +230,12 @@ fn start_consensus(
 	Ok(())
 }
 
-/// Start a node with the given parachain `Configuration` and relay chain
-/// `Configuration`.
+/// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 pub async fn start_parachain_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
-	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient>)> {
 	let parachain_config = prepare_node_config(parachain_config);
@@ -256,23 +254,36 @@ pub async fn start_parachain_node(
 	let backend = params.backend.clone();
 	let mut task_manager = params.task_manager;
 
-	let (relay_chain_interface, collator_key) = build_relay_chain_interface(
-		polkadot_config,
-		&parachain_config,
-		telemetry_worker_handle,
-		&mut task_manager,
-		collator_options.clone(),
-		hwbench.clone(),
-	)
-	.await
-	.map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
+	let relay_chain_fork_id = polkadot_config.chain_spec.fork_id().map(ToString::to_string);
+	let parachain_fork_id = parachain_config.chain_spec.fork_id().map(ToString::to_string);
+	let advertise_non_global_ips = parachain_config.network.allow_non_globals_in_dht;
+	let parachain_public_addresses = parachain_config.network.public_addresses.clone();
+
+	let (relay_chain_interface, collator_key, relay_chain_network, paranode_rx) =
+		build_relay_chain_interface(
+			polkadot_config,
+			&parachain_config,
+			telemetry_worker_handle,
+			&mut task_manager,
+			collator_options.clone(),
+			hwbench.clone(),
+		)
+		.await
+		.map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
 
 	let validator = parachain_config.role.is_authority();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
 
-	// NOTE: because we use Aura here explicitly, we can use
-	// `CollatorSybilResistance::Resistant` when starting the network.
+	// Take parachain id from runtime.
+	let best_hash = client.chain_info().best_hash;
+	let para_id = client
+		.runtime_api()
+		.parachain_id(best_hash)
+		.map_err(|_| "Failed to retrieve parachain id from runtime. Make sure you implement `cumulus_primitives_core::GetParachaiNidentity` runtime API.")?;
+
+	// NOTE: because we use Aura here explicitly, we can use `CollatorSybilResistance::Resistant`
+	// when starting the network.
 	let (network, system_rpc_tx, tx_handler_controller, sync_service) =
 		build_network(BuildNetworkParams {
 			parachain_config: &parachain_config,
@@ -284,6 +295,9 @@ pub async fn start_parachain_node(
 			relay_chain_interface: relay_chain_interface.clone(),
 			import_queue: params.import_queue,
 			sybil_resistance_level: CollatorSybilResistance::Resistant, // because of Aura
+			metrics: sc_network::NetworkWorker::<Block, Hash>::register_notification_metrics(
+				parachain_config.prometheus_config.as_ref().map(|config| &config.registry),
+			),
 		})
 		.await?;
 
@@ -330,7 +344,7 @@ pub async fn start_parachain_node(
 		config: parachain_config,
 		keystore: params.keystore_container.keystore(),
 		backend: backend.clone(),
-		network,
+		network: network.clone(),
 		sync_service: sync_service.clone(),
 		system_rpc_tx,
 		tx_handler_controller,
@@ -339,16 +353,15 @@ pub async fn start_parachain_node(
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);
-		// Here you can check whether the hardware meets your chains' requirements.
-		// Putting a link in there and swapping out the requirements for your own are
-		// probably a good idea. The requirements for a para-chain are dictated by its
-		// relay-chain.
+		// Here you can check whether the hardware meets your chains' requirements. Putting a link
+		// in there and swapping out the requirements for your own are probably a good idea. The
+		// requirements for a para-chain are dictated by its relay-chain.
 		match SUBSTRATE_REFERENCE_HARDWARE.check_hardware(&hwbench, false) {
 			Err(err) if validator => {
 				log::warn!(
-					"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority'.",
-					err
-				);
+				"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority'.",
+				err
+			);
 			},
 			_ => {},
 		}
@@ -389,7 +402,24 @@ pub async fn start_parachain_node(
 		relay_chain_slot_duration,
 		recovery_handle: Box::new(overseer_handle.clone()),
 		sync_service: sync_service.clone(),
+		prometheus_registry: prometheus_registry.as_ref(),
 	})?;
+
+	start_bootnode_tasks(StartBootnodeTasksParams {
+		embedded_dht_bootnode: collator_options.embedded_dht_bootnode,
+		dht_bootnode_discovery: collator_options.dht_bootnode_discovery,
+		para_id,
+		task_manager: &mut task_manager,
+		relay_chain_interface: relay_chain_interface.clone(),
+		relay_chain_fork_id,
+		relay_chain_network,
+		request_receiver: paranode_rx,
+		parachain_network: network,
+		advertise_non_global_ips,
+		parachain_genesis_hash: client.chain_info().genesis_hash,
+		parachain_fork_id,
+		parachain_public_addresses,
+	});
 
 	if validator {
 		start_consensus(

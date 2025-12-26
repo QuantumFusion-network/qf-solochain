@@ -1,4 +1,4 @@
-// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) QF Network, 2025.
 // Copyright (C) Parity Technologies (UK) Ltd., until 2025.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -60,10 +60,10 @@ pub const SPIN_ENGINE_ID: ConsensusEngineId = *b"spin";
 pub type AuthorityIndex = u32;
 
 /// The length of the session.
-pub type SessionLength = u32;
+pub type SessionLength<BlockNumber> = BlockNumber;
 
 /// Auxilary data for SPIN
-pub type SpinAuxData<A> = (Vec<A>, SessionLength);
+pub type SpinAuxData<A, BlockNumber> = (Vec<A>, SessionLength<BlockNumber>);
 
 /// An consensus log item for SPIN.
 #[derive(Decode, Encode)]
@@ -78,13 +78,13 @@ pub enum ConsensusLog<AuthorityId: Codec> {
 
 sp_api::decl_runtime_apis! {
 	/// API necessary for block authorship with SPIN.
-	pub trait SpinApi<AuthorityId: Codec> {
+	pub trait SpinApi<AuthorityId: Codec, BlockNumber: sp_runtime::traits::BlockNumber> {
 		/// Returns the slot duration for SPIN.
 		///
 		/// Currently, only the value provided by this type at genesis will be used.
 		fn slot_duration() -> SlotDuration;
 
 		/// Return the current set of authorities.
-		fn aux_data() -> SpinAuxData<AuthorityId>;
+		fn aux_data() -> SpinAuxData<AuthorityId, BlockNumber>;
 	}
 }

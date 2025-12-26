@@ -26,8 +26,12 @@
 frame_benchmarking::define_benchmarks!(
 	[frame_benchmarking, BaselineBench::<Runtime>]
 	[frame_system, SystemBench::<Runtime>]
+	[pallet_assets, Assets]
 	[pallet_balances, Balances]
-	[pallet_timestamp, Timestamp]
+	[pallet_multisig, Multisig]
 	[pallet_sudo, Sudo]
-	[pallet_qf_polkavm_dev, QFPolkaVM]
+	[pallet_timestamp, Timestamp]
+	[pallet_utility, Utility]
+	[pallet_vesting, Vesting]
+	[pallet_claims, Claims]
 );

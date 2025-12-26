@@ -15,6 +15,9 @@
     "runtimeGenesis": {
       "code": "0x00",
       "patch": {
+        "assets": {
+          "nextAssetId": 1
+        },
         "balances": {
           "balances": [
             [
@@ -110,6 +113,26 @@
             ]
           ],
           "validatorCount": 2
+        },
+        "claims": {
+          "claims": [
+            [
+              "0xe2cf7becc847d11b35b71d205b646cf8d0bcd637",
+              100000000000000000000,
+              null,
+              null
+            ]
+          ],
+          "vesting": [
+            [
+              "0xe2cf7becc847d11b35b71d205b646cf8d0bcd637",
+              [
+                100000000000000000000,
+                100000000000000000000,
+                600
+              ]
+            ]
+          ]
         },
         "sudo": {
           "key": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"

@@ -1,4 +1,4 @@
-// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) QF Network, 2025.
 // Copyright (C) Parity Technologies (UK) Ltd., until 2025.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,9 +9,11 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
+	pallet_prelude::*,
 	traits::{DisabledValidators, FindAuthor, Get, OnTimestampSet, OneSessionHandler},
 	BoundedSlice, BoundedVec, ConsensusEngineId, Parameter,
 };
+use frame_system::pallet_prelude::*;
 use log;
 use qfp_consensus_spin::{
 	AuthorityIndex, ConsensusLog, SessionLength as SessionLengthT, Slot, SpinAuxData,
@@ -47,14 +49,9 @@ impl<T: pallet_timestamp::Config> Get<T::Moment> for MinimumPeriodTimesTwo<T> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
 	pub trait Config: pallet_timestamp::Config + frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// The identifier type for an authority.
 		type AuthorityId: Member
 			+ Parameter
@@ -96,7 +93,7 @@ pub mod pallet {
 
 		/// Default session length in blocks.
 		#[pallet::constant]
-		type DefaultSessionLength: Get<SessionLengthT>;
+		type DefaultSessionLength: Get<SessionLengthT<BlockNumberFor<Self>>>;
 	}
 
 	#[pallet::pallet]
@@ -157,7 +154,7 @@ pub mod pallet {
 	/// Selected leader produces blocks for `SessionLength` blocks.
 	#[pallet::storage]
 	pub type SessionLength<T: Config> =
-		StorageValue<_, SessionLengthT, ValueQuery, T::DefaultSessionLength>;
+		StorageValue<_, SessionLengthT<BlockNumberFor<T>>, ValueQuery, T::DefaultSessionLength>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -182,7 +179,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// New session length set.
-		NewSessionLength(SessionLengthT),
+		NewSessionLength(SessionLengthT<BlockNumberFor<T>>),
 	}
 
 	#[pallet::call]
@@ -194,7 +191,7 @@ pub mod pallet {
 		#[pallet::weight(T::DbWeight::get().reads_writes(0, 1))]
 		pub fn set_session_length(
 			origin: OriginFor<T>,
-			session_len: SessionLengthT,
+			session_len: SessionLengthT<BlockNumberFor<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -272,7 +269,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Auxiliary data for SPIN.
-	pub fn aux_data() -> SpinAuxData<T::AuthorityId> {
+	pub fn aux_data() -> SpinAuxData<T::AuthorityId, BlockNumberFor<T>> {
 		let authorities = Authorities::<T>::get();
 		let session_length = SessionLength::<T>::get();
 		(authorities.into_inner(), session_length)

@@ -1,289 +1,214 @@
-//! # SPIN pallet for obtaining secure finality from Polkadot to SPIN
-//!
-//! This pallet defines the structure of alive messages and the state machine
-//! for the slow chain. It automatically triggers state transitions based on
-//! received messages and passed blocks. Extrinsic allow handling of alive
-//! messages.
-//!
-//! ## State Machine
-//!
-//! The pallet implements a state machine with two states:
-//!
-//! * `Operational`: The normal operating mode. In this state:
-//!   - Fastchain processes blocks and accepts alive messages
-//!   - Each received alive message updates the `last_alive_message_block_number`
-//!   - If no alive message is received for `TimeoutBlocks` blocks, the system transitions to
-//!     `CoolDown`
-//!
-//! * `CoolDown`: A recovery period after a timeout. In this state:
-//!   - Validators provide last known notarizations
-//!   - Alive messages are not accepted until the cool down period ends
-//!   - After `CoolDownPeriodBlocks` blocks, the system automatically transitions back to
-//!     `Operational`
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
 
-#[frame::pallet]
+use codec::{Decode, DecodeWithMemTracking, Encode};
+use finality_grandpa::Message as GrandpaMessage;
+use frame_support::{ensure, pallet_prelude::*, BoundedVec};
+use frame_system::pallet_prelude::*;
+use scale_info::TypeInfo;
+use sp_consensus_grandpa::{self, AuthorityList, SetId};
+use sp_runtime::traits::Header as HeaderT;
+use sp_std::collections::btree_set::BTreeSet;
+
+#[frame_support::pallet]
 pub mod pallet {
-	use frame::{prelude::*, runtime::types_common::BlockNumber, traits::Header};
-	use polkadot_parachain_primitives::primitives::HeadData;
-	use sp_consensus_grandpa::Commit;
+	use super::*;
 
-	/// The validation data provides information about how to create the inputs
-	/// for validation of a candidate.
-	///
-	/// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/polkadot/primitives/src/v8/mod.rs#L663)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	pub struct PersistedValidationData<
-		H: Clone + Debug + PartialEq = H256,
-		N: Clone + Debug + PartialEq = BlockNumber,
-	> {
-		/// The parent head-data.
-		pub parent_head: HeadData,
-		/// The relay-chain block number this is in the context of.
-		pub relay_parent_number: N,
-		/// The relay-chain block storage root this is in the context of.
-		pub relay_parent_storage_root: H,
-		/// The maximum legal size of a POV block, in bytes.
-		pub max_pov_size: u32,
-	}
+	/// TODO(zotho): pick sane limits for our network
+	pub const MAX_VOTES_ANCESTRIES: u32 = 512;
 
-	/// The inherent data that is passed by the fastchain validator to the
-	/// parachain runtime.
-	///
-	///  See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/cumulus/primitives/parachain-inherent/src/lib.rs#L46)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	pub struct FastchainInherentData {
-		pub validation_data: PersistedValidationData,
-		/// A storage proof of a predefined set of keys from the relay-chain.
-		///
-		/// Specifically this witness contains the data for:
-		///
-		/// - the current slot number at the given relay parent
-		/// - active host configuration as per the relay parent,
-		/// - the relay dispatch queue sizes
-		/// - the list of egress HRMP channels (in the list of recipients form)
-		/// - the metadata for the egress HRMP channels
-		pub relay_chain_state: sp_trie::StorageProof,
-		// /// Downward messages in the order they were sent.
-		// pub downward_messages: Vec<InboundDownwardMessage>,
-		// /// HRMP messages grouped by channels. The messages in the inner vec must be in order
-		// they /// were sent. In combination with the rule of no more than one message in a
-		// channel per block, /// this means `sent_at` is **strictly** greater than the previous
-		// one (if any). pub horizontal_messages: BTreeMap<ParaId, Vec<InboundHrmpMessage>>,
-	}
-
-	/// A GRANDPA justification for block finality, it includes a commit message
-	/// and an ancestry proof including all headers routing all precommit
-	/// target blocks to the commit target block. Due to the current voting
-	/// strategy the precommit targets should be the same as the commit target,
-	/// since honest voters don't vote past authority set change blocks.
-	///
-	/// See the [original reference](https://github.com/paritytech/polkadot-sdk/blob/polkadot-stable2412-2/substrate/primitives/consensus/grandpa/src/lib.rs#L133)
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	#[scale_info(skip_type_params(MaxVotesAncestries))]
-	pub struct GrandpaJustification<MaxVotesAncestries: Get<u32>, H: Header> {
+	/// Identical to `sp_consensus_grandpa::GrandpaJustification` but with bounded
+	/// `votes_ancestries` vector.
+	#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
+	pub struct BoundedGrandpaJustification<H: HeaderT> {
 		pub round: u64,
-		// TODO: replace with bounded size data structure
-		pub commit: Commit<H>,
-		pub votes_ancestries: BoundedVec<H, MaxVotesAncestries>,
+		pub commit: sp_consensus_grandpa::Commit<H>,
+		pub votes_ancestries: BoundedVec<H, ConstU32<MAX_VOTES_ANCESTRIES>>,
 	}
 
-	/// Alive message proof combining `FastchainInherentData` and
-	/// `GrandpaJustification`.
-	///
-	/// Should be sent from a fastchain node to the parachain SPIN pallet via an
-	/// extrinsic call.
-	#[derive(CloneNoBound, Encode, Decode, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
-	#[scale_info(skip_type_params(MaxVotesAncestries))]
-	pub struct AliveMessageProof<MaxVotesAncestries: Get<u32>, H: Header> {
-		pub fastchain_inherent_data: FastchainInherentData,
-		pub grandpa_justification: GrandpaJustification<MaxVotesAncestries, H>,
+	impl<H: HeaderT> core::fmt::Debug for BoundedGrandpaJustification<H> {
+		fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+			f.debug_struct("BoundedGrandpaJustification")
+				.field("round", &self.round)
+				.field("commit", &"<commit>") // TODO: replace the placeholder
+				.field("votes_ancestries", &self.votes_ancestries.len())
+				.finish()
+		}
+	}
+
+	/// Stored configuration for the GRANDPA authority set that signs fastchain finality proofs.
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+	pub struct AuthoritySetData {
+		pub set_id: SetId,
+		pub authorities: AuthorityList,
+	}
+
+	/// Metadata about the best fastchain block accepted on the parachain.
+	#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+	pub struct FinalizedTarget<BlockNumber, Hash> {
+		pub number: BlockNumber,
+		pub hash: Hash,
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+	pub trait Config: frame_system::Config {}
 
-		#[pallet::constant]
-		type TimeoutBlocks: Get<BlockNumberFor<Self>>;
-
-		#[pallet::constant]
-		type CoolDownPeriodBlocks: Get<BlockNumberFor<Self>>;
-
-		#[pallet::constant]
-		type MaxVotesAncestries: Get<u32>;
-	}
-
+	// TODO(zotho): remove `without_storage_info`
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq)]
-	pub enum SlowchainState<BlockNumber: Clone + PartialEq> {
-		Operational { last_alive_message_block_number: BlockNumber },
-		CoolDown { start_block_number: BlockNumber },
-	}
-
-	/// State of the slowchain: Operational, CoolDown or None
+	// TODO(zotho): Add MEL bound for `AuthoritySetData` https://github.com/QuantumFusion-network/spec/issues/629
+	/// Current GRANDPA authority set information.
 	#[pallet::storage]
-	pub type State<T: Config> = StorageValue<_, SlowchainState<BlockNumberFor<T>>>;
+	pub type FastchainAuthoritySet<T: Config> = StorageValue<_, AuthoritySetData>;
 
-	/// Set of fastchain validators used to verify alive messages and elect a
-	/// leader
+	/// Highest fastchain block known to be finalized on the parachain.
 	#[pallet::storage]
-	pub type ValidatorSet<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, (), ValueQuery>;
+	pub type LastFinalized<T: Config> =
+		StorageValue<_, FinalizedTarget<BlockNumberFor<T>, <HeaderFor<T> as HeaderT>::Hash>>;
 
-	/// Last seen alive message
+	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
+	/// The most recent justification bytes accepted. This is informational only.
 	#[pallet::storage]
-	pub type LastAliveMessage<T: Config> =
-		StorageValue<_, AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>>;
+	pub type LastJustification<T: Config> =
+		StorageValue<_, BoundedGrandpaJustification<HeaderFor<T>>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// A new alive message has been received.
-		HeartbeatReceived { block_number: BlockNumberFor<T>, who: T::AccountId },
-		/// `CoolDown` mode has been triggered.
-		StartedCoolDown {
-			block_number: BlockNumberFor<T>,
-			last_alive_message_block_number: BlockNumberFor<T>,
+		/// The parachain accepted a new fastchain finality proof.
+		FinalityProofAccepted {
+			who: T::AccountId,
+			number: BlockNumberFor<T>,
+			hash: <HeaderFor<T> as HeaderT>::Hash,
 		},
-		/// `CoolDown` mode has ended.
-		FinishedCoolDown { block_number: BlockNumberFor<T> },
+		/// The GRANDPA authority set was updated.
+		AuthoritySetUpdated { set_id: SetId, authorities: u64 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		IntegerOverflow,
-		CoolDownPeriod,
-		BlockNumberDecreased,
-	}
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(current_block_number: BlockNumberFor<T>) -> Weight {
-			let mut weight = Weight::zero();
-			weight += T::DbWeight::get().reads(1);
-
-			match <State<T>>::get() {
-				Some(SlowchainState::Operational { last_alive_message_block_number }) => {
-					let timeout_blocks = T::TimeoutBlocks::get();
-
-					let deadline_block_number =
-						match last_alive_message_block_number.checked_add(&timeout_blocks) {
-							Some(deadline_block_number) => deadline_block_number,
-							None => return weight,
-						};
-
-					if current_block_number > deadline_block_number {
-						<State<T>>::put(SlowchainState::CoolDown {
-							start_block_number: current_block_number,
-						});
-						weight += T::DbWeight::get().writes(1);
-						Self::deposit_event(Event::StartedCoolDown {
-							block_number: current_block_number,
-							last_alive_message_block_number,
-						});
-					}
-				},
-				Some(SlowchainState::CoolDown { start_block_number }) => {
-					let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
-					let cool_down_period_deadline =
-						match start_block_number.checked_add(&cool_down_period_blocks) {
-							Some(cool_down_period_deadline) => cool_down_period_deadline,
-							None => return weight,
-						};
-					if current_block_number > cool_down_period_deadline {
-						<State<T>>::put(SlowchainState::Operational {
-							last_alive_message_block_number: current_block_number,
-						});
-						weight += T::DbWeight::get().writes(1);
-						Self::deposit_event(Event::FinishedCoolDown {
-							block_number: current_block_number,
-						});
-					}
-				},
-				None => {
-					// Start as `Operational` for first block
-					<State<T>>::put(SlowchainState::Operational {
-						last_alive_message_block_number: current_block_number,
-					});
-					weight += T::DbWeight::get().writes(1);
-				},
-			}
-
-			weight
-		}
+		AuthoritySetNotInitialized,
+		AuthoritySetMismatch,
+		EmptyAuthoritySet,
+		UnknownAuthority,
+		BadSignature,
+		InsufficientWeight,
+		AlreadyFinalized,
+		UnsupportedBlockNumber,
+		MismatchedTargets,
+		NoPrecommits,
+		ComputationOverflow,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Submit an alive message and postpone the transition to `CoolDown`
-		/// mode.
+		/// Set (or refresh) the GRANDPA authority set that the parachain trusts for fastchain.
+		///
+		/// The call must be dispatched by `Root`.
 		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().reads_writes(1,1))]
-		pub fn submit_alive_message(
+		#[pallet::weight(T::DbWeight::get().writes(1))]
+		pub fn set_authority_set(
 			origin: OriginFor<T>,
-			proof: AliveMessageProof<T::MaxVotesAncestries, HeaderFor<T>>,
-		) -> DispatchResultWithPostInfo {
+			set_id: SetId,
+			authorities: AuthorityList,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
+
+			let authorities_len =
+				u64::try_from(authorities.len()).map_err(|_| Error::<T>::ComputationOverflow)?;
+
+			FastchainAuthoritySet::<T>::put(AuthoritySetData { set_id, authorities });
+
+			Self::deposit_event(Event::AuthoritySetUpdated {
+				set_id,
+				authorities: authorities_len,
+			});
+			Ok(())
+		}
+
+		/// Submit a `GrandpaJustification` produced by the fastchain node.
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::DbWeight::get().reads_writes(2, 2))]
+		pub fn submit_finality_proof(
+			origin: OriginFor<T>,
+			expected_set_id: SetId,
+			justification: BoundedGrandpaJustification<HeaderFor<T>>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// TODO: validate GRANDPA justification proof on client side
-			// proof.validate();
+			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
-			let current_block_number = frame_system::Pallet::<T>::block_number();
+			let authority_set =
+				FastchainAuthoritySet::<T>::get().ok_or(Error::<T>::AuthoritySetNotInitialized)?;
+			ensure!(!authority_set.authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
+			ensure!(authority_set.set_id == expected_set_id, Error::<T>::AuthoritySetMismatch);
 
-			match <State<T>>::get() {
-				Some(SlowchainState::Operational { last_alive_message_block_number }) => {
-					ensure!(
-						current_block_number > last_alive_message_block_number,
-						Error::<T>::BlockNumberDecreased
-					);
-					<State<T>>::put(SlowchainState::Operational {
-						last_alive_message_block_number: current_block_number,
-					});
-					Self::deposit_event(Event::HeartbeatReceived {
-						block_number: current_block_number,
-						who,
-					});
-				},
-				Some(SlowchainState::CoolDown { start_block_number }) => {
-					let cool_down_period_blocks = T::CoolDownPeriodBlocks::get();
-					let cool_down_period_deadline_block_number: BlockNumberFor<T> =
-						start_block_number
-							.checked_add(&cool_down_period_blocks)
-							.ok_or(Error::<T>::IntegerOverflow)?;
+			// TODO(zotho): how do we verify that `target_hash` is hash of `target_number` block?
+			let target_hash = justification.commit.target_hash;
+			let target_number: BlockNumberFor<T> = justification.commit.target_number;
 
-					if current_block_number > cool_down_period_deadline_block_number {
-						<State<T>>::put(SlowchainState::Operational {
-							last_alive_message_block_number: current_block_number,
-						});
-						Self::deposit_event(Event::FinishedCoolDown {
-							block_number: current_block_number,
-						});
-					} else {
-						return Err(Error::<T>::CoolDownPeriod.into());
-					}
-				},
-				None => {
-					// Start as `Operational` for first heartbeat
-					<State<T>>::put(SlowchainState::Operational {
-						last_alive_message_block_number: current_block_number,
-					});
-					Self::deposit_event(Event::HeartbeatReceived {
-						block_number: current_block_number,
-						who,
-					});
-				},
+			if let Some(last) = LastFinalized::<T>::get() {
+				ensure!(target_number > last.number, Error::<T>::AlreadyFinalized);
 			}
 
-			<LastAliveMessage<T>>::put(proof);
+			// TODO(zotho): do we have to compute the total every time?
+			let mut total_weight: u128 = 0;
+			for &(_, weight) in &authority_set.authorities {
+				total_weight = total_weight
+					.checked_add(u128::from(weight))
+					.ok_or(Error::<T>::ComputationOverflow)?;
+			}
+			ensure!(total_weight > 0, Error::<T>::EmptyAuthoritySet);
 
-			Ok(().into())
+			let mut seen = BTreeSet::new();
+			let mut signed_weight: u128 = 0;
+
+			for signed in &justification.commit.precommits {
+				ensure!(
+					signed.precommit.target_hash == target_hash &&
+						signed.precommit.target_number == justification.commit.target_number,
+					Error::<T>::MismatchedTargets
+				);
+
+				let signature_ok = sp_consensus_grandpa::check_message_signature(
+					&GrandpaMessage::Precommit(signed.precommit.clone()),
+					&signed.id,
+					&signed.signature,
+					justification.round,
+					authority_set.set_id,
+				)
+				.is_valid();
+				ensure!(signature_ok, Error::<T>::BadSignature);
+
+				// TODO(zotho): only first seen here. do we need filtering?
+				if seen.insert(signed.id.clone()) {
+					let weight = authority_set
+						.authorities
+						.iter()
+						.find_map(|(id, weight)| if *id == signed.id { Some(weight) } else { None })
+						.ok_or(Error::<T>::UnknownAuthority)?;
+					signed_weight = signed_weight.saturating_add(u128::from(*weight));
+				}
+			}
+
+			ensure!(
+				signed_weight.saturating_mul(3) >= total_weight.saturating_mul(2),
+				Error::<T>::InsufficientWeight
+			);
+
+			LastFinalized::<T>::put(FinalizedTarget { number: target_number, hash: target_hash });
+			LastJustification::<T>::put(justification);
+
+			Self::deposit_event(Event::FinalityProofAccepted {
+				who,
+				number: target_number,
+				hash: target_hash,
+			});
+			Ok(())
 		}
 	}
 }

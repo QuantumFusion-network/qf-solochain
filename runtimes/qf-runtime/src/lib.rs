@@ -7,6 +7,7 @@ pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
+mod weights;
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -20,6 +21,7 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+pub use frame_support::traits::ConstU32;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -61,18 +63,16 @@ impl_opaque_keys! {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("QF-runtime"),
-	impl_name: Cow::Borrowed("QF-runtime"),
+	spec_name: Cow::Borrowed("qf"),
+	impl_name: Cow::Borrowed("theqfnetwork"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
-	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
-	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
-	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
-	//   the compatible custom types.
-	spec_version: 101,
-	impl_version: 1,
+	// runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
+	// `spec_version`, and `authoring_version` are the same between Wasm and native.
+	spec_version: 117,
+	impl_version: 0,
 	apis: apis::RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 10,
 	system_version: 1,
 };
 
@@ -102,11 +102,18 @@ pub const UNIT: Balance = 1_000_000_000_000_000_000;
 pub const MILLI_UNIT: Balance = 1_000_000_000_000_000;
 pub const MICRO_UNIT: Balance = 1_000_000_000_000;
 
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * MILLI_UNIT + (bytes as Balance) * MICRO_UNIT
+}
+
 /// Existential deposit.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
 /// Session length in blocks
 pub const SESSION_LENGTH: BlockNumber = 1 * MINUTES;
+
+/// Initial asset ID in pallet-assets.
+pub const GENESIS_NEXT_ASSET_ID: Option<u32> = Some(1);
 
 /// The version information used to identify this runtime when compiled
 /// natively.
@@ -133,7 +140,7 @@ pub type Nonce = u32;
 pub type Hash = sp_core::H256;
 
 /// An index to a block.
-pub type BlockNumber = u32;
+pub type BlockNumber = u64;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -226,46 +233,51 @@ mod runtime {
 	)]
 	pub struct Runtime;
 
+	// Basic
 	#[runtime::pallet_index(0)]
 	pub type System = frame_system;
-
 	#[runtime::pallet_index(1)]
 	pub type Timestamp = pallet_timestamp;
-
-	/// Aura was used at index 2
-	#[runtime::pallet_index(12)]
-	pub type Spin = pallet_spin;
-
+	#[runtime::pallet_index(2)]
+	pub type Utility = pallet_utility;
 	#[runtime::pallet_index(3)]
-	pub type Grandpa = pallet_grandpa;
+	pub type Multisig = pallet_multisig;
 
-	#[runtime::pallet_index(4)]
-	pub type Balances = pallet_balances;
-
-	#[runtime::pallet_index(5)]
-	pub type TransactionPayment = pallet_transaction_payment;
-
-	#[runtime::pallet_index(6)]
-	pub type Sudo = pallet_sudo;
-
-	#[runtime::pallet_index(7)]
-	pub type QFPolkaVM = pallet_qf_polkavm;
-
-	#[runtime::pallet_index(8)]
-	pub type QFPolkaVMDev = pallet_qf_polkavm_dev;
-
-	#[runtime::pallet_index(9)]
-	pub type Faucet = pallet_faucet;
-
+	// Monetary
 	#[runtime::pallet_index(10)]
+	pub type Balances = pallet_balances;
+	#[runtime::pallet_index(11)]
+	pub type TransactionPayment = pallet_transaction_payment;
+	#[runtime::pallet_index(12)]
+	pub type Vesting = pallet_vesting;
+	#[runtime::pallet_index(13)]
+	pub type Claims = pallet_claims;
+
+	// Consensus
+	#[runtime::pallet_index(20)]
+	pub type Authorship = pallet_authorship;
+	#[runtime::pallet_index(21)]
+	pub type Session = pallet_session;
+	#[runtime::pallet_index(22)]
+	pub type Grandpa = pallet_grandpa;
+	#[runtime::pallet_index(23)]
+	pub type Spin = pallet_spin;
+	#[runtime::pallet_index(24)]
+	pub type SpinAnchoring = pallet_spin_anchoring;
+
+	// Staking
+	#[runtime::pallet_index(40)]
 	pub type Staking = pallet_staking;
 
-	#[runtime::pallet_index(11)]
-	pub type Session = pallet_session;
+	// Governance
+	#[runtime::pallet_index(51)]
+	pub type Sudo = pallet_sudo;
 
-	#[runtime::pallet_index(13)]
-	pub type Authorship = pallet_authorship;
-
-	#[runtime::pallet_index(14)]
+	// Smart contracts
+	#[runtime::pallet_index(70)]
 	pub type Revive = pallet_revive;
+
+	// Assets
+	#[runtime::pallet_index(80)]
+	pub type Assets = pallet_assets;
 }

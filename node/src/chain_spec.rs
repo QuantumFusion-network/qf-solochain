@@ -1,9 +1,12 @@
-use qf_runtime::{AccountId, Signature, WASM_BINARY};
+use qf_runtime::{
+	configs::ClaimPalletAccountId, AccountId, Balance, BlockNumber, SessionKeys, Signature,
+	GENESIS_NEXT_ASSET_ID, UNIT, WASM_BINARY,
+};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use sc_service::ChainType;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -117,13 +120,16 @@ fn testnet_genesis(
 	_enable_println: bool,
 ) -> serde_json::Value {
 	// Configure endowed accounts with initial balance of 10^6 UNIT.
-	const ENDOWMENT: u128 = 10u128.pow(6) * qf_runtime::UNIT;
+	const ENDOWMENT: u128 = 10u128.pow(6) * UNIT;
 	// Configure stash accounts with initial balance of 10^5 UNIT.
-	const STASH: u128 = 10u128.pow(5) * qf_runtime::UNIT;
+	const STASH: u128 = 10u128.pow(5) * UNIT;
 
 	serde_json::json!({
+		"assets": {
+			"nextAssetId": GENESIS_NEXT_ASSET_ID,
+		},
 		"balances": {
-			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect::<Vec<_>>(),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).chain(vec![(ClaimPalletAccountId::get().into_account_truncating(), ENDOWMENT)]).collect::<Vec<_>>(),
 		},
 		"session": {
 			"keys": initial_authorities
@@ -132,7 +138,7 @@ fn testnet_genesis(
 					(
 						x.1.clone(),
 						x.1.clone(),
-						qf_runtime::SessionKeys {
+						SessionKeys {
 							spin: x.2.clone(),
 							grandpa: x.3.clone(),
 						},
@@ -155,6 +161,9 @@ fn testnet_genesis(
 			// Assign network admin rights.
 			"key": Some(root_key),
 		},
+		"vesting": {
+			"vesting": Vec::<(AccountId, BlockNumber, BlockNumber, Balance)>::new(),
+		},
 	})
 }
 
@@ -164,4 +173,8 @@ pub fn qf_devnet_config() -> Result<ChainSpec, String> {
 
 pub fn qf_testnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("./res/qf-testnet.raw.json")[..])
+}
+
+pub fn qf_mainnet_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("./res/qf-mainnet.raw.json")[..])
 }

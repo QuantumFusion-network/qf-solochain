@@ -12,7 +12,7 @@ use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Quantum Fusion QF Node".into()
+		"QF Network Fastchain".into()
 	}
 
 	fn impl_version() -> String {
@@ -41,6 +41,7 @@ impl SubstrateCli for Cli {
 			"" | "local" => Box::new(chain_spec::local_testnet_config()?),
 			"qf-devnet" => Box::new(chain_spec::qf_devnet_config()?),
 			"qf-testnet" => Box::new(chain_spec::qf_testnet_config()?),
+			"qf-mainnet" => Box::new(chain_spec::qf_mainnet_config()?),
 			path =>
 				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 		})
@@ -53,6 +54,7 @@ pub fn run() -> sc_cli::Result<()> {
 
 	match &cli.subcommand {
 		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
+		#[allow(deprecated)]
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -64,6 +66,10 @@ pub fn run() -> sc_cli::Result<()> {
 					service::new_partial(&config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
+		},
+		Some(Subcommand::ExportChainSpec(cmd)) => {
+			let chain_spec = cli.load_spec(&cmd.chain)?;
+			cmd.run(chain_spec)
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -138,8 +144,9 @@ pub fn run() -> sc_cli::Result<()> {
 							service::new_partial(&config)?;
 						let db = backend.expose_db();
 						let storage = backend.expose_storage();
+						let shared_cache = backend.expose_shared_trie_cache();
 
-						cmd.run(config, client, db, storage)
+						cmd.run(config, client, db, storage, shared_cache)
 					},
 					BenchmarkCmd::Overhead(cmd) => {
 						let PartialComponents { client, .. } = service::new_partial(&config)?;

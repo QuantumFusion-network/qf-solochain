@@ -2,7 +2,7 @@ ARG BUILD_ARCH=x86_64
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
 
-LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
+LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
 
 SHELL ["/bin/sh", "-c"]
 
@@ -23,12 +23,11 @@ RUN git config --global http.postBuffer 157286400
 RUN git clone https://github.com/QuantumFusion-network/qf-solochain.git
 
 WORKDIR /opt/qf-solochain
-RUN make vendor-clone
 RUN make qf-node-release -j 8
 
 FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
 
-LABEL MAINTAINER="Quantum Fusion <admin@qfnetwork.xyz>"
+LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
 
 RUN mkdir -p /opt/qf-solochain
 COPY --from=builder-solochain /opt/qf-solochain/output /opt/qf-solochain/output

@@ -1,4 +1,4 @@
-// Copyright (C) Quantum Fusion Network, 2025.
+// Copyright (C) QF Network, 2025.
 // Copyright (C) Parity Technologies (UK) Ltd., until 2025.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -169,7 +169,7 @@ where
 	P::Signature: TryFrom<Vec<u8>> + Member + Codec,
 	B: BlockT,
 	C: ProvideRuntimeApi<B> + BlockOf + AuxStore + HeaderBackend<B> + Send + Sync,
-	C::Api: SpinApi<B, AuthorityId<P>>,
+	C::Api: SpinApi<B, AuthorityId<P>, NumberFor<B>>,
 	SC: SelectChain<B>,
 	I: BlockImport<B> + Send + Sync + 'static,
 	PF: Environment<B, Error = Error> + Send + Sync + 'static,
@@ -267,12 +267,12 @@ pub fn build_spin_worker<P, B, C, PF, I, SO, L, BS, Error>(
 	SyncOracle = SO,
 	JustificationSyncLink = L,
 	Claim = P::Public,
-	AuxData = (Vec<AuthorityId<P>>, SessionLength),
+	AuxData = (Vec<AuthorityId<P>>, SessionLength<NumberFor<B>>),
 >
 where
 	B: BlockT,
 	C: ProvideRuntimeApi<B> + BlockOf + AuxStore + HeaderBackend<B> + Send + Sync,
-	C::Api: SpinApi<B, AuthorityId<P>>,
+	C::Api: SpinApi<B, AuthorityId<P>, NumberFor<B>>,
 	PF: Environment<B, Error = Error> + Send + Sync + 'static,
 	PF::Proposer: Proposer<B, Error = Error>,
 	P: Pair,
@@ -323,7 +323,7 @@ impl<B, C, E, I, P, Error, SO, L, BS> sc_consensus_slots::SimpleSlotWorker<B>
 where
 	B: BlockT,
 	C: ProvideRuntimeApi<B> + BlockOf + HeaderBackend<B> + Sync,
-	C::Api: SpinApi<B, AuthorityId<P>>,
+	C::Api: SpinApi<B, AuthorityId<P>, NumberFor<B>>,
 	E: Environment<B, Error = Error> + Send + Sync,
 	E::Proposer: Proposer<B, Error = Error>,
 	I: BlockImport<B> + Send + Sync + 'static,
@@ -342,7 +342,7 @@ where
 		Pin<Box<dyn Future<Output = Result<E::Proposer, ConsensusError>> + Send + 'static>>;
 	type Proposer = E::Proposer;
 	type Claim = P::Public;
-	type AuxData = SpinAuxData<AuthorityId<P>>;
+	type AuxData = SpinAuxData<AuthorityId<P>, NumberFor<B>>;
 
 	fn logging_target(&self) -> &'static str {
 		"spin"
@@ -371,7 +371,7 @@ where
 		slot: Slot,
 		aux_data: &Self::AuxData,
 	) -> Option<Self::Claim> {
-		crate::standalone::claim_slot::<P>(slot, aux_data, &self.keystore).await
+		crate::standalone::claim_slot::<B, P>(slot, aux_data, &self.keystore).await
 	}
 
 	fn pre_digest_data(&self, slot: Slot, _claim: &Self::Claim) -> Vec<sp_runtime::DigestItem> {
@@ -504,12 +504,12 @@ fn aux_data<A, B, C>(
 	parent_hash: B::Hash,
 	context_block_number: NumberFor<B>,
 	compatibility_mode: &CompatibilityMode<NumberFor<B>>,
-) -> Result<SpinAuxData<A>, ConsensusError>
+) -> Result<SpinAuxData<A, NumberFor<B>>, ConsensusError>
 where
 	A: Codec + Debug,
 	B: BlockT,
 	C: ProvideRuntimeApi<B>,
-	C::Api: SpinApi<B, A>,
+	C::Api: SpinApi<B, A, NumberFor<B>>,
 {
 	let runtime_api = client.runtime_api();
 
