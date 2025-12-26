@@ -170,8 +170,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
-	impl_name: alloc::borrow::Cow::Borrowed("qf-parachain-runtime"),
+	spec_name: alloc::borrow::Cow::Borrowed("qf-para"),
+	impl_name: alloc::borrow::Cow::Borrowed("theqfnetwork"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
