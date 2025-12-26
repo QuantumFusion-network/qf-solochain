@@ -11,7 +11,9 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {}
+	pub trait Config: frame_system::Config {
+		type RelayerOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(core::marker::PhantomData<T>);
@@ -36,7 +38,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			up_to: BlockNumberFor<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::RelayerOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
 
 			let prev = SecureUpTo::<T>::get();
 			if up_to > prev {

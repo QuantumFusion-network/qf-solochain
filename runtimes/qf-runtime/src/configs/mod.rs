@@ -517,7 +517,14 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_spin_anchoring::Config for Runtime {}
+ord_parameter_types! {
+	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
+	pub const RelayerOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
+}
+
+impl pallet_spin_anchoring::Config for Runtime {
+	type RelayerOrigin = EnsureSignedBy<RelayerOrigin, AccountId>;
+}
 
 parameter_types! {
 	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
