@@ -1,0 +1,88 @@
+{
+  "name": "QF Parachain (Polkadot)",
+  "id": "qf_para_polkadot",
+  "para_id": 3426,
+  "chainType": "Live",
+  "bootNodes": [
+    "/dns4/collator.eu.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWQB27w3mHQVn9p95Yo17esK4GK62fbk9kQcPGhGrPsSao",
+    "/dns4/collator.us.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWBsM4P4FTJvd3wD8TaB7xYSh5rzwBTW6J3mnZdQ5LMLVL"
+  ],
+  "telemetryEndpoints": null,
+  "protocolId": "qf-para-pol",
+  "properties": {
+    "ss58Format": 42,
+    "tokenDecimals": 12,
+    "tokenSymbol": "UNIT"
+  },
+  "relay_chain": "polkadot",
+  "codeSubstitutes": {},
+  "genesis": {
+    "runtimeGenesis": {
+      "code": "0x00",
+      "patch": {
+        "balances": {
+          "balances": [
+            [
+              "5Enk8x8yxejgxBAApRE99WwAafthwdoMfUotoWu6X9p2VR3P",
+              1000000000000000000
+            ],
+            [
+              "5EhunzDHzbX2Cfxp611MZQ7f5sczdu6GNwaZKxbMPy1Nf1ER",
+              200000000000000000
+            ],
+            [
+              "5E7THr6nkssWRbL3X8pBCQbQdyroik3xZQBHkVXBc46u7aUq",
+              200000000000000000
+            ],
+            [
+              "5Ec6dA9Y4GLgNBb4hu51vXhQm7xP6r5jmNsg54rLYNRpsdg4",
+              200000000000000000
+            ]
+          ]
+        },
+        "collatorSelection": {
+          "candidacyBond": 100000000000000000,
+          "invulnerables": [
+            "5EhunzDHzbX2Cfxp611MZQ7f5sczdu6GNwaZKxbMPy1Nf1ER",
+            "5E7THr6nkssWRbL3X8pBCQbQdyroik3xZQBHkVXBc46u7aUq",
+            "5Ec6dA9Y4GLgNBb4hu51vXhQm7xP6r5jmNsg54rLYNRpsdg4"
+          ]
+        },
+        "parachainInfo": {
+          "parachainId": 3426
+        },
+        "polkadotXcm": {
+          "safeXcmVersion": 5
+        },
+        "session": {
+          "keys": [
+            [
+              "5EhunzDHzbX2Cfxp611MZQ7f5sczdu6GNwaZKxbMPy1Nf1ER",
+              "5EhunzDHzbX2Cfxp611MZQ7f5sczdu6GNwaZKxbMPy1Nf1ER",
+              {
+                "aura": "5FZ9ekJ7WYpZiFaZpQbMAcGR96rKbUaiPvQm88CR8VRRm4Gp"
+              }
+            ],
+            [
+              "5E7THr6nkssWRbL3X8pBCQbQdyroik3xZQBHkVXBc46u7aUq",
+              "5E7THr6nkssWRbL3X8pBCQbQdyroik3xZQBHkVXBc46u7aUq",
+              {
+                "aura": "5EqjxFehLNNpHd8itn3KeQLy5rgvexv2NZe2ao8KeYi8mis5"
+              }
+            ],
+            [
+              "5Ec6dA9Y4GLgNBb4hu51vXhQm7xP6r5jmNsg54rLYNRpsdg4",
+              "5Ec6dA9Y4GLgNBb4hu51vXhQm7xP6r5jmNsg54rLYNRpsdg4",
+              {
+                "aura": "5CMZH3As5EZjuMKpxcE6yYGEiCXvWTZsYz2C9nZy4Wy4Ve11"
+              }
+            ]
+          ]
+        },
+        "sudo": {
+          "key": "5Enk8x8yxejgxBAApRE99WwAafthwdoMfUotoWu6X9p2VR3P"
+        }
+      }
+    }
+  }
+}
