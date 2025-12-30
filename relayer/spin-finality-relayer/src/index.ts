@@ -20,7 +20,8 @@ import pino from "pino";
 
 const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
-const RELAYER_URI = process.env.RELAYER_URI ?? "//Alice";
+const FASTCHAIN_SIGNER_URI = process.env.FASTCHAIN_SIGNER_URI ?? "//Alice";
+const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Bob";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 
@@ -456,11 +457,14 @@ async function main() {
     });
     await parachain.isReady;
     const keyring = new Keyring({ type: "sr25519" });
-    const relayerAccount = keyring.addFromUri(RELAYER_URI, {
-        name: "spin-finality-relayer",
+    const fastchainAccount = keyring.addFromUri(FASTCHAIN_SIGNER_URI, {
+        name: "spin-finality-relayer-fastchain",
+    });
+    const parachainAccount = keyring.addFromUri(PARACHAIN_SIGNER_URI, {
+        name: "spin-finality-relayer-parachain",
     });
     logger.info(
-        { FASTCHAIN_WS, PARACHAIN_WS, signer: relayerAccount.address },
+        { FASTCHAIN_WS, PARACHAIN_WS, fastchainSigner: fastchainAccount.address, parachainSigner: parachainAccount.address },
         "Relayer starting",
     );
 
@@ -470,7 +474,7 @@ async function main() {
     let currentAuthorities = await fetchAuthorities(fastchain);
     await ensureAuthoritySet(
         parachain,
-        relayerAccount,
+        parachainAccount,
         currentSetId,
         currentAuthorities,
     );
@@ -542,7 +546,7 @@ async function main() {
                 currentAuthorities = newAuthorities;
                 await ensureAuthoritySet(
                     parachain,
-                    relayerAccount,
+                    parachainAccount,
                     currentSetId,
                     currentAuthorities,
                 );
@@ -592,7 +596,7 @@ async function main() {
                     await signAndSendAndWait(
                         parachain,
                         parachainTx,
-                        relayerAccount,
+                        parachainAccount,
                         `submitFinalityProof-${upTo}`,
                     );
                     const fastchainTx =
@@ -601,7 +605,7 @@ async function main() {
                     await signAndSendAndWait(
                         fastchain,
                         sudoCall,
-                        relayerAccount,
+                        fastchainAccount,
                         `noteAnchorVerified-${upTo}`,
                     );
                 });
