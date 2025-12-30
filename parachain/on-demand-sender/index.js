@@ -35,7 +35,9 @@ function getConfig() {
 
     console.log(`Connecting to API at ${apiUrl}...`);
     const wsProvider = new WsProvider(apiUrl, { timeout });
-    const api = await ApiPromise.create({ wsProvider });
+    const api = await ApiPromise.create({ provider: wsProvider });
+    await api.isReady;
+
     const keyring = new Keyring({ type: 'sr25519' });
     const account = keyring.addFromUri(mnemonic);
 
