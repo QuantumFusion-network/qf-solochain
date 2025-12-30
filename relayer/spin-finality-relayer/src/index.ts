@@ -20,7 +20,8 @@ import pino from "pino";
 
 const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
-const RELAYER_URI = process.env.RELAYER_URI ?? "//Alice";
+const FASTCHAIN_SIGNER_URI = process.env.FASTCHAIN_SIGNER_URI ?? "//Alice";
+const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Bob";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 
@@ -361,44 +362,109 @@ async function ensureAuthoritySet(
     await signAndSendAndWait(api, sudoCall, signer, "setAuthoritySet");
 }
 
+type Task = () => Promise<void>;
+
+// Runs at most 1 task at a time. While running, only keeps the latest enqueued task.
+function makeLatestRunner(name: string) {
+    let running = false;
+    let latest: Task | null = null;
+
+    let drainResolve: (() => void) | null = null;
+    let drainPromise: Promise<void> | null = null;
+
+    const ensureDrainPromise = () => {
+        if (!drainPromise) {
+            drainPromise = new Promise<void>((res) => (drainResolve = res));
+        }
+        return drainPromise;
+    };
+
+    const maybeResolveDrain = () => {
+        if (!running && !latest && drainResolve) {
+            drainResolve();
+            drainResolve = null;
+            drainPromise = null;
+        }
+    };
+
+    const start = () => {
+        if (running) return;
+        if (!latest) return;
+        running = true;
+        ensureDrainPromise();
+
+        void (async () => {
+            while (latest) {
+                const task = latest;
+                latest = null;
+                try {
+                    await task();
+                } catch (err) {
+                    logger.error(
+                        { err: formatError(err) },
+                        "Relayer task failed",
+                    );
+                }
+            }
+            running = false;
+            maybeResolveDrain();
+        })();
+    };
+
+    const enqueue = (task: Task) => {
+        latest = task;
+        start();
+    };
+
+    const drain = () =>
+        running || latest ? ensureDrainPromise() : Promise.resolve();
+
+    return { enqueue, drain };
+}
+
 async function main() {
     await cryptoWaitReady();
 
     const fastchainCustomTypes = {
-      'GrandpaJustification': {
-        round: 'u64',
-        commit: 'GrandpaCommit',
-        votesAncestries: 'Vec<Header>'
-      },
-      'GrandpaCommit': {
-        targetHash: 'H256',
-        targetNumber: 'u64',  // <-- KEY: must be u64, not u32
-        precommits: 'Vec<GrandpaSignedPrecommit>'
-      },
-      'GrandpaSignedPrecommit': {
-        precommit: 'GrandpaPrecommit',
-        signature: '[u8; 64]',  // Ed25519 signature
-        id: '[u8; 32]'          // AuthorityId
-      },
-      'GrandpaPrecommit': {
-        targetHash: 'H256',
-        targetNumber: 'u64'     // <-- Also u64
-      }
+        GrandpaJustification: {
+            round: "u64",
+            commit: "GrandpaCommit",
+            votesAncestries: "Vec<Header>",
+        },
+        GrandpaCommit: {
+            targetHash: "H256",
+            targetNumber: "u64", // <-- KEY: must be u64, not u32
+            precommits: "Vec<GrandpaSignedPrecommit>",
+        },
+        GrandpaSignedPrecommit: {
+            precommit: "GrandpaPrecommit",
+            signature: "[u8; 64]", // Ed25519 signature
+            id: "[u8; 32]", // AuthorityId
+        },
+        GrandpaPrecommit: {
+            targetHash: "H256",
+            targetNumber: "u64", // <-- Also u64
+        },
     };
 
     const fastchain = await ApiPromise.create({
         provider: new WsProvider(FASTCHAIN_WS),
         types: fastchainCustomTypes,
     });
+    await fastchain.isReady;
     const parachain = await ApiPromise.create({
         provider: new WsProvider(PARACHAIN_WS),
     });
+    await parachain.isReady;
     const keyring = new Keyring({ type: "sr25519" });
-    const relayerAccount = keyring.addFromUri(RELAYER_URI, {
-        name: "spin-finality-relayer",
+    const fastchainAccount = keyring.addFromUri(FASTCHAIN_SIGNER_URI, {
+        name: "spin-finality-relayer-fastchain",
+    });
+    const parachainAccount = keyring.addFromUri(PARACHAIN_SIGNER_URI, {
+        name: "spin-finality-relayer-parachain",
     });
     logger.info(
-        { FASTCHAIN_WS, PARACHAIN_WS, signer: relayerAccount.address },
+        { FASTCHAIN_WS, PARACHAIN_WS, fastchainSigner: fastchainAccount.address, parachainSigner: parachainAccount.address },
         "Relayer starting",
     );
 
@@ -408,19 +474,13 @@ async function main() {
     let currentAuthorities = await fetchAuthorities(fastchain);
     await ensureAuthoritySet(
         parachain,
-        relayerAccount,
+        parachainAccount,
         currentSetId,
         currentAuthorities,
     );
 
-    let pending = Promise.resolve();
-    const enqueue = (task: () => Promise<void>) => {
-        pending = pending
-            .then(task)
-            .catch((err) =>
-                logger.error({ err: formatError(err) }, "Relayer task failed"),
-            );
-    };
+    const setIdRunner = makeLatestRunner("setId");
+    const proofRunner = makeLatestRunner("proof");
 
     const subscriptions: Unsubscribe[] = [];
     let shuttingDown = false;
@@ -439,12 +499,24 @@ async function main() {
             }
         }
 
-        await pending.catch((err) =>
-            logger.error(
-                { err: formatError(err) },
-                "Pending task failed during shutdown",
-            ),
-        );
+        await Promise.all([
+            setIdRunner
+                .drain()
+                .catch((err) =>
+                    logger.error(
+                        { err: formatError(err) },
+                        "Pending setId task failed during shutdown",
+                    ),
+                ),
+            proofRunner
+                .drain()
+                .catch((err) =>
+                    logger.error(
+                        { err: formatError(err) },
+                        "Pending proof task failed during shutdown",
+                    ),
+                ),
+        ]);
         await Promise.allSettled([
             fastchain.disconnect(),
             parachain.disconnect(),
@@ -462,7 +534,7 @@ async function main() {
 
     const unsubSetId = (await fastchain.query.grandpa.currentSetId(
         (setId: { toString(): string }) => {
-            enqueue(async () => {
+            setIdRunner.enqueue(async () => {
                 const newSetId = Number(setId.toString());
                 const newAuthorities = await fetchAuthorities(fastchain);
                 const changed =
@@ -474,7 +546,7 @@ async function main() {
                 currentAuthorities = newAuthorities;
                 await ensureAuthoritySet(
                     parachain,
-                    relayerAccount,
+                    parachainAccount,
                     currentSetId,
                     currentAuthorities,
                 );
@@ -495,7 +567,8 @@ async function main() {
                 const upTo =
                     typedJustification.commit.targetNumber.toNumber() as number;
                 logger.info({ upTo }, "upTo");
-                enqueue(async () => {
+                proofRunner.enqueue(async () => {
+                    await setIdRunner.drain(); // avoid racing authority-set updates
                     const proofU8a = justificationToU8a(justification);
                     if (!proofU8a) {
                         logger.warn(
@@ -523,7 +596,7 @@ async function main() {
                     await signAndSendAndWait(
                         parachain,
                         parachainTx,
-                        relayerAccount,
+                        parachainAccount,
                         `submitFinalityProof-${upTo}`,
                     );
                     const fastchainTx =
@@ -532,7 +605,7 @@ async function main() {
                     await signAndSendAndWait(
                         fastchain,
                         sudoCall,
-                        relayerAccount,
+                        fastchainAccount,
                         `noteAnchorVerified-${upTo}`,
                     );
                 });
