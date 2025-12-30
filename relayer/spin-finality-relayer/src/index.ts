@@ -450,9 +450,11 @@ async function main() {
         provider: new WsProvider(FASTCHAIN_WS),
         types: fastchainCustomTypes,
     });
+    await fastchain.isReady;
     const parachain = await ApiPromise.create({
         provider: new WsProvider(PARACHAIN_WS),
     });
+    await parachain.isReady;
     const keyring = new Keyring({ type: "sr25519" });
     const relayerAccount = keyring.addFromUri(RELAYER_URI, {
         name: "spin-finality-relayer",
