@@ -324,4 +324,6 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_spin_polkadot::Config for Runtime {}
+impl pallet_spin_polkadot::Config for Runtime {
+	type AnchoredChainHeader = qf_runtime::Header;
+}

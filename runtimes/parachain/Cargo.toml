@@ -65,6 +65,9 @@ polkadot-sdk = { workspace = true, default-features = false, features = [
 cumulus-pallet-parachain-system = { workspace = true }
 pallet-spin-polkadot = { workspace = true }
 
+# Local
+qf-runtime = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
@@ -73,9 +76,11 @@ std = [
 	"log/std",
 	"pallet-spin-polkadot/std",
 	"polkadot-sdk/std",
+	"qf-runtime/std",
 	"scale-info/std",
 	"serde_json/std",
 	"substrate-wasm-builder",
+
 ]
 
 runtime-benchmarks = [
@@ -83,12 +88,14 @@ runtime-benchmarks = [
 	"hex-literal",
 	"pallet-spin-polkadot/runtime-benchmarks",
 	"polkadot-sdk/runtime-benchmarks",
+	"qf-runtime/runtime-benchmarks",
 ]
 
 try-runtime = [
 	"cumulus-pallet-parachain-system/try-runtime",
 	"pallet-spin-polkadot/try-runtime",
 	"polkadot-sdk/try-runtime",
+	"qf-runtime/try-runtime",
 ]
 
 # Enable the metadata hash generation.

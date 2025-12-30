@@ -52,7 +52,10 @@ pub mod pallet {
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {}
+	pub trait Config: frame_system::Config {
+		/// The header type for the anchored chain.
+		type AnchoredChainHeader: HeaderT + TypeInfo;
+	}
 
 	// TODO(zotho): remove `without_storage_info`
 	#[pallet::pallet]
@@ -67,13 +70,13 @@ pub mod pallet {
 	/// Highest fastchain block known to be finalized on the parachain.
 	#[pallet::storage]
 	pub type LastFinalized<T: Config> =
-		StorageValue<_, FinalizedTarget<BlockNumberFor<T>, <HeaderFor<T> as HeaderT>::Hash>>;
+		StorageValue<_, FinalizedTarget<<T::AnchoredChainHeader as HeaderT>::Number, <T::AnchoredChainHeader as HeaderT>::Hash>>;
 
 	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
 	/// The most recent justification bytes accepted. This is informational only.
 	#[pallet::storage]
 	pub type LastJustification<T: Config> =
-		StorageValue<_, BoundedGrandpaJustification<HeaderFor<T>>>;
+		StorageValue<_, BoundedGrandpaJustification<T::AnchoredChainHeader>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -81,8 +84,8 @@ pub mod pallet {
 		/// The parachain accepted a new fastchain finality proof.
 		FinalityProofAccepted {
 			who: T::AccountId,
-			number: BlockNumberFor<T>,
-			hash: <HeaderFor<T> as HeaderT>::Hash,
+			number: <T::AnchoredChainHeader as HeaderT>::Number,
+			hash: <T::AnchoredChainHeader as HeaderT>::Hash,
 		},
 		/// The GRANDPA authority set was updated.
 		AuthoritySetUpdated { set_id: SetId, authorities: u64 },
@@ -136,7 +139,7 @@ pub mod pallet {
 		pub fn submit_finality_proof(
 			origin: OriginFor<T>,
 			expected_set_id: SetId,
-			justification: BoundedGrandpaJustification<HeaderFor<T>>,
+			justification: BoundedGrandpaJustification<T::AnchoredChainHeader>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -149,7 +152,7 @@ pub mod pallet {
 
 			// TODO(zotho): how do we verify that `target_hash` is hash of `target_number` block?
 			let target_hash = justification.commit.target_hash;
-			let target_number: BlockNumberFor<T> = justification.commit.target_number;
+			let target_number = justification.commit.target_number;
 
 			if let Some(last) = LastFinalized::<T>::get() {
 				ensure!(target_number > last.number, Error::<T>::AlreadyFinalized);
