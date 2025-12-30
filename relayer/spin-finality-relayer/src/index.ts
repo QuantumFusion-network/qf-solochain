@@ -363,8 +363,32 @@ async function ensureAuthoritySet(
 
 async function main() {
     await cryptoWaitReady();
+
+    const fastchainCustomTypes = {
+      'GrandpaJustification': {
+        round: 'u64',
+        commit: 'GrandpaCommit',
+        votesAncestries: 'Vec<Header>'
+      },
+      'GrandpaCommit': {
+        targetHash: 'H256',
+        targetNumber: 'u64',  // <-- KEY: must be u64, not u32
+        precommits: 'Vec<GrandpaSignedPrecommit>'
+      },
+      'GrandpaSignedPrecommit': {
+        precommit: 'GrandpaPrecommit',
+        signature: '[u8; 64]',  // Ed25519 signature
+        id: '[u8; 32]'          // AuthorityId
+      },
+      'GrandpaPrecommit': {
+        targetHash: 'H256',
+        targetNumber: 'u64'     // <-- Also u64
+      }
+    };
+
     const fastchain = await ApiPromise.create({
         provider: new WsProvider(FASTCHAIN_WS),
+        types: fastchainCustomTypes,
     });
     const parachain = await ApiPromise.create({
         provider: new WsProvider(PARACHAIN_WS),
