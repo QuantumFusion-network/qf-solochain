@@ -13057,7 +13057,7 @@ dependencies = [
 
 [[package]]
 name = "qf-node"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "clap",
  "frame-benchmarking-cli",
@@ -13104,7 +13104,7 @@ dependencies = [
 
 [[package]]
 name = "qf-parachain-node"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clap",
  "color-print",
@@ -13123,7 +13123,7 @@ dependencies = [
 
 [[package]]
 name = "qf-parachain-runtime"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "docify",
@@ -13132,6 +13132,7 @@ dependencies = [
  "pallet-spin-polkadot",
  "parity-scale-codec",
  "polkadot-sdk",
+ "qf-runtime",
  "scale-info",
  "serde_json",
  "smallvec",
