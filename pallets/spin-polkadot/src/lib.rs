@@ -69,8 +69,13 @@ pub mod pallet {
 
 	/// Highest fastchain block known to be finalized on the parachain.
 	#[pallet::storage]
-	pub type LastFinalized<T: Config> =
-		StorageValue<_, FinalizedTarget<<T::AnchoredChainHeader as HeaderT>::Number, <T::AnchoredChainHeader as HeaderT>::Hash>>;
+	pub type LastFinalized<T: Config> = StorageValue<
+		_,
+		FinalizedTarget<
+			<T::AnchoredChainHeader as HeaderT>::Number,
+			<T::AnchoredChainHeader as HeaderT>::Hash,
+		>,
+	>;
 
 	// TODO(zotho): Add MEL bound https://github.com/QuantumFusion-network/spec/issues/629
 	/// The most recent justification bytes accepted. This is informational only.
