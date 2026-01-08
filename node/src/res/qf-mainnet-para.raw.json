@@ -4,7 +4,8 @@
   "chainType": "Live",
   "bootNodes": [
     "/dns4/collator.eu.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWQB27w3mHQVn9p95Yo17esK4GK62fbk9kQcPGhGrPsSao",
-    "/dns4/collator.us.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWBsM4P4FTJvd3wD8TaB7xYSh5rzwBTW6J3mnZdQ5LMLVL"
+    "/dns4/collator.us.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWBsM4P4FTJvd3wD8TaB7xYSh5rzwBTW6J3mnZdQ5LMLVL",
+    "/dns4/collator.as.mainnet.qfnode.net/tcp/30334/p2p/12D3KooWAdgAhecoRFcBLZSngGZTeLcd76mGcFLcUThjE3jdUTwA"
   ],
   "telemetryEndpoints": null,
   "protocolId": "qf-para-pol",
