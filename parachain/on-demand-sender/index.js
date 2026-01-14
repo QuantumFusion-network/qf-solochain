@@ -17,19 +17,19 @@ function getConfig() {
     const mnemonic = process.env.MNEMONIC;
     const maxAmount = process.env.MAX_AMOUNT;
     const paraId = process.env.PARA_ID;
-    const skip = process.env.SKIP || 0;
+    const relayBlocksPerParaBlock = process.env.RELAY_BLOCKS_PER_PARA_BLOCK || 1;
 
     if (!apiUrl || !mnemonic || !maxAmount || !paraId) {
         console.error('Missing required env variables.');
         process.exit(1);
     }
 
-    return { apiUrl, timeout, mnemonic, maxAmount, paraId, skip };
+    return { apiUrl, timeout, mnemonic, maxAmount, paraId, relayBlocksPerParaBlock };
 }
 
 // Get config from env and send an on-demand order each block.
 (async () => {
-    const { apiUrl, timeout, mnemonic, maxAmount, paraId, skip } = getConfig();
+    const { apiUrl, timeout, mnemonic, maxAmount, paraId, relayBlocksPerParaBlock } = getConfig();
 
     await cryptoWaitReady();
 
@@ -42,7 +42,7 @@ function getConfig() {
     const account = keyring.addFromUri(mnemonic);
 
     let lastBlock = 0;
-    let count = 0;
+    let count = 1;
 
     console.log('Subscribing to new blocks...');
     const unsub = await api.rpc.chain.subscribeNewHeads(async (header) => {
@@ -50,12 +50,12 @@ function getConfig() {
         if (blockNumber === lastBlock) return;
         lastBlock = blockNumber;
 
-        console.log(`${blockNumber} - new relay block, ${count}/${skip}...`);
-        if (skip - count > 0) {
+        console.log(`${blockNumber} - new relay block, ${count}/${relayBlocksPerParaBlock}...`);
+        if (relayBlocksPerParaBlock - count > 0) {
             count++;
             return;
         };
-        count = 0;
+        count = 1;
 
         try {
             const txHash = await send(api, blockNumber, account, maxAmount, paraId);
