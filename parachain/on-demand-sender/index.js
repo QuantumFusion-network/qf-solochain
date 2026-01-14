@@ -17,10 +17,15 @@ function getConfig() {
     const mnemonic = process.env.MNEMONIC;
     const maxAmount = process.env.MAX_AMOUNT;
     const paraId = process.env.PARA_ID;
-    const relayBlocksPerParaBlock = process.env.RELAY_BLOCKS_PER_PARA_BLOCK || 1;
+    const relayBlocksPerParaBlock = parseInt(process.env.RELAY_BLOCKS_PER_PARA_BLOCK || '1', 10);
 
     if (!apiUrl || !mnemonic || !maxAmount || !paraId) {
         console.error('Missing required env variables.');
+        process.exit(1);
+    }
+
+    if (!Number.isInteger(relayBlocksPerParaBlock) || relayBlocksPerParaBlock < 1) {
+        console.error('RELAY_BLOCKS_PER_PARA_BLOCK must be an integer > 1.');
         process.exit(1);
     }
 
