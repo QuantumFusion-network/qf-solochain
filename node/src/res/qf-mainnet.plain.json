@@ -38,10 +38,50 @@
             ],
             [
               "5EYCAe5g847pC4nvyjiy3aa95FjLGKVJXQNFD8jzGUxGTn2t",
+              500000000000000000000000000
+            ],
+            [
+              "5F6i4D5y3cCFD4Rg4eszasUhqKWdSZMbzqQa1x3UnCSKnWMu",
               100000000000000000000000000
             ],
             [
+              "5ECAbGJmoWwXP4wg3VwhtPHVPdwrcySLZBeAqRgLrg2Gyr8k",
+              199399650000000000000000000
+            ],
+            [
+              "5GaRaCrdTYJAX2ze8hGUXkNZfRJNRR8TL9YzasZs22U2rgfR",
+              100000000000000000000000000
+            ],
+            [
+              "5EU53UgNLR9U4rYJqWkmVterT5vYvZSH1vKWVZsA9tr6t7ro",
+              50000000000000000000000000
+            ],
+            [
+              "5GMrHbu9BVKLKr2Uy4Qh2FFAxv1pzzXHdDQFWTBE7XDmjtfE",
+              50000000000000000000000000
+            ],
+            [
               "5HN6UToRyceP5rN3T6jyUU7Xmw3nzi1vmiMf1zVBgwMMpdYc",
+              50000000000000000000
+            ],
+            [
+              "5EWqCN4QMKHsPZqwSqmTM8pwCvUTVYiEcH1kUKJcpoGeUJdb",
+              50000000000000000000
+            ],
+            [
+              "5F3u6EpA5b1dDRjAycuFyyED3sQ3AtbVkVXV7a44oRTixCCP",
+              50000000000000000000
+            ],
+            [
+              "5C4yXRmXMsAKttFA32wLJtiN1BCKPffzpaW28GgBdqchGJdM",
+              50000000000000000000
+            ],
+            [
+              "5EKzPQZetaPK6QmmLstiURN8eGVwHS4QTv2e7Sv1fdvUB5rm",
+              50000000000000000000
+            ],
+            [
+              "5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed",
               100000000000000000000
             ]
           ]
@@ -101,6 +141,54 @@
               "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP",
               199900000000000000000000,
               "Validator"
+            ],
+            [
+              "5F6i4D5y3cCFD4Rg4eszasUhqKWdSZMbzqQa1x3UnCSKnWMu",
+              "5F6i4D5y3cCFD4Rg4eszasUhqKWdSZMbzqQa1x3UnCSKnWMu",
+              90000000000000000000000000,
+              {
+                "Nominator": [
+                  "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+                  "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+                  "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP"
+                ]
+              }
+            ],
+            [
+              "5ECAbGJmoWwXP4wg3VwhtPHVPdwrcySLZBeAqRgLrg2Gyr8k",
+              "5ECAbGJmoWwXP4wg3VwhtPHVPdwrcySLZBeAqRgLrg2Gyr8k",
+              180000000000000000000000000,
+              {
+                "Nominator": [
+                  "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+                  "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+                  "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP"
+                ]
+              }
+            ],
+            [
+              "5GaRaCrdTYJAX2ze8hGUXkNZfRJNRR8TL9YzasZs22U2rgfR",
+              "5GaRaCrdTYJAX2ze8hGUXkNZfRJNRR8TL9YzasZs22U2rgfR",
+              90000000000000000000000000,
+              {
+                "Nominator": [
+                  "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+                  "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+                  "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP"
+                ]
+              }
+            ],
+            [
+              "5EU53UgNLR9U4rYJqWkmVterT5vYvZSH1vKWVZsA9tr6t7ro",
+              "5EU53UgNLR9U4rYJqWkmVterT5vYvZSH1vKWVZsA9tr6t7ro",
+              45000000000000000000000000,
+              {
+                "Nominator": [
+                  "5FLHtKzrsZc6ai2MXptAde2hTLTDNTpFagMLvtGPv4K6zvcj",
+                  "5C8M6XkxKjWEyMbNsatR4GbJWsvS7tELyqVLoQeGmBJD4uxv",
+                  "5FUWjtbGrmW836ih9F89G7aVKpsPU5ihSt18eCHfns55FfrP"
+                ]
+              }
             ]
           ],
           "validatorCount": 3,
@@ -110,7 +198,7 @@
           "minNominatorBond": 100000000000000000000
         },
         "sudo": {
-          "key": "5HN6UToRyceP5rN3T6jyUU7Xmw3nzi1vmiMf1zVBgwMMpdYc"
+          "key": "5CZBtHd8YDAYKQm1irCXGx6jz8cy8KRrCLzsqQP8Ui6gNoUe"
         },
         "vesting": {
           "vesting": []
