@@ -1,6 +1,7 @@
 # pallet-spin-anchoring
 
-Secure finality tracking.
+On-chain component of the SPIN secure finality implementation in the fastchain. Tracks secure finality progress in the
+fastchain state.
 
 Usage example with Polkadot.js. Use in https://portal.qfnetwork.xyz/#/js
 ```js
