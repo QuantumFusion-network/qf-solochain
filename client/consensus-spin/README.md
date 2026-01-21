@@ -1,3 +1,5 @@
+# qfc-consensus-spin
+
 SPIN consensus.
 
 SPIN works by having a list of authorities A who are expected to roughly
