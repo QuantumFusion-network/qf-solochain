@@ -1,6 +1,6 @@
 [package]
 name = "qf-parachain-runtime"
-description = "A parachain runtime built with Substrate and Cumulus."
+description = "QF Network parachain runtime"
 version = "0.1.4"
 license.workspace = true
 authors.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "qf-runtime"
-description = "QF Network solochain runtime"
+description = "QF Network fastchain runtime"
 version = "0.8.1"
 license.workspace = true
 authors.workspace = true
