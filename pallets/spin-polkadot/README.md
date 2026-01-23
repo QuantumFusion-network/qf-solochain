@@ -1,3 +1,4 @@
+<!-- markdownlint-disable-next-line MD044 -->
 # pallet-spin-polkadot
 
 On-chain component implementing SPIN bridging gadget functionality for a Polkadot parachain. Verifies fastchain finality
