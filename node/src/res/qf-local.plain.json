@@ -132,7 +132,9 @@
                 600
               ]
             ]
-          ]
+          ],
+          "mintClaimOrigin": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+          "moveClaimOrigin": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
         },
         "sudo": {
           "key": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"

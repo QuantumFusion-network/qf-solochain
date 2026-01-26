@@ -151,6 +151,36 @@ fn attest_moving_works() {
 }
 
 #[test]
+fn change_move_claim_origin() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(claims::MoveClaimOrigin::<Test>::get(), Some(Six::get()));
+		assert_noop!(
+			claims::mock::Claims::move_claim(
+				RuntimeOrigin::signed(Seven::get()),
+				eth(&eve()),
+				eth(&bob()),
+				Some(42)
+			),
+			BadOrigin
+		);
+
+		assert_ok!(claims::mock::Claims::change_move_claim_origin(
+			RuntimeOrigin::root(),
+			Seven::get()
+		));
+
+		assert_eq!(claims::MoveClaimOrigin::<Test>::get(), Some(Seven::get()));
+
+		assert_ok!(claims::mock::Claims::move_claim(
+			RuntimeOrigin::signed(Seven::get()),
+			eth(&eve()),
+			eth(&bob()),
+			Some(42)
+		));
+	});
+}
+
+#[test]
 fn claiming_does_not_bypass_signing() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(claims::mock::Claims::claim(
@@ -566,6 +596,47 @@ fn claiming_with_no_mint_claim_origin() {
 }
 
 #[test]
+fn change_claim_mint_origin() {
+	new_test_ext().execute_with(|| {
+		CurrencyOf::<Test>::make_free_balance_be(&69, total_claims());
+		assert_eq!(Balances::free_balance(69), total_claims());
+		assert_noop!(
+			claims::mock::Claims::mint_claim(
+				RuntimeOrigin::signed(Eight::get()), // MintClaimOrigin != Eight
+				eth(&bob()),
+				200,
+				None,
+				None
+			),
+			BadOrigin
+		);
+		// Total doesn't change
+		assert_eq!(claims::Total::<Test>::get(), total_claims());
+
+		assert_ok!(claims::mock::Claims::change_mint_claim_origin(
+			RuntimeOrigin::root(),
+			Eight::get()
+		));
+		assert_eq!(claims::MintClaimOrigin::<Test>::get(), Some(Eight::get()));
+		assert_ok!(claims::mock::Claims::mint_claim(
+			RuntimeOrigin::signed(Eight::get()), // Now MintClaimOrigin == Eight
+			eth(&bob()),
+			200,
+			None,
+			None
+		));
+		// New total
+		assert_eq!(claims::Total::<Test>::get(), total_claims() + 200);
+
+		assert_ok!(claims::mock::Claims::claim(
+			RuntimeOrigin::none(),
+			69,
+			sig::<Test>(&bob(), &69u64.encode(), &[][..])
+		));
+	})
+}
+
+#[test]
 fn non_sender_sig_doesnt_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(42), 0);
@@ -713,15 +784,15 @@ fn validate_unsigned_works() {
 fn claim_with_no_total_issue_changing() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(42), 0);
-		assert_eq!(Balances::free_balance(0), 566);
 		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_eq!(Balances::free_balance(CHARLIE), pre_transaction_total_issue);
 		assert_ok!(claims::mock::Claims::claim(
 			RuntimeOrigin::none(),
 			42,
 			sig::<Test>(&gave(), &42u64.encode(), &[][..])
 		));
 		assert_eq!(Balances::free_balance(&42), 66);
-		assert_eq!(Balances::free_balance(&0), 500);
+		assert_eq!(Balances::free_balance(&CHARLIE), pre_transaction_total_issue - 66);
 		assert_eq!(claims::mock::Vesting::vesting_balance(&42), Some(30));
 		assert_eq!(claims::Total::<Test>::get(), total_claims() - 66);
 		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
@@ -732,16 +803,16 @@ fn claim_with_no_total_issue_changing() {
 fn claim_with_no_total_issue_changing_with_exact_amount() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(42), 0);
-		assert_eq!(Balances::free_balance(0), 566);
 		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_eq!(Balances::free_balance(CHARLIE), pre_transaction_total_issue);
 		assert_ok!(claims::mock::Claims::claim(
 			RuntimeOrigin::none(),
 			42,
 			sig::<Test>(&mark(), &42u64.encode(), &[][..])
 		));
-		assert_eq!(Balances::free_balance(&42), 566);
-		assert_eq!(Balances::free_balance(&0), 0);
-		assert_eq!(claims::Total::<Test>::get(), total_claims() - 566);
+		assert_eq!(Balances::free_balance(&42), pre_transaction_total_issue);
+		assert_eq!(Balances::free_balance(&CHARLIE), 0);
+		assert_eq!(claims::Total::<Test>::get(), total_claims() - pre_transaction_total_issue);
 		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
 	});
 }
@@ -750,8 +821,8 @@ fn claim_with_no_total_issue_changing_with_exact_amount() {
 fn claim_with_no_total_issue_changing_claims_more_then_slashing_account_has() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(42), 0);
-		assert_eq!(Balances::free_balance(0), 566);
 		let pre_transaction_total_issue = Balances::total_issuance();
+		assert_eq!(Balances::free_balance(CHARLIE), pre_transaction_total_issue);
 		assert_noop!(
 			claims::mock::Claims::claim(
 				RuntimeOrigin::none(),
@@ -761,8 +832,28 @@ fn claim_with_no_total_issue_changing_claims_more_then_slashing_account_has() {
 			TokenError::FundsUnavailable
 		);
 		assert_eq!(Balances::free_balance(&42), 0);
-		assert_eq!(Balances::free_balance(&0), 566);
+		assert_eq!(Balances::free_balance(&CHARLIE), pre_transaction_total_issue);
 		assert_eq!(claims::Total::<Test>::get(), total_claims());
 		assert_eq!(pre_transaction_total_issue, Balances::total_issuance());
+	});
+}
+
+#[test]
+fn try_to_change_origins_with_no_root() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			claims::mock::Claims::change_move_claim_origin(
+				RuntimeOrigin::signed(Six::get()),
+				Seven::get()
+			),
+			BadOrigin
+		);
+		assert_noop!(
+			claims::mock::Claims::change_mint_claim_origin(
+				RuntimeOrigin::signed(Seven::get()),
+				Eight::get()
+			),
+			BadOrigin
+		);
 	});
 }

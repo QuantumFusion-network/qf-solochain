@@ -64,6 +64,8 @@ pub trait WeightInfo {
 	fn attest() -> Weight;
 	fn move_claim() -> Weight;
 	fn prevalidate_attests() -> Weight;
+	fn change_mint_claim_origin() -> Weight;
+	fn change_move_claim_origin() -> Weight;
 }
 
 pub struct TestWeightInfo;
@@ -84,6 +86,12 @@ impl WeightInfo for TestWeightInfo {
 		Weight::zero()
 	}
 	fn prevalidate_attests() -> Weight {
+		Weight::zero()
+	}
+	fn change_mint_claim_origin() -> Weight {
+		Weight::zero()
+	}
+	fn change_move_claim_origin() -> Weight {
 		Weight::zero()
 	}
 }
@@ -207,6 +215,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_runtime::traits::BadOrigin;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -220,11 +229,9 @@ pub mod pallet {
 		type VestingSchedule: VestingSchedule<Self::AccountId, Moment = BlockNumberFor<Self>>;
 		#[pallet::constant]
 		type Prefix: Get<&'static [u8]>;
-		type MoveClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-		type MintClaimOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// This type provide possibility to make some actions, which depends on positive imbalance
 		/// from minted tokens
-		type Compensate: CompensateTrait<BalanceOf<Self>>;
+		type Compensate: CompensateTrait<Self::AccountId, BalanceOf<Self>>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -274,12 +281,20 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Preclaims<T: Config> = StorageMap<_, Identity, T::AccountId, EthereumAddress>;
 
+	#[pallet::storage]
+	pub type MintClaimOrigin<T: Config> = StorageValue<_, T::AccountId>;
+
+	#[pallet::storage]
+	pub type MoveClaimOrigin<T: Config> = StorageValue<_, T::AccountId>;
+
 	#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
 		pub claims:
 			Vec<(EthereumAddress, BalanceOf<T>, Option<T::AccountId>, Option<StatementKind>)>,
 		pub vesting: Vec<(EthereumAddress, (BalanceOf<T>, BalanceOf<T>, BlockNumberFor<T>))>,
+		pub mint_claim_origin: Option<T::AccountId>,
+		pub move_claim_origin: Option<T::AccountId>,
 	}
 
 	#[pallet::genesis_build]
@@ -312,6 +327,8 @@ pub mod pallet {
 					Preclaims::<T>::insert(i, a);
 				},
 			);
+			MintClaimOrigin::<T>::set(self.mint_claim_origin.clone());
+			MoveClaimOrigin::<T>::set(self.move_claim_origin.clone());
 		}
 	}
 
@@ -386,7 +403,14 @@ pub mod pallet {
 			vesting_schedule: Option<(BalanceOf<T>, BalanceOf<T>, BlockNumberFor<T>)>,
 			statement: Option<StatementKind>,
 		) -> DispatchResult {
-			T::MintClaimOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+			let signer = ensure_signed_or_root(origin)?;
+			if let Some(signer) = signer {
+				if !MintClaimOrigin::<T>::get()
+					.map_or(false, |mint_claim_origin| mint_claim_origin == signer)
+				{
+					return Err(BadOrigin.into());
+				}
+			}
 
 			Total::<T>::mutate(|t| *t += value);
 			Claims::<T>::insert(who, value);
@@ -490,7 +514,14 @@ pub mod pallet {
 			new: EthereumAddress,
 			maybe_preclaim: Option<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
-			T::MoveClaimOrigin::try_origin(origin).map(|_| ()).or_else(ensure_root)?;
+			let signer = ensure_signed_or_root(origin)?;
+			if let Some(signer) = signer {
+				if !MoveClaimOrigin::<T>::get()
+					.map_or(false, |move_claim_origin| move_claim_origin == signer)
+				{
+					return Err(BadOrigin.into());
+				}
+			}
 
 			Claims::<T>::take(&old).map(|c| Claims::<T>::insert(&new, c));
 			Vesting::<T>::take(&old).map(|c| Vesting::<T>::insert(&new, c));
@@ -503,6 +534,26 @@ pub mod pallet {
 				})
 			});
 			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::change_mint_claim_origin())]
+		pub fn change_mint_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
+			ensure_root(origin)?;
+
+			MintClaimOrigin::<T>::set(Some(new));
+
+			Ok(())
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::change_move_claim_origin())]
+		pub fn change_move_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
+			ensure_root(origin)?;
+
+			MoveClaimOrigin::<T>::set(Some(new));
+
+			Ok(())
 		}
 	}
 

@@ -78,13 +78,16 @@ mod benchmarks {
 	#[benchmark]
 	fn claim() -> Result<(), BenchmarkError> {
 		let c = MAX_CLAIMS;
-		for _ in 0..c / 2 {
-			create_claim::<T>(c)?;
-			create_claim_attest::<T>(u32::MAX - c)?;
+		for i in 0..(c / 2) {
+			create_claim::<T>(i)?;
+			create_claim_attest::<T>(u32::MAX - i)?;
 		}
 		let secret_key = libsecp256k1::SecretKey::parse(&keccak_256(&c.encode())).unwrap();
 		let eth_address = eth(&secret_key);
+
 		let account: T::AccountId = account("user", c, SEED);
+		T::Compensate::mint_tokens_for_further_burn(&account, VALUE.into());
+
 		let vesting = Some((100_000u32.into(), 1_000u32.into(), 100u32.into()));
 		let signature = sig::<T>(&secret_key, &account.encode(), &[][..]);
 		super::Pallet::<T>::mint_claim(
@@ -144,7 +147,10 @@ mod benchmarks {
 		let attest_c = u32::MAX - c;
 		let secret_key = libsecp256k1::SecretKey::parse(&keccak_256(&attest_c.encode())).unwrap();
 		let eth_address = eth(&secret_key);
+
 		let account: T::AccountId = account("user", c, SEED);
+		T::Compensate::mint_tokens_for_further_burn(&account, VALUE.into());
+
 		let vesting = Some((100_000u32.into(), 1_000u32.into(), 100u32.into()));
 		let statement = StatementKind::Regular;
 		let signature = sig::<T>(&secret_key, &account.encode(), statement.to_text());
@@ -188,7 +194,10 @@ mod benchmarks {
 		let attest_c = u32::MAX - c;
 		let secret_key = libsecp256k1::SecretKey::parse(&keccak_256(&attest_c.encode())).unwrap();
 		let eth_address = eth(&secret_key);
+
 		let account: T::AccountId = account("user", c, SEED);
+		T::Compensate::mint_tokens_for_further_burn(&account, VALUE.into());
+
 		let vesting = Some((100_000u32.into(), 1_000u32.into(), 100u32.into()));
 		let statement = StatementKind::Regular;
 		super::Pallet::<T>::mint_claim(
@@ -236,6 +245,28 @@ mod benchmarks {
 
 		assert!(!Claims::<T>::contains_key(eth_address));
 		assert!(Claims::<T>::contains_key(new_eth_address));
+		Ok(())
+	}
+
+	#[benchmark]
+	fn change_move_claim_origin() -> Result<(), BenchmarkError> {
+		let new_move_claim_origin: T::AccountId = account("newMoveClaimOrigin", MAX_CLAIMS, SEED);
+		assert!(MoveClaimOrigin::<T>::get() != Some(new_move_claim_origin.clone()));
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, new_move_claim_origin.clone());
+		assert!(MoveClaimOrigin::<T>::get() == Some(new_move_claim_origin));
+		Ok(())
+	}
+
+	#[benchmark]
+	fn change_mint_claim_origin() -> Result<(), BenchmarkError> {
+		let new_mint_claim_origin: T::AccountId = account("newMintClaimOrigin", MAX_CLAIMS, SEED);
+		assert!(MintClaimOrigin::<T>::get() != Some(new_mint_claim_origin.clone()));
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, new_mint_claim_origin.clone());
+		assert!(MintClaimOrigin::<T>::get() == Some(new_mint_claim_origin));
 		Ok(())
 	}
 
