@@ -27,7 +27,7 @@ or a virtual machine.
 2. Clone the repository and build the node binary.
 
     ```console
-    git clone --recursive https://github.com/QuantumFusion-network/qf-solochain.git
+    git clone https://github.com/QuantumFusion-network/qf-solochain.git
     cd qf-solochain
     cargo build --release
     ```
@@ -35,13 +35,13 @@ or a virtual machine.
 3. Inspect available subcommands.
 
     ```console
-    ./target/release/qf-node --help
+    target/release/qf-node --help
     ```
 
 4. Run a local node in dev mode.
 
     ```bash
-    make qf-run
+    target/release/qf-node --dev --state-pruning archive --disable-log-color
     ```
 
 ## Executables and runtimes

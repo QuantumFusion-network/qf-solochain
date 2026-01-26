@@ -17,28 +17,37 @@ function getConfig() {
     const mnemonic = process.env.MNEMONIC;
     const maxAmount = process.env.MAX_AMOUNT;
     const paraId = process.env.PARA_ID;
+    const relayBlocksPerParaBlock = parseInt(process.env.RELAY_BLOCKS_PER_PARA_BLOCK || '1', 10);
 
     if (!apiUrl || !mnemonic || !maxAmount || !paraId) {
         console.error('Missing required env variables.');
         process.exit(1);
     }
 
-    return { apiUrl, timeout, mnemonic, maxAmount, paraId };
+    if (!Number.isInteger(relayBlocksPerParaBlock) || relayBlocksPerParaBlock < 1) {
+        console.error('RELAY_BLOCKS_PER_PARA_BLOCK must be an integer > 1.');
+        process.exit(1);
+    }
+
+    return { apiUrl, timeout, mnemonic, maxAmount, paraId, relayBlocksPerParaBlock };
 }
 
 // Get config from env and send an on-demand order each block.
 (async () => {
-    const { apiUrl, timeout, mnemonic, maxAmount, paraId } = getConfig();
+    const { apiUrl, timeout, mnemonic, maxAmount, paraId, relayBlocksPerParaBlock } = getConfig();
 
     await cryptoWaitReady();
 
     console.log(`Connecting to API at ${apiUrl}...`);
     const wsProvider = new WsProvider(apiUrl, { timeout });
-    const api = await ApiPromise.create({ wsProvider });
+    const api = await ApiPromise.create({ provider: wsProvider });
+    await api.isReady;
+
     const keyring = new Keyring({ type: 'sr25519' });
     const account = keyring.addFromUri(mnemonic);
 
     let lastBlock = 0;
+    let count = 1;
 
     console.log('Subscribing to new blocks...');
     const unsub = await api.rpc.chain.subscribeNewHeads(async (header) => {
@@ -46,7 +55,12 @@ function getConfig() {
         if (blockNumber === lastBlock) return;
         lastBlock = blockNumber;
 
-        console.log(`${blockNumber} - new relay block`);
+        console.log(`${blockNumber} - new relay block, ${count}/${relayBlocksPerParaBlock}...`);
+        if (relayBlocksPerParaBlock - count > 0) {
+            count++;
+            return;
+        };
+        count = 1;
 
         try {
             const txHash = await send(api, blockNumber, account, maxAmount, paraId);

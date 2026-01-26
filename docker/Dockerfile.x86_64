@@ -1,62 +1,42 @@
-ARG BUILD_ARCH=x86_64
+# syntax=docker/dockerfile:1
 
-FROM --platform=linux/${BUILD_ARCH} debian:bullseye AS builder
+FROM rust:1.84-slim-bookworm AS builder
 
-LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang \
+    cmake \
+    libclang-dev \
+    protobuf-compiler \
+    build-essential \
+    git \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-SHELL ["/bin/sh", "-c"]
-
-STOPSIGNAL SIGTERM
-
-RUN apt update && apt install -y gcc g++ make
-RUN apt install -y curl git
-RUN apt install -y protobuf-compiler libclang-dev
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.84.1 -y
-ENV PATH="$PATH:/root/.cargo/bin"
-RUN rustup target add wasm32-unknown-unknown --toolchain 1.84.1-x86_64-unknown-linux-gnu
-RUN rustup component add rust-src --toolchain 1.84.1-x86_64-unknown-linux-gnu
-
-FROM builder AS builder-solochain
-
-WORKDIR /opt
-RUN git config --global http.postBuffer 157286400
-RUN git clone https://github.com/QuantumFusion-network/qf-solochain.git
+RUN rustup target add wasm32-unknown-unknown
 
 WORKDIR /opt/qf-solochain
+
+COPY . .
+
+# Build the node
 RUN make qf-node-release
 
-FROM --platform=linux/${BUILD_ARCH} debian:bullseye-slim
+FROM debian:bookworm-slim AS runtime
 
-LABEL MAINTAINER="QF Network <admin@qfnetwork.xyz>"
+ARG QF_REF
 
-RUN mkdir -p /opt/qf-solochain
-
-RUN apt-get update && \
-    apt-get install -y ca-certificates && \
-    update-ca-certificates
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-RUN apt install -y protobuf-compiler curl
-
-COPY --from=builder-solochain /opt/qf-solochain/output /opt/qf-solochain
-COPY qf-node-start.sh /opt/qf-solochain/qf-node-start.sh
-RUN chmod +x /opt/qf-solochain/qf-node-start.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/qf-solochain
 
-ARG port=30333
-ARG rpc_port=9944
-ARG prometheus_port=9615
+COPY --from=builder /opt/qf-solochain/target/release/qf-node /usr/local/bin/qf-node
 
-ENV QF_PORT=${port}
-ENV QF_RPC_PORT=${rpc_port}
+LABEL org.opencontainers.image.authors="QF Network <admin@qfnetwork.xyz>"
+LABEL org.opencontainers.image.source="https://github.com/QuantumFusion-network/qf-solochain"
+LABEL org.opencontainers.image.revision="${QF_REF}"
 
-# You can define your node name here
-# ENV QF_NODE_NAME=
-
-ENV QF_TELEMETRY_URL='wss://telemetry.qfnetwork.xyz/submit 0'
-
-EXPOSE ${port}
-EXPOSE ${rpc_port}
-EXPOSE ${prometheus_port}
-
-ENTRYPOINT [ "/opt/qf-solochain/qf-node-start.sh" ]
+# No ENTRYPOINT or CMD - will be provided by docker-compose
