@@ -153,7 +153,7 @@ impl<T: frame_system::Config> pallet_claims::WeightInfo for WeightInfo<T> {
 	}
 	/// Storage: `Claims::MoveClaimOrigin` (r:0 w:1)
 	/// Proof: `Claims::MoveClaimOrigin` (`max_values`: Some(1), `max_size`: Some(32), added: 527, mode: `MaxEncodedLen`)
-	fn change_move_claim_origin() -> Weight {
+	fn set_move_claim_origin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -164,7 +164,7 @@ impl<T: frame_system::Config> pallet_claims::WeightInfo for WeightInfo<T> {
 	}
 	/// Storage: `Claims::MintClaimOrigin` (r:0 w:1)
 	/// Proof: `Claims::MintClaimOrigin` (`max_values`: Some(1), `max_size`: Some(32), added: 527, mode: `MaxEncodedLen`)
-	fn change_mint_claim_origin() -> Weight {
+	fn set_mint_claim_origin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`

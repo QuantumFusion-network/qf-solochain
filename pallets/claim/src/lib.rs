@@ -64,8 +64,8 @@ pub trait WeightInfo {
 	fn attest() -> Weight;
 	fn move_claim() -> Weight;
 	fn prevalidate_attests() -> Weight;
-	fn change_mint_claim_origin() -> Weight;
-	fn change_move_claim_origin() -> Weight;
+	fn set_mint_claim_origin() -> Weight;
+	fn set_move_claim_origin() -> Weight;
 }
 
 pub struct TestWeightInfo;
@@ -88,10 +88,10 @@ impl WeightInfo for TestWeightInfo {
 	fn prevalidate_attests() -> Weight {
 		Weight::zero()
 	}
-	fn change_mint_claim_origin() -> Weight {
+	fn set_mint_claim_origin() -> Weight {
 		Weight::zero()
 	}
-	fn change_move_claim_origin() -> Weight {
+	fn set_move_claim_origin() -> Weight {
 		Weight::zero()
 	}
 }
@@ -405,11 +405,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let signer = ensure_signed_or_root(origin)?;
 			if let Some(signer) = signer {
-				if !MintClaimOrigin::<T>::get()
-					.map_or(false, |mint_claim_origin| mint_claim_origin == signer)
-				{
-					return Err(BadOrigin.into());
-				}
+				let mint_claim_origin = MintClaimOrigin::<T>::get();
+				ensure!(mint_claim_origin == Some(signer), BadOrigin);
 			}
 
 			Total::<T>::mutate(|t| *t += value);
@@ -516,11 +513,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let signer = ensure_signed_or_root(origin)?;
 			if let Some(signer) = signer {
-				if !MoveClaimOrigin::<T>::get()
-					.map_or(false, |move_claim_origin| move_claim_origin == signer)
-				{
-					return Err(BadOrigin.into());
-				}
+				let move_claim_origin = MoveClaimOrigin::<T>::get();
+				ensure!(move_claim_origin == Some(signer), BadOrigin);
 			}
 
 			Claims::<T>::take(&old).map(|c| Claims::<T>::insert(&new, c));
@@ -537,8 +531,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::change_mint_claim_origin())]
-		pub fn change_mint_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::set_mint_claim_origin())]
+		pub fn set_mint_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 
 			MintClaimOrigin::<T>::set(Some(new));
@@ -547,8 +541,8 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::change_move_claim_origin())]
-		pub fn change_move_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::set_move_claim_origin())]
+		pub fn set_move_claim_origin(origin: OriginFor<T>, new: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 
 			MoveClaimOrigin::<T>::set(Some(new));

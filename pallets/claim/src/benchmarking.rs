@@ -249,7 +249,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn change_move_claim_origin() -> Result<(), BenchmarkError> {
+	fn set_move_claim_origin() -> Result<(), BenchmarkError> {
 		let new_move_claim_origin: T::AccountId = account("newMoveClaimOrigin", MAX_CLAIMS, SEED);
 		assert!(MoveClaimOrigin::<T>::get() != Some(new_move_claim_origin.clone()));
 
@@ -260,7 +260,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn change_mint_claim_origin() -> Result<(), BenchmarkError> {
+	fn set_mint_claim_origin() -> Result<(), BenchmarkError> {
 		let new_mint_claim_origin: T::AccountId = account("newMintClaimOrigin", MAX_CLAIMS, SEED);
 		assert!(MintClaimOrigin::<T>::get() != Some(new_mint_claim_origin.clone()));
 

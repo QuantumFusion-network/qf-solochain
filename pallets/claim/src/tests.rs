@@ -151,7 +151,7 @@ fn attest_moving_works() {
 }
 
 #[test]
-fn change_move_claim_origin() {
+fn set_move_claim_origin() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(claims::MoveClaimOrigin::<Test>::get(), Some(Six::get()));
 		assert_noop!(
@@ -164,7 +164,7 @@ fn change_move_claim_origin() {
 			BadOrigin
 		);
 
-		assert_ok!(claims::mock::Claims::change_move_claim_origin(
+		assert_ok!(claims::mock::Claims::set_move_claim_origin(
 			RuntimeOrigin::root(),
 			Seven::get()
 		));
@@ -613,7 +613,7 @@ fn change_claim_mint_origin() {
 		// Total doesn't change
 		assert_eq!(claims::Total::<Test>::get(), total_claims());
 
-		assert_ok!(claims::mock::Claims::change_mint_claim_origin(
+		assert_ok!(claims::mock::Claims::set_mint_claim_origin(
 			RuntimeOrigin::root(),
 			Eight::get()
 		));
@@ -842,14 +842,14 @@ fn claim_with_no_total_issue_changing_claims_more_then_slashing_account_has() {
 fn try_to_change_origins_with_no_root() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			claims::mock::Claims::change_move_claim_origin(
+			claims::mock::Claims::set_move_claim_origin(
 				RuntimeOrigin::signed(Six::get()),
 				Seven::get()
 			),
 			BadOrigin
 		);
 		assert_noop!(
-			claims::mock::Claims::change_mint_claim_origin(
+			claims::mock::Claims::set_mint_claim_origin(
 				RuntimeOrigin::signed(Seven::get()),
 				Eight::get()
 			),
