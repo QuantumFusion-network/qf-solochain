@@ -35,7 +35,7 @@ use pallet_balances;
 use sp_runtime::{traits::Identity, BuildStorage};
 
 type Block = frame_system::mocking::MockBlock<Test>;
-const CHARLIE: u64 = 0;
+pub const CHARLIE: u64 = 10_001;
 
 frame_support::construct_runtime!(
 	pub enum Test
@@ -89,7 +89,7 @@ ord_parameter_types! {
 }
 
 pub struct Compensate;
-impl CompensateTrait<u64> for Compensate {
+impl CompensateTrait<u64, u64> for Compensate {
 	fn burn_from(amount: u64) -> sp_runtime::DispatchResult {
 		Balances::burn_from(
 			&CHARLIE,
@@ -100,14 +100,18 @@ impl CompensateTrait<u64> for Compensate {
 		)?;
 		Ok(())
 	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn mint_tokens_for_further_burn(account: &u64, amount: u64) {
+		let _ = Balances::deposit_creating(&CHARLIE, amount);
+		let _ = Balances::deposit_creating(&account, amount);
+	}
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
-	type MoveClaimOrigin = frame_system::EnsureSignedBy<Six, u64>;
-	type MintClaimOrigin = frame_system::EnsureSignedBy<Seven, u64>;
 	type Compensate = Compensate;
 	type WeightInfo = TestWeightInfo;
 }
@@ -143,7 +147,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	// We use default for brevity, but you can configure as desired if needed.
 	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(CHARLIE, 566u64)],
+		balances: vec![(CHARLIE, 1_000_000_000_000u64)],
 		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
@@ -154,11 +158,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(eth(&dave()), 200, None, Some(StatementKind::Regular)),
 			(eth(&eve()), 300, Some(42), Some(StatementKind::Saft)),
 			(eth(&frank()), 400, Some(43), None),
-			(eth(&charlie()), 600, None, None),
+			(eth(&charlie()), 1_000_000_000_600u64, None, None),
 			(eth(&gave()), 66, None, None),
-			(eth(&mark()), 566, None, None),
+			(eth(&mark()), 1_000_000_000_000u64, None, None),
 		],
 		vesting: vec![(eth(&alice()), (50, 10, 1)), (eth(&gave()), (30, 10, 1))],
+		move_claim_origin: Some(Six::get()),
+		mint_claim_origin: Some(Seven::get()),
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -166,5 +172,5 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub fn total_claims() -> u64 {
-	100 + 66 + 200 + 300 + 400 + 600 + 566
+	100 + 66 + 200 + 300 + 400 + 1_000_000_000_600u64 + 1_000_000_000_000u64
 }

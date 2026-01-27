@@ -361,7 +361,7 @@ parameter_types! {
 
 pub struct Compensate;
 
-impl CompensateTrait<Balance> for Compensate {
+impl CompensateTrait<AccountId, Balance> for Compensate {
 	fn burn_from(amount: Balance) -> sp_runtime::DispatchResult {
 		let who = ClaimPalletAccountId::get().into_account_truncating();
 
@@ -374,19 +374,23 @@ impl CompensateTrait<Balance> for Compensate {
 		)?;
 		Ok(())
 	}
-}
 
-ord_parameter_types! {
-	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
-	pub const MintClaimOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
+	#[cfg(feature = "runtime-benchmarks")]
+	fn mint_tokens_for_further_burn(account: &AccountId, amount: Balance) {
+		use frame_support::traits::Currency;
+
+		let who = ClaimPalletAccountId::get().into_account_truncating();
+		let ed = <Runtime as pallet_balances::Config>::ExistentialDeposit::get() * 1_000_000_000;
+		let total = ed.saturating_add(amount);
+		let _ = Balances::deposit_creating(&who, total);
+		let _ = Balances::deposit_creating(&account, total);
+	}
 }
 
 impl pallet_claims::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type VestingSchedule = Vesting;
 	type Prefix = Prefix;
-	type MoveClaimOrigin = EnsureRoot<AccountId>;
-	type MintClaimOrigin = EnsureSignedBy<MintClaimOrigin, AccountId>; // TODO (artemiksion): Change origin
 	type Compensate = Compensate;
 	type WeightInfo = crate::weights::pallet_claims::WeightInfo<Runtime>;
 }
