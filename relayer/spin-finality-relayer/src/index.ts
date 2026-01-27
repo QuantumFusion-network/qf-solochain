@@ -464,7 +464,12 @@ async function main() {
         name: "spin-finality-relayer-parachain",
     });
     logger.info(
-        { FASTCHAIN_WS, PARACHAIN_WS, fastchainSigner: fastchainAccount.address, parachainSigner: parachainAccount.address },
+        {
+            FASTCHAIN_WS,
+            PARACHAIN_WS,
+            fastchainSigner: fastchainAccount.address,
+            parachainSigner: parachainAccount.address,
+        },
         "Relayer starting",
     );
 
@@ -601,10 +606,9 @@ async function main() {
                     );
                     const fastchainTx =
                         fastchain.tx.spinAnchoring.noteAnchorVerified(upTo);
-                    const sudoCall = fastchain.tx.sudo.sudo(fastchainTx);
                     await signAndSendAndWait(
                         fastchain,
-                        sudoCall,
+                        fastchainTx,
                         fastchainAccount,
                         `noteAnchorVerified-${upTo}`,
                     );
