@@ -25,22 +25,150 @@ const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Bob";
 const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 
+// Retry knobs (safe defaults)
+const TX_RETRY_MAX_ATTEMPTS = Number(process.env.TX_RETRY_MAX_ATTEMPTS ?? 8);
+const TX_RETRY_BASE_DELAY_MS = Number(
+    process.env.TX_RETRY_BASE_DELAY_MS ?? 1_500,
+);
+const TX_RETRY_MAX_DELAY_MS = Number(
+    process.env.TX_RETRY_MAX_DELAY_MS ?? 20_000,
+);
+
 const logger = pino({
     base: undefined,
     level: LOG_LEVEL,
     transport: {
         target: "pino-pretty",
-        options: {
-            colorize: true,
-        },
+        options: { colorize: true },
     },
 });
 
 let shutdownHandler: ((signal?: string) => Promise<void>) | null = null;
 
 type AuthorityTuple = [authorityIdHex: string, weight: bigint];
-
 type Unsubscribe = () => void;
+
+// ----------------------------------
+// helpers
+// ----------------------------------
+
+function sleep(ms: number) {
+    return new Promise<void>((res) => setTimeout(res, ms));
+}
+
+function errorMessage(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (
+        typeof err === "object" &&
+        err !== null &&
+        "message" in err &&
+        typeof (err as any).message === "string"
+    ) {
+        return (err as any).message;
+    }
+    return String(err);
+}
+
+function isAuthoritySetMismatch(err: unknown): boolean {
+    const msg = errorMessage(err);
+    // matches: "submitFinalityProof-XXXX failed: spinPolkadot.AuthoritySetMismatch"
+    return msg.includes("AuthoritySetMismatch");
+}
+
+function isPriorityTooLow(err: unknown): boolean {
+    const msg = errorMessage(err);
+    return (
+        msg.includes("1014") &&
+        (msg.includes("Priority is too low") ||
+            msg.includes(
+                "too low priority to replace another transaction already in the pool",
+            ))
+    );
+}
+
+function isRetryableRpcError(err: unknown): boolean {
+    const msg = errorMessage(err);
+
+    // The one you see in your logs. :contentReference[oaicite:1]{index=1}
+    if (isPriorityTooLow(err)) return true;
+
+    // Common transient provider issues
+    if (
+        msg.includes("WebSocket is not connected") ||
+        msg.includes("disconnected") ||
+        msg.includes("ECONNRESET") ||
+        msg.includes("ETIMEDOUT") ||
+        msg.includes("Timeout") ||
+        msg.includes("timed out")
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+async function withRetry<T>(
+    label: string,
+    fn: () => Promise<T>,
+    opts?: {
+        maxAttempts?: number;
+        baseDelayMs?: number;
+        maxDelayMs?: number;
+        retryIf?: (err: unknown) => boolean;
+    },
+): Promise<T> {
+    const maxAttempts = opts?.maxAttempts ?? TX_RETRY_MAX_ATTEMPTS;
+    const retryIf = opts?.retryIf ?? isRetryableRpcError;
+
+    let attempt = 1;
+    let delay = opts?.baseDelayMs ?? TX_RETRY_BASE_DELAY_MS;
+    const maxDelay = opts?.maxDelayMs ?? TX_RETRY_MAX_DELAY_MS;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        try {
+            return await fn();
+        } catch (err) {
+            const canRetry = retryIf(err);
+            if (!canRetry || attempt >= maxAttempts) {
+                throw err;
+            }
+
+            logger.warn(
+                {
+                    attempt,
+                    maxAttempts,
+                    nextDelayMs: delay,
+                    err: formatError(err),
+                },
+                `${label} failed; retrying`,
+            );
+
+            await sleep(delay);
+            delay = Math.min(delay * 2, maxDelay);
+            attempt += 1;
+        }
+    }
+}
+
+// Serial queue for tx submissions (prevents nonce collisions)
+function makeSerialQueue(name: string) {
+    let tail: Promise<unknown> = Promise.resolve();
+
+    const run = <T>(task: () => Promise<T>): Promise<T> => {
+        const next = tail.then(task, task);
+        // Keep tail alive even if a task fails
+        tail = next.then(
+            () => undefined,
+            () => undefined,
+        );
+        return next;
+    };
+
+    const drain = () => tail;
+
+    return { name, run, drain };
+}
 
 // ---- helpers: authority comparison ----
 
@@ -250,6 +378,24 @@ async function fetchAuthorities(api: ApiPromise): Promise<AuthorityTuple[]> {
     return normalizeAuthorities(decodeAuthorityList(raw));
 }
 
+async function fetchAuthoritiesAt(
+    api: ApiPromise,
+    atHash: HexString,
+): Promise<AuthorityTuple[]> {
+    const apiAt = await api.at(atHash);
+    const raw =
+        (await apiAt.call.grandpaApi.grandpaAuthorities()) as unknown as AuthorityList;
+    return normalizeAuthorities(decodeAuthorityList(raw));
+}
+
+async function fetchSetIdAt(
+    api: ApiPromise,
+    atHash: HexString,
+): Promise<bigint> {
+    const setIdCodec = await api.query.grandpa.currentSetId.at(atHash);
+    return BigInt(setIdCodec.toString());
+}
+
 function formatAuthoritiesForParachain(authorities: AuthorityTuple[]) {
     return normalizeAuthorities(authorities).map(([authorityId, weight]) => [
         authorityId,
@@ -257,43 +403,74 @@ function formatAuthoritiesForParachain(authorities: AuthorityTuple[]) {
     ]);
 }
 
+// Note: explicit nonce + fail-fast on dropped/usurped/invalid
 async function signAndSendAndWait(
     api: ApiPromise,
     extrinsic: SubmittableExtrinsic<"promise">,
     signer: ReturnType<Keyring["addFromUri"]>,
     label: string,
 ) {
+    // IMPORTANT: explicit accountNextIndex avoids races better than nonce:-1 in concurrent contexts.
+    const nonce = await api.rpc.system.accountNextIndex(signer.address);
+
     return new Promise<void>((resolve, reject) => {
         let unsub: (() => void) | undefined;
+
         const timer = setTimeout(() => {
             if (unsub) unsub();
             reject(new Error(`${label} timed out after ${TX_TIMEOUT_MS}ms`));
         }, TX_TIMEOUT_MS);
 
+        const finish = (err?: Error) => {
+            if (unsub) {
+                try {
+                    unsub();
+                } catch {
+                    // ignore
+                }
+                unsub = undefined;
+            }
+            clearTimeout(timer);
+            if (err) reject(err);
+        };
+
         extrinsic
-            .signAndSend(signer, { nonce: -1 }, (result) => {
+            .signAndSend(signer, { nonce }, (result) => {
                 if (result.dispatchError) {
-                    if (unsub) {
-                        unsub();
-                        unsub = undefined;
-                    }
-                    clearTimeout(timer);
                     if (result.dispatchError.isModule) {
                         const decoded = api.registry.findMetaError(
                             result.dispatchError.asModule,
                         );
-                        reject(
+                        finish(
                             new Error(
                                 `${label} failed: ${decoded.section}.${decoded.name}`,
                             ),
                         );
                     } else {
-                        reject(
+                        finish(
                             new Error(
                                 `${label} failed: ${result.dispatchError.toString()}`,
                             ),
                         );
                     }
+                    return;
+                }
+
+                // Fail-fast statuses (prevents waiting until timeout)
+                if (result.status.isInvalid) {
+                    finish(new Error(`${label} invalid (tx pool rejected)`));
+                    return;
+                }
+                if (result.status.isDropped) {
+                    finish(new Error(`${label} dropped from tx pool`));
+                    return;
+                }
+                if (result.status.isUsurped) {
+                    finish(
+                        new Error(
+                            `${label} usurped (nonce replaced by another tx)`,
+                        ),
+                    );
                     return;
                 }
 
@@ -305,11 +482,15 @@ async function signAndSendAndWait(
                 }
 
                 if (result.status.isFinalized) {
+                    clearTimeout(timer);
                     if (unsub) {
-                        unsub();
+                        try {
+                            unsub();
+                        } catch {
+                            // ignore
+                        }
                         unsub = undefined;
                     }
-                    clearTimeout(timer);
                     logger.info(
                         { hash: result.status.asFinalized.toHex() },
                         `${label} finalized`,
@@ -318,35 +499,35 @@ async function signAndSendAndWait(
                 }
             })
             .then((u) => (unsub = u))
-            .catch((err) => {
-                clearTimeout(timer);
-                reject(err);
-            });
+            .catch((err) =>
+                finish(err instanceof Error ? err : new Error(String(err))),
+            );
     });
 }
 
 async function ensureAuthoritySet(
     api: ApiPromise,
     signer: ReturnType<Keyring["addFromUri"]>,
-    setId: number,
+    setId: bigint,
     authorities: AuthorityTuple[],
 ) {
     const currentRaw = await api.query.spinPolkadot.fastchainAuthoritySet();
     const current = currentRaw.toJSON() as null | {
-        setId: number;
+        setId: number | string;
         authorities: [string, string][];
     };
 
     const desired = formatAuthoritiesForParachain(authorities);
 
     if (current) {
+        const currentSetId = BigInt(current.setId);
         const existingTuples = normalizeAuthorities(
             current.authorities.map(
                 ([idHex, weight]) => [idHex, BigInt(weight)] as AuthorityTuple,
             ),
         );
         if (
-            current.setId === setId &&
+            currentSetId === setId &&
             authorityTuplesEqual(existingTuples, authorities)
         ) {
             return;
@@ -354,12 +535,18 @@ async function ensureAuthoritySet(
     }
 
     logger.info(
-        { setId, size: authorities.length },
+        { setId: setId.toString(), size: authorities.length },
         "Updating parachain authority set",
     );
-    const call = api.tx.spinPolkadot.setAuthoritySet(setId, desired);
+
+    const call = api.tx.spinPolkadot.setAuthoritySet(setId.toString(), desired);
     const sudoCall = api.tx.sudo.sudo(call);
-    await signAndSendAndWait(api, sudoCall, signer, "setAuthoritySet");
+
+    await withRetry(
+        `setAuthoritySet-${setId.toString()}`,
+        () => signAndSendAndWait(api, sudoCall, signer, "setAuthoritySet"),
+        { retryIf: isRetryableRpcError },
+    );
 }
 
 type Task = () => Promise<void>;
@@ -425,6 +612,7 @@ function makeLatestRunner(name: string) {
 async function main() {
     await cryptoWaitReady();
 
+    // IMPORTANT: custom types (fastchain has u64 block numbers)
     const fastchainCustomTypes = {
         GrandpaJustification: {
             round: "u64",
@@ -452,10 +640,12 @@ async function main() {
         types: fastchainCustomTypes,
     });
     await fastchain.isReady;
+
     const parachain = await ApiPromise.create({
         provider: new WsProvider(PARACHAIN_WS),
     });
     await parachain.isReady;
+
     const keyring = new Keyring({ type: "sr25519" });
     const fastchainAccount = keyring.addFromUri(FASTCHAIN_SIGNER_URI, {
         name: "spin-finality-relayer-fastchain",
@@ -463,6 +653,7 @@ async function main() {
     const parachainAccount = keyring.addFromUri(PARACHAIN_SIGNER_URI, {
         name: "spin-finality-relayer-parachain",
     });
+
     logger.info(
         {
             FASTCHAIN_WS,
@@ -473,19 +664,14 @@ async function main() {
         "Relayer starting",
     );
 
-    let currentSetId = Number(
-        (await fastchain.query.grandpa.currentSetId()).toString(),
-    );
-    let currentAuthorities = await fetchAuthorities(fastchain);
-    await ensureAuthoritySet(
-        parachain,
-        parachainAccount,
-        currentSetId,
-        currentAuthorities,
-    );
-
-    const setIdRunner = makeLatestRunner("setId");
     const proofRunner = makeLatestRunner("proof");
+
+    // Serialize txs per chain/signer to prevent nonce collisions (fixes 1014 pool replacement)
+    const parachainTxQ = makeSerialQueue("parachainTxQ");
+    const fastchainTxQ = makeSerialQueue("fastchainTxQ");
+
+    // Cache authorities by setId (authorities are stable within a set)
+    const authorityCache = new Map<bigint, AuthorityTuple[]>();
 
     const subscriptions: Unsubscribe[] = [];
     let shuttingDown = false;
@@ -504,24 +690,12 @@ async function main() {
             }
         }
 
-        await Promise.all([
-            setIdRunner
-                .drain()
-                .catch((err) =>
-                    logger.error(
-                        { err: formatError(err) },
-                        "Pending setId task failed during shutdown",
-                    ),
-                ),
-            proofRunner
-                .drain()
-                .catch((err) =>
-                    logger.error(
-                        { err: formatError(err) },
-                        "Pending proof task failed during shutdown",
-                    ),
-                ),
+        await Promise.allSettled([
+            proofRunner.drain(),
+            parachainTxQ.drain(),
+            fastchainTxQ.drain(),
         ]);
+
         await Promise.allSettled([
             fastchain.disconnect(),
             parachain.disconnect(),
@@ -529,6 +703,7 @@ async function main() {
     };
 
     shutdownHandler = shutdown;
+
     const registerShutdown = (signal: "SIGINT" | "SIGTERM") => {
         process.once(signal, () => {
             shutdown(signal).finally(() => process.exit(0));
@@ -537,92 +712,253 @@ async function main() {
     registerShutdown("SIGINT");
     registerShutdown("SIGTERM");
 
-    const unsubSetId = (await fastchain.query.grandpa.currentSetId(
-        (setId: { toString(): string }) => {
-            setIdRunner.enqueue(async () => {
-                const newSetId = Number(setId.toString());
-                const newAuthorities = await fetchAuthorities(fastchain);
-                const changed =
-                    newSetId !== currentSetId ||
-                    !authorityTuplesEqual(newAuthorities, currentAuthorities);
-                if (!changed) return;
+    // Best-effort: prime parachain authority set to current fastchain set.
+    // (If it fails transiently, we continue; the next proof will fix it anyway.)
+    try {
+        const tipSetId = BigInt(
+            (await fastchain.query.grandpa.currentSetId()).toString(),
+        );
+        const tipAuthorities = await fetchAuthorities(fastchain);
+        authorityCache.set(tipSetId, tipAuthorities);
 
-                currentSetId = newSetId;
-                currentAuthorities = newAuthorities;
+        await parachainTxQ.run(async () => {
+            await ensureAuthoritySet(
+                parachain,
+                parachainAccount,
+                tipSetId,
+                tipAuthorities,
+            );
+        });
+    } catch (err) {
+        logger.warn(
+            { err: formatError(err) },
+            "Initial authority set sync failed (will retry on next proof)",
+        );
+    }
+
+    // Unified proof forwarding pipeline:
+    // - derive setId AT the target block hash
+    // - ensure parachain has that authority set
+    // - submit proof
+    // - then noteAnchorVerified on fastchain
+    const forwardProof = async (args: {
+        upTo: bigint;
+        targetHash: HexString;
+        proofU8a: Uint8Array;
+    }) => {
+        const { upTo, targetHash, proofU8a } = args;
+
+        // Derive the correct setId for THIS proof (fixes AuthoritySetMismatch)
+        const setIdAtTarget = await fetchSetIdAt(fastchain, targetHash);
+
+        let authorities = authorityCache.get(setIdAtTarget);
+        if (!authorities) {
+            authorities = await fetchAuthoritiesAt(fastchain, targetHash);
+            authorityCache.set(setIdAtTarget, authorities);
+        }
+
+        logger.info(
+            {
+                upTo: upTo.toString(),
+                targetHash,
+                setId: setIdAtTarget.toString(),
+                proofLen: proofU8a.length,
+            },
+            "Forwarding finality proof",
+        );
+
+        // Everything on parachain must be serialized to avoid nonce collisions
+        await parachainTxQ.run(async () => {
+            // Ensure authority set matches what this proof requires
+            await ensureAuthoritySet(
+                parachain,
+                parachainAccount,
+                setIdAtTarget,
+                authorities!,
+            );
+
+            const label = `submitFinalityProof-${upTo.toString()}`;
+
+            const sendProof = async (sid: bigint) => {
+                const tx = parachain.tx.spinPolkadot.submitFinalityProof(
+                    sid.toString(),
+                    proofU8a,
+                );
+                await withRetry(
+                    label,
+                    () =>
+                        signAndSendAndWait(
+                            parachain,
+                            tx,
+                            parachainAccount,
+                            label,
+                        ),
+                    { retryIf: isRetryableRpcError },
+                );
+            };
+
+            try {
+                await sendProof(setIdAtTarget);
+            } catch (err) {
+                if (!isAuthoritySetMismatch(err)) {
+                    throw err;
+                }
+
+                // Recovery path for edge cases:
+                // 1) refresh authorities at targetHash and retry
+                logger.warn(
+                    {
+                        err: formatError(err),
+                        setId: setIdAtTarget.toString(),
+                        targetHash,
+                    },
+                    "AuthoritySetMismatch: refreshing authority set at target hash and retrying once",
+                );
+
+                const freshSetId = await fetchSetIdAt(fastchain, targetHash);
+                const freshAuthorities = await fetchAuthoritiesAt(
+                    fastchain,
+                    targetHash,
+                );
+                authorityCache.set(freshSetId, freshAuthorities);
+
                 await ensureAuthoritySet(
                     parachain,
                     parachainAccount,
-                    currentSetId,
-                    currentAuthorities,
+                    freshSetId,
+                    freshAuthorities,
                 );
-            });
-        },
-    )) as unknown as Unsubscribe;
-    subscriptions.push(unsubSetId);
 
-    let proofSubscriptionEstablished = false;
+                try {
+                    await sendProof(freshSetId);
+                    return;
+                } catch (err2) {
+                    if (!isAuthoritySetMismatch(err2)) throw err2;
+
+                    // 2) last resort: try the parent hash set (transition boundary edge case)
+                    const header =
+                        await fastchain.rpc.chain.getHeader(targetHash);
+                    const parentHash = header.parentHash.toHex() as HexString;
+
+                    logger.warn(
+                        { err: formatError(err2), parentHash, targetHash },
+                        "AuthoritySetMismatch persists: trying parent hash authority set once",
+                    );
+
+                    const parentSetId = await fetchSetIdAt(
+                        fastchain,
+                        parentHash,
+                    );
+                    const parentAuthorities = await fetchAuthoritiesAt(
+                        fastchain,
+                        parentHash,
+                    );
+                    authorityCache.set(parentSetId, parentAuthorities);
+
+                    await ensureAuthoritySet(
+                        parachain,
+                        parachainAccount,
+                        parentSetId,
+                        parentAuthorities,
+                    );
+                    await sendProof(parentSetId);
+                }
+            }
+        });
+
+        // Fastchain txs also serialized (not strictly necessary here, but safe)
+        await fastchainTxQ.run(async () => {
+            const label = `noteAnchorVerified-${upTo.toString()}`;
+            const tx = fastchain.tx.spinAnchoring.noteAnchorVerified(
+                upTo.toString(),
+            );
+            await withRetry(
+                label,
+                () =>
+                    signAndSendAndWait(fastchain, tx, fastchainAccount, label),
+                { retryIf: isRetryableRpcError },
+            );
+        });
+    };
+
+    // Prefer justification stream. If unavailable, fallback to finalized heads + proveFinality.
     try {
         const unsubJustifications = await subscribeJustificationStream(
             fastchain,
             (justification: Bytes | Uint8Array) => {
-                const typedJustification = fastchain.registry.createType(
-                    "GrandpaJustification",
-                    justification,
-                ) as any;
-                const upTo =
-                    typedJustification.commit.targetNumber.toNumber() as number;
-                logger.info({ upTo }, "upTo");
-                proofRunner.enqueue(async () => {
-                    await setIdRunner.drain(); // avoid racing authority-set updates
-                    const proofU8a = justificationToU8a(justification);
-                    if (!proofU8a) {
-                        logger.warn(
-                            {
-                                notification:
-                                    describeJustification(justification),
-                            },
-                            "Empty justification payload",
-                        );
-                        return;
-                    }
-                    logger.info(
+                const proofU8a = justificationToU8a(justification);
+                if (!proofU8a) {
+                    logger.warn(
+                        { notification: describeJustification(justification) },
+                        "Empty justification payload",
+                    );
+                    return;
+                }
+
+                let typedJustification: any;
+                try {
+                    typedJustification = fastchain.registry.createType(
+                        "GrandpaJustification",
+                        justification,
+                    ) as any;
+                } catch (err) {
+                    logger.warn(
                         {
-                            setId: currentSetId,
-                            proofLen: proofU8a.length,
-                            upTo,
+                            err: formatError(err),
+                            notification: describeJustification(justification),
                         },
-                        "Forwarding finality proof",
+                        "Failed to decode GrandpaJustification",
                     );
-                    const parachainTx =
-                        parachain.tx.spinPolkadot.submitFinalityProof(
-                            currentSetId,
-                            proofU8a,
-                        );
-                    await signAndSendAndWait(
-                        parachain,
-                        parachainTx,
-                        parachainAccount,
-                        `submitFinalityProof-${upTo}`,
-                    );
-                    const fastchainTx =
-                        fastchain.tx.spinAnchoring.noteAnchorVerified(upTo);
-                    await signAndSendAndWait(
-                        fastchain,
-                        fastchainTx,
-                        fastchainAccount,
-                        `noteAnchorVerified-${upTo}`,
-                    );
+                    return;
+                }
+
+                const upTo = BigInt(
+                    typedJustification.commit.targetNumber.toString(),
+                );
+                const targetHash =
+                    typedJustification.commit.targetHash.toHex() as HexString;
+
+                logger.info({ upTo: upTo.toString() }, "upTo");
+
+                proofRunner.enqueue(async () => {
+                    await forwardProof({ upTo, targetHash, proofU8a });
                 });
             },
         );
+
         subscriptions.push(unsubJustifications);
-        proofSubscriptionEstablished = true;
         logger.info("Subscribed to GRANDPA justification stream");
     } catch (err) {
         logger.warn(
             { err: formatError(err) },
-            "Justification stream unavailable; falling back to proveFinality",
+            "Justification stream unavailable; falling back to finalized heads + proveFinality",
         );
+
+        const unsubHeads = (await fastchain.rpc.chain.subscribeFinalizedHeads(
+            (header: Header) => {
+                proofRunner.enqueue(async () => {
+                    const upTo = BigInt(header.number.toString());
+                    const targetHash = (
+                        await fastchain.rpc.chain.getBlockHash(header.number)
+                    ).toHex() as HexString;
+
+                    const proof = await fetchFinalityProofBytes(
+                        fastchain,
+                        targetHash,
+                    );
+                    if (!proof) return;
+
+                    logger.info(
+                        { upTo: upTo.toString() },
+                        "upTo (proveFinality)",
+                    );
+                    await forwardProof({ upTo, targetHash, proofU8a: proof });
+                });
+            },
+        )) as unknown as Unsubscribe;
+
+        subscriptions.push(unsubHeads);
+        logger.info("Subscribed to finalized heads (proveFinality fallback)");
     }
 }
 
