@@ -47,10 +47,8 @@ services:
       - --prometheus-port=9615
       - --base-path=/data
       - --database=paritydb # Or remove this flag to use the default rocksdb
-      - --state-pruning=36000 # For a pruned RPC node
-      - --blocks-pruning=36000 # For a pruned RPC node
-      - --state-pruning=archive # For an archive node
-      - --blocks-pruning=archive # For an archive node
+      - --state-pruning=archive # For an archive node. For a pruned node use `- --state-pruning=36000`.
+      - --blocks-pruning=archive # For an archive node. For a pruned node use `- --blocks-pruning=36000`.
 ```
 
 3. Set up your firewall to allow p2p connectivity and secure RPC connections. With Nftables, `/etc/nftables.conf` should look something like this:
