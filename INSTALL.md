@@ -1,6 +1,14 @@
 # QF Network Mainnet Node Deployment Guide
 
-This document provides a technical walkthrough for deploying a Substrate-based node for the **QF Network** (`qf-mainnet`). This setup uses the official container image and is configured for high-performance RPC access with specific pruning and database settings.
+This document provides a technical walkthrough for deploying a Substrate-based node for the **QF Network** (`qf-mainnet`). This setup uses 
+the official container image and is configured for high-performance RPC access with specific pruning and database settings.
+
+An archive node will store all the state history and blocks, while a pruned RPC node will retain only the most recent 
+blocks and states up to the number defined in the flag, in our case 36000 which is approximately 1 hour of history. The pruned 
+RPC node is suitable for most applications that require recent state access without the need for historical data, and will be
+more efficient in terms of storage and resource requirements.
+
+The archive node is necessary for applications that require access to historical state and block data, such as block explorers or analytics platforms.
 
 ## 1. System Requirements
 
@@ -18,9 +26,10 @@ Note: the RAM requirements for RocksDB databases are higher due to the high amou
 
 ## 2. Deployment via Docker/Podman Compose
 
-Docker/Podman Compose is the recommended method for validator and archive nodes in production environments as it ensures consistent configuration and easy service management. Pruned RPC nodes would work better with Kubernetes as it allows auto healing and scaling if set up properly.
+Docker/Podman Compose is the recommended method for validator and archive nodes in production environments as it ensures consistent configuration and easy service management.
 
-It's recommended to create a separate user and run the container with Podman to run it rootless. Make sure to enable lingering for that user, so the container keeps running when the user logs out. For convenience sake, the method below describes a Docker Compose setup on a Debian Linux based system as the root user.
+It's recommended to create a separate user and run the container with Podman to run it rootless. Make sure to enable lingering for that user, so the container keeps running when the user logs out. 
+For convenience sake, the method below describes a Docker Compose setup on a Debian Linux based system as the root user.
 
 ### RPC node Setup Steps
 
@@ -114,7 +123,7 @@ sudo nft list ruleset
 5. Now you're ready to start the node. Before you continue, make sure your user is part of the `docker` group: `sudo usermod -aG docker "$USER"` and relogin. Then run `docker compose up -d` in the directory where the compose.yml file is located. Enable the Docker daemon to automatically start after a server reboot with `sudo systemctl enable docker.service`. The node will now start syncing blocks.
 
 
-6. To provide secure websocket connections, install Nginx and certbot with `sudo apt install nginx certbot` and activate nginx: `sudo systemctl enable --now nginx`. You also need a domain name that's pointing to your server's IP. I'll use YOUR_DOMAIN_NAME as a placeholder in these instructions.
+6. To provide secure websocket connections, install Nginx and certbot with `sudo apt install nginx certbot` and activate nginx: `sudo systemctl enable --now nginx`. You also need a domain name that's pointing to your server's IP. We'll use YOUR_DOMAIN_NAME as a placeholder in these instructions.
 
 
 7. Run the followings commands to prepare for the certificate generation:
