@@ -23,6 +23,7 @@ Docker/Podman Compose is the recommended method for validator and archive nodes 
 It's recommended to create a separate user and run the container with Podman to run it rootless. Make sure to enable lingering for that user, so the container keeps running when the user logs out. For convenience sake, the method below describes a Docker Compose setup on a Debian Linux based system as the root user.
 
 ### RPC node Setup Steps
+
 1. Create a directory for the node data on the data drive: `mkdir -p /mnt/qf-node-data && cd /mnt/qf-node-data`.
 
 2. Create a `compose.yml` file and paste the following:
