@@ -133,7 +133,7 @@ async function withRetry<T>(
             if (!canRetry || attempt >= maxAttempts) {
                 throw err;
             }
-
+            // TODO Should we recreate API instances here when trying to retry?
             logger.warn(
                 {
                     attempt,
@@ -482,6 +482,10 @@ async function signAndSendAndWait(
                 }
 
                 if (result.status.isFinalized) {
+                    logger.debug(
+                        { hash: result.status.asFinalized.toHex() },
+                        `${label} finalized`,
+                    );
                     clearTimeout(timer);
                     if (unsub) {
                         try {
@@ -939,7 +943,7 @@ async function main() {
                 proofRunner.enqueue(async () => {
                     const upTo = BigInt(header.number.toString());
                     const targetHash = (
-                        await fastchain.rpc.chain.getBlockHash(header.number)
+                        await fastchain.rpc.chain.getBlockHash(header.number.unwrap())
                     ).toHex() as HexString;
 
                     const proof = await fetchFinalityProofBytes(
