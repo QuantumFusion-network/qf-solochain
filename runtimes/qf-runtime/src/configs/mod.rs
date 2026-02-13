@@ -43,7 +43,7 @@ use frame_support::{
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
-	EnsureRoot, EnsureSigned, EnsureSignedBy,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
@@ -528,9 +528,7 @@ ord_parameter_types! {
 	pub const RelayerOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
 }
 
-impl pallet_spin_anchoring::Config for Runtime {
-	type RelayerOrigin = EnsureSignedBy<RelayerOrigin, AccountId>;
-}
+impl pallet_spin_anchoring::Config for Runtime {}
 
 parameter_types! {
 	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
