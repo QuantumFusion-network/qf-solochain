@@ -4,15 +4,16 @@ pub use pallet::*;
 
 use codec::{Decode, DecodeWithMemTracking, Encode};
 use finality_grandpa::Message as GrandpaMessage;
-use frame_support::{ensure, pallet_prelude::*, BoundedVec};
+use frame_support::{ensure, pallet_prelude::*, BoundedVec, DefaultNoBound};
 use frame_system::pallet_prelude::*;
 use scale_info::TypeInfo;
 use sp_consensus_grandpa::{self, AuthorityList, SetId};
-use sp_runtime::traits::Header as HeaderT;
+use sp_runtime::traits::{BadOrigin, Header as HeaderT};
 use sp_std::collections::btree_set::BTreeSet;
 
 #[frame_support::pallet]
 pub mod pallet {
+
 	use super::*;
 
 	/// TODO(zotho): pick sane limits for our network
@@ -83,12 +84,28 @@ pub mod pallet {
 	pub type LastJustification<T: Config> =
 		StorageValue<_, BoundedGrandpaJustification<T::AnchoredChainHeader>>;
 
+	#[pallet::storage]
+	pub type RelayerOrigin<T: Config> = StorageValue<_, T::AccountId>;
+
+	#[pallet::genesis_config]
+	#[derive(DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub relayer_origin: Option<T::AccountId>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			RelayerOrigin::<T>::set(self.relayer_origin.clone());
+		}
+	}
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The parachain accepted a new fastchain finality proof.
 		FinalityProofAccepted {
-			who: T::AccountId,
+			who: Option<T::AccountId>,
 			number: <T::AnchoredChainHeader as HeaderT>::Number,
 			hash: <T::AnchoredChainHeader as HeaderT>::Hash,
 		},
@@ -123,7 +140,11 @@ pub mod pallet {
 			set_id: SetId,
 			authorities: AuthorityList,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			let signer = ensure_signed_or_root(origin)?;
+			if let Some(signer) = signer {
+				let relayer_origin = RelayerOrigin::<T>::get();
+				ensure!(Some(signer) == relayer_origin, BadOrigin);
+			}
 			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
 			let authorities_len =
@@ -146,7 +167,11 @@ pub mod pallet {
 			expected_set_id: SetId,
 			justification: BoundedGrandpaJustification<T::AnchoredChainHeader>,
 		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+			let signer = ensure_signed_or_root(origin)?;
+			if let Some(signer) = signer.clone() {
+				let relayer_origin = RelayerOrigin::<T>::get();
+				ensure!(Some(signer) == relayer_origin, BadOrigin);
+			}
 
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
@@ -212,10 +237,21 @@ pub mod pallet {
 			LastJustification::<T>::put(justification);
 
 			Self::deposit_event(Event::FinalityProofAccepted {
-				who,
+				who: signer,
 				number: target_number,
 				hash: target_hash,
 			});
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
+		pub fn set_relayer_origin(
+			origin: OriginFor<T>,
+			new_relayer_origin: T::AccountId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			RelayerOrigin::<T>::put(new_relayer_origin);
 			Ok(())
 		}
 	}

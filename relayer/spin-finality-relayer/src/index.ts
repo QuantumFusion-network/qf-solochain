@@ -358,8 +358,8 @@ async function ensureAuthoritySet(
         "Updating parachain authority set",
     );
     const call = api.tx.spinPolkadot.setAuthoritySet(setId, desired);
-    const sudoCall = api.tx.sudo.sudo(call);
-    await signAndSendAndWait(api, sudoCall, signer, "setAuthoritySet");
+    //const sudoCall = api.tx.sudo.sudo(call);
+    await signAndSendAndWait(api, call, signer, "setAuthoritySet");
 }
 
 type Task = () => Promise<void>;
@@ -601,10 +601,10 @@ async function main() {
                     );
                     const fastchainTx =
                         fastchain.tx.spinAnchoring.noteAnchorVerified(upTo);
-                    const sudoCall = fastchain.tx.sudo.sudo(fastchainTx);
+                    //const sudoCall = fastchain.tx.sudo.sudo(fastchainTx);
                     await signAndSendAndWait(
                         fastchain,
-                        sudoCall,
+                        fastchainTx,
                         fastchainAccount,
                         `noteAnchorVerified-${upTo}`,
                     );
