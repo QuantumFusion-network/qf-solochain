@@ -206,3 +206,121 @@ This will also create an autorenewal hook with these options.
 ---
 
  ====== Now your RPC node has been set up. ======
+
+### Validator node Setup Steps
+
+1. Create a directory for the node data on the data drive: `mkdir -p /mnt/qf-node-data && cd /mnt/qf-node-data`.
+
+2. Create a `compose.yml` file and paste the following:
+
+```yaml
+services:
+  qf-node:
+    image: docker.io/theqfnetwork/qf-node:v0.1.28
+    container_name: qf-validator-node
+    network_mode: host
+    restart: always
+    volumes:
+      - /mnt/qf-node-data:/data
+    command:
+      - qf-node
+      - --validator
+      - --name=qf-mainnet-validator-node
+      - --chain=qf-mainnet
+      - --port=30333
+      - --prometheus-port=9615
+      - --base-path=/data
+```
+
+3. Set up your firewall to allow p2p connectivity. With Nftables, `/etc/nftables.conf` should look something like this:
+
+```
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+
+    ct state invalid drop
+    ct state {established, related} accept
+
+    iif "lo" accept
+    ip protocol icmp accept
+    meta l4proto ipv6-icmp accept
+
+    # You should harden the SSH access to your server
+    tcp dport 22 log prefix "SSH_CONNECT: " accept
+    tcp dport 30333 counter accept comment "P2P networking"
+  }
+
+  chain forward {
+    type filter hook forward priority 0; policy drop;
+  }
+
+  chain output {
+    type filter hook output priority 0; policy accept;
+  }
+}
+```
+
+If you don't have Nftables installed, you can install with `sudo apt update && sudo apt install nftables`. 
+Note: disable iptables before you enable Nftables with `sudo systemctl enable --now nftables`.
+
+To disable iptables, run these but be sure the migrate existing rules to Nftables first:
+
+```bash
+# On Ubuntu
+sudo ufw disable; sudo systemctl stop ufw; sudo systemctl disable ufw
+
+sudo systemctl stop iptables; sudo systemctl disable iptables; sudo systemctl stop ip6tables; sudo systemctl disable ip6tables
+
+# Reset the rules too
+sudo iptables -F; sudo iptables -X; sudo ip6tables -F; sudo ip6tables -X
+
+# Verify with:
+sudo iptables -L -n
+
+# And that your Nftables rules are still intact:
+sudo nft list ruleset
+```
+
+4. Then apply it with `sudo systemctl restart nftables` and start your node with `docker compose up -d` in the directory where the compose.yml file is located. 
+Enable the Docker daemon to automatically start after a server reboot with `sudo systemctl enable docker.service`. The node will now start syncing blocks.
+
+
+5. Once your node is fully synced, you need to complete the validator setup by configuring session keys and bonding stake. This requires QF tokens in your stash and controller accounts.
+
+
+6. Generate Session Keys
+
+Session keys are used by your validator node to sign consensus messages. Generate them by running the following command on your validator node:
+
+```bash
+curl -H "Content-Type: application/json" -d'{"id":1, "jsonrpc":"2.0", "method": "author_rotateKeys", "params":[]}' http://localhost:9944
+```
+The response will contain a hex-encoded result field (e.g., 0x5c8c...). Save this value—it is your session key and will be used in the next step.
+
+
+7. Stake Tokens and Set Session Keys
+
+You will need two accounts funded with QF tokens:
+
+**Stash account**: Holds your bonded stake
+
+**Controller account**: Manages validator actions (can be the same as stash for simplicity, but is not recommended for security)
+
+Via the QF Network staking interface (Polkadot JS Apps or the QF Network portal):
+
+Bond your stake: Navigate to Staking > Account Actions and click + Stash. Select your stash and controller accounts, enter the amount of QF tokens to bond (minimum required to enter the active validator set), and choose the reward destination.
+
+Set session keys: After bonding, click Set Session Key and paste the hex string generated from the author_rotateKeys command in step 5.1. Sign and submit the transaction with your controller account.
+
+**Validate: Click Validate and set your validator preferences:**
+
+Commission: The percentage of rewards you keep (e.g., 5-10%)
+
+Block nominations: Whether to accept new nominations
+
+Sign and submit with your controller account.
