@@ -323,4 +323,4 @@ Commission: The percentage of rewards you keep (e.g., 5-10%)
 
 Block nominations: Whether to accept new nominations
 
-Sign and submit with your controller account.
+Sign and submit with your controller account. Your node will be an active validator once the next session starts, after approximately 1.5 hours.
