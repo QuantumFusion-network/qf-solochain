@@ -203,9 +203,11 @@ sudo certbot certonly --webroot -w /var/www/letsencrypt -d YOUR_DOMAIN_NAME \
 
 This will also create an autorenewal hook with these options.
 
----
 
- ====== Now your RPC node has been set up. ======
+10. Now your RPC node has been set up. Verify that you can access the RPC websocket endpoint securely via `wss://YOUR_DOMAIN_NAME`
+and that the node is syncing properly by checking the logs with `docker compose logs -f`. It should mention such logs:
+
+`qf-rpc-node  | 2026-02-19 13:27:39 🏆 Imported #19770730 (0x2ec2…f8ed → 0x93a4…3171)`
 
 ### Validator node Setup Steps
 
@@ -322,3 +324,20 @@ Commission: The percentage of nominators' rewards you keep (e.g., 5-10%)
 Block nominations: Whether to accept nominations
 
 Sign and submit with your account. Your node will be an active validator once the next session starts, after approximately 1.5 hours.
+
+8. Check that the node is syncing properly. The logs should mention such logs:
+
+`qf-validator-node  | 2026-02-19 13:27:39 🏆 Imported #19770730 (0x2ec2…f8ed → 0x93a4…3171)`
+
+9. Verify validator status: You can check your validator's status and performance metrics in the Staking > Validators section of the Polkadot JS Apps or the QF Network portal.
+Look for your account in the active validator list.
+
+The logs should also mention that the node is authoring blocks:
+
+```
+qf-validator-node  | 2026-02-19 13:27:39 🎁 Prepared block for proposing at 19770729 (1 ms) hash: 0x91246ccec8d68d47f8a6c543cdc4d3c5d4fe5d24f4f42d628ebf03500dfaec7b; parent_hash: 0xbe88…2bad; end: NoMoreTransactions; extrinsics_count: 1
+qf-validator-node  | 2026-02-19 13:27:39 🔖 Pre-sealed block for proposal at 19770729. Hash now 0x2ec279df3929879f78cbab24e9314829ac467ebdba7d8e40d0cfe50e8018f8ed, previously 0x91246ccec8d68d47f8a6c543cdc4d3c5d4fe5d24f4f42d628ebf03500dfaec7b.
+qf-validator-node  | 2026-02-19 13:27:39 🏆 Imported #19770729 (0xbe88…2bad → 0x2ec2…f8ed)
+qf-validator-node  | 2026-02-19 13:27:39 maintain txs=(0, 0) a=1 i=34 views=[(19770729, 0, 0)] event=NewBestBlock { hash: 0x2ec279df3929879f78cbab24e9314829ac467ebdba7d8e40d0cfe50e8018f8ed, tree_route: None } duration=577.595µs
+qf-validator-node  | 2026-02-19 13:27:39 🙌 Starting consensus session on top of parent 0x2ec279df3929879f78cbab24e9314829ac467ebdba7d8e40d0cfe50e8018f8ed (#19770729)
+```
