@@ -209,6 +209,14 @@ and that the node is syncing properly by checking the logs with `docker compose 
 
 `qf-rpc-node  | 2026-02-19 13:27:39 🏆 Imported #19770730 (0x2ec2…f8ed → 0x93a4…3171)`
 
+You can also check with an RPC call:
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"system_health","params":[],"id":1}' \
+  http://localhost:9944
+```
+
 ### Validator node Setup Steps
 
 1. Create a directory for the node data on the data drive: `mkdir -p /mnt/qf-node-data && cd /mnt/qf-node-data`.
@@ -328,6 +336,14 @@ Sign and submit with your account. Your node will be an active validator once th
 8. Check that the node is syncing properly. The logs should mention such logs:
 
 `qf-validator-node  | 2026-02-19 13:27:39 🏆 Imported #19770730 (0x2ec2…f8ed → 0x93a4…3171)`
+
+You can also check with an RPC call:
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"system_health","params":[],"id":1}' \
+  http://localhost:9944
+```
 
 9. Verify validator status: You can check your validator's status and performance metrics in the Staking > Validators section of the Polkadot JS Apps or the QF Network portal.
 Look for your account in the active validator list.
