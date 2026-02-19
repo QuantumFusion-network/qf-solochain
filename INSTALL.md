@@ -305,22 +305,20 @@ The response will contain a hex-encoded result field (e.g., 0x5c8c...). Save thi
 
 7. Stake Tokens and Set Session Keys
 
-You will need two accounts funded with QF tokens:
+As QF Network doesn't support Proxy accounts yet, this guide will describe the process using one account for storing the bonded stake and managing validator actions.
 
-**Stash account**: Holds your bonded stake
-
-**Controller account**: Manages validator actions (can be the same as stash for simplicity, but is not recommended for security)
+You will need to fund the account with QF tokens:
 
 Via the QF Network staking interface (Polkadot JS Apps or the QF Network portal):
 
-Bond your stake: Navigate to Staking > Account Actions and click + Stash. Select your stash and controller accounts, enter the amount of QF tokens to bond (minimum required to enter the active validator set), and choose the reward destination.
+Bond your stake: Navigate to Staking > Account Actions and click + Stash. Select your account, enter the amount of QF tokens to bond (minimum required to enter the active validator set), and choose the reward destination.
 
-Set session keys: After bonding, click Set Session Key and paste the hex string generated from the author_rotateKeys command in step 5.1. Sign and submit the transaction with your controller account.
+Set session keys: After bonding, click Set Session Key and paste the hex string generated from the author_rotateKeys command in step 5.1. Sign and submit the transaction.
 
 **Validate: Click Validate and set your validator preferences:**
 
-Commission: The percentage of rewards you keep (e.g., 5-10%)
+Commission: The percentage of nominators' rewards you keep (e.g., 5-10%)
 
-Block nominations: Whether to accept new nominations
+Block nominations: Whether to accept nominations
 
-Sign and submit with your controller account. Your node will be an active validator once the next session starts, after approximately 1.5 hours.
+Sign and submit with your account. Your node will be an active validator once the next session starts, after approximately 1.5 hours.
