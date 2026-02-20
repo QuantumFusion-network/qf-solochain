@@ -502,7 +502,7 @@ impl pallet_revive::Config for Runtime {
 	type EthGasEncoder = ();
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
 	type Precompiles = ();
-	type AllowEVMBytecode = ConstBool<false>;
+	type AllowEVMBytecode = ConstBool<true>;
 }
 
 impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {
