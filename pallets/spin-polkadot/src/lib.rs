@@ -85,7 +85,7 @@ pub mod pallet {
 		StorageValue<_, BoundedGrandpaJustification<T::AnchoredChainHeader>>;
 
 	#[pallet::storage]
-	pub type RelayerOrigin<T: Config> = StorageValue<_, T::AccountId>;
+	pub type Relayer<T: Config> = StorageValue<_, T::AccountId>;
 
 	#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
@@ -96,7 +96,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			RelayerOrigin::<T>::set(self.relayer_origin.clone());
+			Relayer::<T>::set(self.relayer_origin.clone());
 		}
 	}
 
@@ -105,7 +105,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// The parachain accepted a new fastchain finality proof.
 		FinalityProofAccepted {
-			who: Option<T::AccountId>,
+			who: T::AccountId,
 			number: <T::AnchoredChainHeader as HeaderT>::Number,
 			hash: <T::AnchoredChainHeader as HeaderT>::Hash,
 		},
@@ -142,7 +142,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let signer = ensure_signed_or_root(origin)?;
 			if let Some(signer) = signer {
-				let relayer_origin = RelayerOrigin::<T>::get();
+				let relayer_origin = Relayer::<T>::get();
 				ensure!(Some(signer) == relayer_origin, BadOrigin);
 			}
 			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
@@ -167,11 +167,8 @@ pub mod pallet {
 			expected_set_id: SetId,
 			justification: BoundedGrandpaJustification<T::AnchoredChainHeader>,
 		) -> DispatchResult {
-			let signer = ensure_signed_or_root(origin)?;
-			if let Some(signer) = signer.clone() {
-				let relayer_origin = RelayerOrigin::<T>::get();
-				ensure!(Some(signer) == relayer_origin, BadOrigin);
-			}
+			let who = ensure_signed(origin)?;
+			ensure!(Some(who.clone()) == Relayer::<T>::get(), BadOrigin);
 
 			ensure!(!justification.commit.precommits.is_empty(), Error::<T>::NoPrecommits);
 
@@ -237,7 +234,7 @@ pub mod pallet {
 			LastJustification::<T>::put(justification);
 
 			Self::deposit_event(Event::FinalityProofAccepted {
-				who: signer,
+				who,
 				number: target_number,
 				hash: target_hash,
 			});
@@ -251,7 +248,7 @@ pub mod pallet {
 			new_relayer_origin: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			RelayerOrigin::<T>::put(new_relayer_origin);
+			Relayer::<T>::put(new_relayer_origin);
 			Ok(())
 		}
 	}

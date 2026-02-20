@@ -21,7 +21,7 @@ pub mod pallet {
 	pub struct Pallet<T>(core::marker::PhantomData<T>);
 
 	#[pallet::storage]
-	pub type RelayerOrigin<T: Config> = StorageValue<_, T::AccountId>;
+	pub type Relayer<T: Config> = StorageValue<_, T::AccountId>;
 
 	/// Highest fast-chain block number that is securely anchored.
 	#[pallet::storage]
@@ -36,7 +36,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			RelayerOrigin::<T>::set(self.relayer_origin.clone());
+			Relayer::<T>::set(self.relayer_origin.clone());
 		}
 	}
 
@@ -56,10 +56,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			up_to: BlockNumberFor<T>,
 		) -> DispatchResult {
-			let signer = ensure_signed_or_root(origin)?;
-			if let Some(signer) = signer {
-				let relayer_origin = RelayerOrigin::<T>::get();
-				ensure!(Some(signer) == relayer_origin, BadOrigin);
+			match ensure_signed_or_root(origin)? {
+				Some(signer) => ensure!(Relayer::<T>::get() == Some(signer), BadOrigin),
+				None => {}, // root is allowed
 			}
 
 			let prev = SecureUpTo::<T>::get();
@@ -78,7 +77,7 @@ pub mod pallet {
 			new_relayer_origin: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			RelayerOrigin::<T>::put(new_relayer_origin);
+			Relayer::<T>::put(new_relayer_origin);
 			Ok(())
 		}
 	}
