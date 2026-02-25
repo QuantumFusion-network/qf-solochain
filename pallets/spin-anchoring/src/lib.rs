@@ -30,13 +30,13 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub relayer_origin: Option<T::AccountId>,
+		pub relayer: Option<T::AccountId>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			Relayer::<T>::set(self.relayer_origin.clone());
+			Relayer::<T>::set(self.relayer.clone());
 		}
 	}
 
@@ -72,12 +72,12 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
-		pub fn set_relayer_origin(
+		pub fn set_relayer(
 			origin: OriginFor<T>,
-			new_relayer_origin: T::AccountId,
+			new_relayer: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			Relayer::<T>::put(new_relayer_origin);
+			Relayer::<T>::put(new_relayer);
 			Ok(())
 		}
 	}
