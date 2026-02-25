@@ -16,23 +16,30 @@ import type {
     AuthorityList,
     Header,
 } from "@polkadot/types/interfaces";
+import type { RegistryTypes } from "@polkadot/types/types";
+import type { Compact, u64 } from "@polkadot/types-codec";
 import pino from "pino";
 
-const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
-const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:9988";
-const FASTCHAIN_SIGNER_URI = process.env.FASTCHAIN_SIGNER_URI ?? "//Alice";
-const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Bob";
-const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
+const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:9944";
+const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:40767";
+const FASTCHAIN_SIGNER_URI = process.env.FASTCHAIN_SIGNER_URI ?? "//Bob";
+const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Alice";
+const LOG_LEVEL = process.env.LOG_LEVEL ?? "debug";
 const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
+const API_CONNECT_TIMEOUT_MS = Number(process.env.API_CONNECT_TIMEOUT_MS ?? 10_000);
 
 // Retry knobs (safe defaults)
-const TX_RETRY_MAX_ATTEMPTS = Number(process.env.TX_RETRY_MAX_ATTEMPTS ?? 8);
+const TX_RETRY_MAX_ATTEMPTS = Number(process.env.TX_RETRY_MAX_ATTEMPTS ?? 2);
 const TX_RETRY_BASE_DELAY_MS = Number(
     process.env.TX_RETRY_BASE_DELAY_MS ?? 1_500,
 );
 const TX_RETRY_MAX_DELAY_MS = Number(
     process.env.TX_RETRY_MAX_DELAY_MS ?? 20_000,
 );
+const RECONNECT_BASE_DELAY_MS = Number(
+    process.env.RECONNECT_BASE_DELAY_MS ?? 2_000,
+);
+const RECONNECT_MAX_DELAY_MS = Number(process.env.RECONNECT_MAX_DELAY_MS ?? 30_000);
 
 const logger = pino({
     base: undefined,
@@ -44,9 +51,18 @@ const logger = pino({
 });
 
 let shutdownHandler: ((signal?: string) => Promise<void>) | null = null;
+let stopRequested = false;
 
 type AuthorityTuple = [authorityIdHex: string, weight: bigint];
 type Unsubscribe = () => void;
+type FastchainHeader = Omit<Header, "number"> & { number: Compact<u64> };
+type DecodedGrandpaJustification = {
+    commit: {
+        targetNumber: { toString: () => string };
+        targetHash: { toHex: () => string };
+        precommits?: { length?: number };
+    };
+};
 
 // ----------------------------------
 // helpers
@@ -56,15 +72,33 @@ function sleep(ms: number) {
     return new Promise<void>((res) => setTimeout(res, ms));
 }
 
+function withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    message: string,
+): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+
+    return Promise.race([promise, timeout]).finally(() => {
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
+    });
+}
+
 function errorMessage(err: unknown): string {
     if (err instanceof Error) return err.message;
+    const maybe = err as { message?: unknown };
     if (
         typeof err === "object" &&
         err !== null &&
-        "message" in err &&
-        typeof (err as any).message === "string"
+        typeof maybe.message === "string"
     ) {
-        return (err as any).message;
+        return maybe.message;
     }
     return String(err);
 }
@@ -87,24 +121,9 @@ function isPriorityTooLow(err: unknown): boolean {
 }
 
 function isRetryableRpcError(err: unknown): boolean {
-    const msg = errorMessage(err);
-
-    // The one you see in your logs. :contentReference[oaicite:1]{index=1}
-    if (isPriorityTooLow(err)) return true;
-
-    // Common transient provider issues
-    if (
-        msg.includes("WebSocket is not connected") ||
-        msg.includes("disconnected") ||
-        msg.includes("ECONNRESET") ||
-        msg.includes("ETIMEDOUT") ||
-        msg.includes("Timeout") ||
-        msg.includes("timed out")
-    ) {
-        return true;
-    }
-
-    return false;
+    // Keep retries only for tx-pool replace races.
+    // Network/transport errors should restart the whole session instead.
+    return isPriorityTooLow(err);
 }
 
 async function withRetry<T>(
@@ -133,7 +152,7 @@ async function withRetry<T>(
             if (!canRetry || attempt >= maxAttempts) {
                 throw err;
             }
-            // TODO Should we recreate API instances here when trying to retry?
+
             logger.warn(
                 {
                     attempt,
@@ -152,7 +171,7 @@ async function withRetry<T>(
 }
 
 // Serial queue for tx submissions (prevents nonce collisions)
-function makeSerialQueue(name: string) {
+function makeSerialQueue() {
     let tail: Promise<unknown> = Promise.resolve();
 
     const run = <T>(task: () => Promise<T>): Promise<T> => {
@@ -167,7 +186,7 @@ function makeSerialQueue(name: string) {
 
     const drain = () => tail;
 
-    return { name, run, drain };
+    return { run, drain };
 }
 
 // ---- helpers: authority comparison ----
@@ -306,17 +325,17 @@ async function subscribeJustificationStream(
 
 async function fetchFinalityProofBytes(
     api: ApiPromise,
-    blockHash: HexString | { toHex: () => HexString },
+    header: FastchainHeader,
 ): Promise<Uint8Array | null> {
     const proveFinality = (
         api.rpc.grandpa as unknown as {
             proveFinality: (
-                hash: HexString | { toHex: () => HexString },
+                blockNumber: bigint | number | Compact<u64>,
             ) => Promise<Option<Struct & { justification: Bytes }>>;
         }
     ).proveFinality;
 
-    const res = await proveFinality(blockHash);
+    const res = await proveFinality(header.number.unwrap().toBigInt());
     if (res.isNone) return null;
     const unwrapped = res.unwrap();
     return unwrapped.justification.toU8a();
@@ -416,20 +435,32 @@ async function signAndSendAndWait(
     return new Promise<void>((resolve, reject) => {
         let unsub: (() => void) | undefined;
 
+        const clearSub = (logOnError: boolean) => {
+            if (!unsub) return;
+            try {
+                unsub();
+            } catch {
+                if (logOnError) {
+                    logger.error(
+                        { label },
+                        "Failed to unsubscribe after finalized (probably already unsubscribed)",
+                    );
+                }
+            }
+            unsub = undefined;
+        };
+
         const timer = setTimeout(() => {
-            if (unsub) unsub();
-            reject(new Error(`${label} timed out after ${TX_TIMEOUT_MS}ms`));
+            clearSub(false);
+            reject(
+                new Error(
+                    `${label} timed out after ${TX_TIMEOUT_MS}ms`,
+                ),
+            );
         }, TX_TIMEOUT_MS);
 
         const finish = (err?: Error) => {
-            if (unsub) {
-                try {
-                    unsub();
-                } catch {
-                    // ignore
-                }
-                unsub = undefined;
-            }
+            clearSub(false);
             clearTimeout(timer);
             if (err) reject(err);
         };
@@ -474,32 +505,21 @@ async function signAndSendAndWait(
                     return;
                 }
 
-                if (result.status.isInBlock) {
-                    logger.debug(
-                        { hash: result.status.asInBlock.toHex() },
-                        `${label} included in block`,
-                    );
-                }
-
                 if (result.status.isFinalized) {
-                    logger.debug(
-                        { hash: result.status.asFinalized.toHex() },
-                        `${label} finalized`,
-                    );
                     clearTimeout(timer);
-                    if (unsub) {
-                        try {
-                            unsub();
-                        } catch {
-                            // ignore
-                        }
-                        unsub = undefined;
-                    }
+                    clearSub(true);
                     logger.info(
                         { hash: result.status.asFinalized.toHex() },
                         `${label} finalized`,
                     );
                     resolve();
+                }
+
+                if (result.status.isInBlock) {
+                    logger.debug(
+                        { hash: result.status.asInBlock.toHex() },
+                        `${label} included in block`,
+                    );
                 }
             })
             .then((u) => (unsub = u))
@@ -556,7 +576,7 @@ async function ensureAuthoritySet(
 type Task = () => Promise<void>;
 
 // Runs at most 1 task at a time. While running, only keeps the latest enqueued task.
-function makeLatestRunner(name: string) {
+function makeLatestRunner() {
     let running = false;
     let latest: Task | null = null;
 
@@ -613,42 +633,114 @@ function makeLatestRunner(name: string) {
     return { enqueue, drain };
 }
 
-async function main() {
+const fastchainCustomTypes = {
+    GrandpaJustification: {
+        round: "u64",
+        commit: "GrandpaCommit",
+        votesAncestries: "Vec<Header>",
+    },
+    GrandpaCommit: {
+        targetHash: "H256",
+        targetNumber: "u64", // <-- KEY: must be u64, not u32
+        precommits: "Vec<GrandpaSignedPrecommit>",
+    },
+    GrandpaSignedPrecommit: {
+        precommit: "GrandpaPrecommit",
+        signature: "[u8; 64]", // Ed25519 signature
+        id: "[u8; 32]", // AuthorityId
+    },
+    GrandpaPrecommit: {
+        targetHash: "H256",
+        targetNumber: "u64", // <-- Also u64
+    },
+};
+
+type ChainName = "fastchain" | "parachain";
+
+type SessionBreak = {
+    chain: ChainName;
+    reason: "disconnected" | "error";
+    err?: unknown;
+};
+
+async function connectApiWithRetry(
+    chain: ChainName,
+    endpoint: string,
+    opts?: { types?: RegistryTypes },
+): Promise<ApiPromise> {
+    let delay = RECONNECT_BASE_DELAY_MS;
+
+    while (!stopRequested) {
+        let api: ApiPromise | null = null;
+        const provider = new WsProvider(endpoint);
+        try {
+            const createOpts: { provider: WsProvider; types?: RegistryTypes } = {
+                provider,
+            };
+            if (opts?.types) {
+                createOpts.types = opts.types;
+            }
+
+            api = await withTimeout(
+                ApiPromise.create(createOpts),
+                API_CONNECT_TIMEOUT_MS,
+                `${chain} create timed out after ${API_CONNECT_TIMEOUT_MS}ms`,
+            );
+
+            await withTimeout(
+                api.isReady,
+                API_CONNECT_TIMEOUT_MS,
+                `${chain} connection timed out after ${API_CONNECT_TIMEOUT_MS}ms`,
+            );
+
+            logger.info({ chain, endpoint }, "API connected");
+            return api;
+        } catch (err) {
+            if (api) {
+                await api.disconnect().catch(() => undefined);
+            } else {
+                await provider.disconnect().catch(() => undefined);
+            }
+            if (stopRequested) {
+                throw err;
+            }
+
+            logger.warn(
+                {
+                    chain,
+                    endpoint,
+                    retryInMs: delay,
+                    err: formatError(err),
+                },
+                "API connection failed; retrying",
+            );
+
+            await sleep(delay);
+            delay = Math.min(delay * 2, RECONNECT_MAX_DELAY_MS);
+        }
+    }
+
+    throw new Error(`Stop requested while connecting ${chain}`);
+}
+
+function waitForApiBreak(api: ApiPromise, chain: ChainName): Promise<SessionBreak> {
+    return new Promise((resolve) => {
+        api.once("disconnected", () => {
+            resolve({ chain, reason: "disconnected" });
+        });
+        api.once("error", (err: unknown) => {
+            resolve({ chain, reason: "error", err });
+        });
+    });
+}
+
+async function runRelayerSession() {
     await cryptoWaitReady();
 
-    // IMPORTANT: custom types (fastchain has u64 block numbers)
-    const fastchainCustomTypes = {
-        GrandpaJustification: {
-            round: "u64",
-            commit: "GrandpaCommit",
-            votesAncestries: "Vec<Header>",
-        },
-        GrandpaCommit: {
-            targetHash: "H256",
-            targetNumber: "u64", // <-- KEY: must be u64, not u32
-            precommits: "Vec<GrandpaSignedPrecommit>",
-        },
-        GrandpaSignedPrecommit: {
-            precommit: "GrandpaPrecommit",
-            signature: "[u8; 64]", // Ed25519 signature
-            id: "[u8; 32]", // AuthorityId
-        },
-        GrandpaPrecommit: {
-            targetHash: "H256",
-            targetNumber: "u64", // <-- Also u64
-        },
-    };
-
-    const fastchain = await ApiPromise.create({
-        provider: new WsProvider(FASTCHAIN_WS),
+    const fastchain = await connectApiWithRetry("fastchain", FASTCHAIN_WS, {
         types: fastchainCustomTypes,
     });
-    await fastchain.isReady;
-
-    const parachain = await ApiPromise.create({
-        provider: new WsProvider(PARACHAIN_WS),
-    });
-    await parachain.isReady;
+    const parachain = await connectApiWithRetry("parachain", PARACHAIN_WS);
 
     const keyring = new Keyring({ type: "sr25519" });
     const fastchainAccount = keyring.addFromUri(FASTCHAIN_SIGNER_URI, {
@@ -668,11 +760,11 @@ async function main() {
         "Relayer starting",
     );
 
-    const proofRunner = makeLatestRunner("proof");
+    const proofRunner = makeLatestRunner();
 
     // Serialize txs per chain/signer to prevent nonce collisions (fixes 1014 pool replacement)
-    const parachainTxQ = makeSerialQueue("parachainTxQ");
-    const fastchainTxQ = makeSerialQueue("fastchainTxQ");
+    const parachainTxQ = makeSerialQueue();
+    const fastchainTxQ = makeSerialQueue();
 
     // Cache authorities by setId (authorities are stable within a set)
     const authorityCache = new Map<bigint, AuthorityTuple[]>();
@@ -704,17 +796,13 @@ async function main() {
             fastchain.disconnect(),
             parachain.disconnect(),
         ]);
+
+        if (shutdownHandler === shutdown) {
+            shutdownHandler = null;
+        }
     };
 
     shutdownHandler = shutdown;
-
-    const registerShutdown = (signal: "SIGINT" | "SIGTERM") => {
-        process.once(signal, () => {
-            shutdown(signal).finally(() => process.exit(0));
-        });
-    };
-    registerShutdown("SIGINT");
-    registerShutdown("SIGTERM");
 
     // Best-effort: prime parachain authority set to current fastchain set.
     // (If it fails transiently, we continue; the next proof will fix it anyway.)
@@ -782,12 +870,60 @@ async function main() {
             );
 
             const label = `submitFinalityProof-${upTo.toString()}`;
-
             const sendProof = async (sid: bigint) => {
                 const tx = parachain.tx.spinPolkadot.submitFinalityProof(
                     sid.toString(),
                     proofU8a,
                 );
+
+                // Diagnostics: compare decoded proof shape in both registries.
+                // If these lengths differ or are zero, it's usually an endpoint/type mismatch.
+                try {
+                    const paraJust = tx.method.args[1] as unknown as {
+                        commit?: { precommits?: { length?: number }; targetNumber?: { toString?: () => string } };
+                    };
+                    const paraPrecommitsLen = paraJust.commit?.precommits?.length ?? -1;
+                    const paraTargetNumber = paraJust.commit?.targetNumber?.toString?.();
+
+                    let fastPrecommitsLen = -1;
+                    let fastTargetNumber: string | undefined;
+                    try {
+                        const fastJust = fastchain.registry.createType(
+                            "GrandpaJustification",
+                            proofU8a,
+                        ) as unknown as {
+                            commit?: {
+                                precommits?: { length?: number };
+                                targetNumber?: { toString?: () => string };
+                            };
+                        };
+                        fastPrecommitsLen = fastJust.commit?.precommits?.length ?? -1;
+                        fastTargetNumber = fastJust.commit?.targetNumber?.toString?.();
+                    } catch (decodeErr) {
+                        logger.warn(
+                            { err: formatError(decodeErr) },
+                            "Failed to decode proof as GrandpaJustification in fastchain registry",
+                        );
+                    }
+
+                    logger.info(
+                        {
+                            upTo: upTo.toString(),
+                            sid: sid.toString(),
+                            paraPrecommitsLen,
+                            paraTargetNumber,
+                            fastPrecommitsLen,
+                            fastTargetNumber,
+                        },
+                        "Proof decode diagnostics before submitFinalityProof",
+                    );
+                } catch (diagErr) {
+                    logger.warn(
+                        { err: formatError(diagErr) },
+                        "Failed to build proof diagnostics",
+                    );
+                }
+
                 await withRetry(
                     label,
                     () =>
@@ -899,12 +1035,12 @@ async function main() {
                     return;
                 }
 
-                let typedJustification: any;
+                let typedJustification: DecodedGrandpaJustification;
                 try {
                     typedJustification = fastchain.registry.createType(
                         "GrandpaJustification",
                         justification,
-                    ) as any;
+                    ) as unknown as DecodedGrandpaJustification;
                 } catch (err) {
                     logger.warn(
                         {
@@ -937,18 +1073,19 @@ async function main() {
             { err: formatError(err) },
             "Justification stream unavailable; falling back to finalized heads + proveFinality",
         );
-
         const unsubHeads = (await fastchain.rpc.chain.subscribeFinalizedHeads(
-            (header: Header) => {
+            (header: FastchainHeader) => {
                 proofRunner.enqueue(async () => {
                     const upTo = BigInt(header.number.toString());
                     const targetHash = (
-                        await fastchain.rpc.chain.getBlockHash(header.number.unwrap())
+                        await fastchain.rpc.chain.getBlockHash(
+                            header.number.unwrap().toBigInt(),
+                        )
                     ).toHex() as HexString;
 
                     const proof = await fetchFinalityProofBytes(
                         fastchain,
-                        targetHash,
+                        header,
                     );
                     if (!proof) return;
 
@@ -963,6 +1100,65 @@ async function main() {
 
         subscriptions.push(unsubHeads);
         logger.info("Subscribed to finalized heads (proveFinality fallback)");
+    }
+
+    const sessionBreak = await Promise.race([
+        waitForApiBreak(fastchain, "fastchain"),
+        waitForApiBreak(parachain, "parachain"),
+    ]);
+
+    if (!shuttingDown && !stopRequested) {
+        logger.warn(
+            {
+                chain: sessionBreak.chain,
+                reason: sessionBreak.reason,
+                err: sessionBreak.err ? formatError(sessionBreak.err) : undefined,
+            },
+            "API connection lost; restarting relayer session",
+        );
+    }
+
+    await shutdown();
+
+    if (!stopRequested) {
+        throw new Error(
+            `${sessionBreak.chain} connection ${sessionBreak.reason}; restarting session`,
+        );
+    }
+}
+
+async function main() {
+    const registerShutdown = (signal: "SIGINT" | "SIGTERM") => {
+        process.once(signal, () => {
+            stopRequested = true;
+            const handler = shutdownHandler;
+            if (!handler) {
+                process.exit(0);
+                return;
+            }
+            handler(signal).finally(() => process.exit(0));
+        });
+    };
+    registerShutdown("SIGINT");
+    registerShutdown("SIGTERM");
+
+    let restartDelayMs = RECONNECT_BASE_DELAY_MS;
+    while (!stopRequested) {
+        try {
+            await runRelayerSession();
+            restartDelayMs = RECONNECT_BASE_DELAY_MS;
+        } catch (err) {
+            if (stopRequested) break;
+            logger.warn(
+                {
+                    retryInMs: restartDelayMs,
+                    err: formatError(err),
+                },
+                "Relayer session stopped; restarting",
+            );
+            await sleep(restartDelayMs);
+            restartDelayMs = Math.min(restartDelayMs * 2, RECONNECT_MAX_DELAY_MS);
+        }
     }
 }
 
