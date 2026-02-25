@@ -807,18 +807,18 @@ async function runRelayerSession() {
     // Best-effort: prime parachain authority set to current fastchain set.
     // (If it fails transiently, we continue; the next proof will fix it anyway.)
     try {
-        const tipSetId = BigInt(
+        const setId = BigInt(
             (await fastchain.query.grandpa.currentSetId()).toString(),
         );
-        const tipAuthorities = await fetchAuthorities(fastchain);
-        authorityCache.set(tipSetId, tipAuthorities);
+        const authorities = await fetchAuthorities(fastchain);
+        authorityCache.set(setId, authorities);
 
         await parachainTxQ.run(async () => {
             await ensureAuthoritySet(
                 parachain,
                 parachainAccount,
-                tipSetId,
-                tipAuthorities,
+                setId,
+                authorities,
             );
         });
     } catch (err) {
