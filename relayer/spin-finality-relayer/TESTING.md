@@ -1,6 +1,5 @@
 
 
-
 # Local testing
 
 For local testing you should have:
@@ -26,11 +25,13 @@ and start it:
 
 ### 2. Start Relaychain and qf-parachain
 
-To start both we will use zombienet tool(https://github.com/paritytech/zombienet). To download and install it use comands that described in repository.
+To start both we will use zombienet tool(https://github.com/paritytech/zombienet).
+To download and install it use comands that described in repository.
 
-Firstly need to download (or build) polkadot binary from polkadot-sdk repository (https://github.com/paritytech/polkadot-sdk) (Better to use the same version as we import in ./Cargo.toml)
+Firstly need to download (or build) Polkadot binary from Polkadot-sdk repository (https://github.com/paritytech/polkadot-sdk)
+Better to use the same version as we import in ./Cargo.toml.
 
-To build(at polkadot-sdk directory) you should use:
+To build(at Polkadot-sdk directory) you should use:
 ```bash
 cargo b -r -p polkadot
 ```
@@ -40,7 +41,9 @@ Also we need build qf-parachain-node(at qf-solochain directory):
 cargo b -r -p qf-parachain-node
 ```
 
-For default recomended to use zombienet file ./parachain/zombient.toml. If it needed to use custom chain-spec - you can add it like this:
+For default recomended to use zombienet file ./parachain/zombient.toml.
+If it needed to use custom chain-spec - you can add it like this:
+
 ```toml
 [[parachains]]
 id = 4775
@@ -72,7 +75,8 @@ zombienet --provider native spawn parachain/zombienet.toml
 
 ### 3. Spin-finality-relayer
 
-Before starting you should configure .env file(or if you don't use it you can configure parameters at begining of index.ts file)
+Before starting you should configure .env file
+Or if you don't use it you can configure parameters at begining of index.ts file.
 
 To start use:
 ```bash
@@ -84,5 +88,7 @@ npm start
 ## Possible problems and Errors
 
 1. ParaId in chain spec and zombienet config should be the same
-2. It may be error with origins. Relayer sign 3 transactions - on parachain 'set_authority_set', 'submit_finality_proof' and on fastchain 'note_anchor_verified'. Origins on chains and origins in relayer should match
+2. It may be error with origins. Relayer sign 3 transactions - on parachain
+'set_authority_set', 'submit_finality_proof' and on fastchain 'note_anchor_verified'.
+Origins on chains and origins in relayer should match
 
