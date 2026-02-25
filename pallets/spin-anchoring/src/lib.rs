@@ -72,10 +72,7 @@ pub mod pallet {
 
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
-		pub fn set_relayer(
-			origin: OriginFor<T>,
-			new_relayer: T::AccountId,
-		) -> DispatchResult {
+		pub fn set_relayer(origin: OriginFor<T>, new_relayer: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 			Relayer::<T>::put(new_relayer);
 			Ok(())
