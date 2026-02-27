@@ -3,9 +3,9 @@
   "id": "qf_testnet",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/31.222.238.107/tcp/38333/p2p/12D3KooWHYNkUDdNuBMZVdykvWfdA5pe6QBrZtwZy3vaWAsgTh5b",
-    "/ip4/31.222.238.80/tcp/38333/p2p/12D3KooWBBho1yvd2fHPBnSsUs9TvoP2K7dtKYZqqst55CEHgxDo",
-    "/ip4/31.222.238.108/tcp/38333/p2p/12D3KooWRnc1UCLPTMW71nMXuzrjjg6HiBBF9mGn5iuUDwt4cwCS"
+    "/dns4/validator2.testnet.qfnetwork.xyz/tcp/38333/p2p/12D3KooWHYNkUDdNuBMZVdykvWfdA5pe6QBrZtwZy3vaWAsgTh5b",
+    "/dns4/validator3.testnet.qfnetwork.xyz/tcp/38333/p2p/12D3KooWBBho1yvd2fHPBnSsUs9TvoP2K7dtKYZqqst55CEHgxDo",
+    "/dns4/validator1.testnet.qfnetwork.xyz/tcp/38333/p2p/12D3KooWRnc1UCLPTMW71nMXuzrjjg6HiBBF9mGn5iuUDwt4cwCS"
   ],
   "telemetryEndpoints": null,
   "protocolId": "qf-test",
