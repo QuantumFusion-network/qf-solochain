@@ -2,7 +2,11 @@
   "name": "QF Testnet",
   "id": "qf_testnet",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/ip4/31.222.238.107/tcp/37333/p2p/12D3KooWHYNkUDdNuBMZVdykvWfdA5pe6QBrZtwZy3vaWAsgTh5b",
+    "/ip4/31.222.238.80/tcp/37333/p2p/12D3KooWBBho1yvd2fHPBnSsUs9TvoP2K7dtKYZqqst55CEHgxDo",
+    "/ip4/31.222.238.108/tcp/37333/p2p/12D3KooWRnc1UCLPTMW71nMXuzrjjg6HiBBF9mGn5iuUDwt4cwCS"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "qf-test",
   "properties": {
