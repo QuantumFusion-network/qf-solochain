@@ -24,10 +24,9 @@
 // For more information, please refer to <http://unlicense.org>
 
 // Substrate and Polkadot dependencies
-use alloc::vec;
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
-	derive_impl, ord_parameter_types, parameter_types,
+	derive_impl, parameter_types,
 	traits::{
 		fungible::{Balanced, Credit, Mutate},
 		tokens::{Fortitude, Precision, Preservation},
@@ -43,7 +42,7 @@ use frame_support::{
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	pallet_prelude::BlockNumberFor,
-	EnsureRoot, EnsureSigned, EnsureSignedBy,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
@@ -523,14 +522,7 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
-ord_parameter_types! {
-	// Account: 5GEbbcFYz4AasJfyca5rJVYVd4TY6qFJfs2zV96ib1KE9sed
-	pub const RelayerOrigin: AccountId = AccountId::from(hex_literal::hex!("b87c50e34fdea20ae21715db68279881efd04cf30e6d6680892ec214dac6b277"));
-}
-
-impl pallet_spin_anchoring::Config for Runtime {
-	type RelayerOrigin = EnsureSignedBy<RelayerOrigin, AccountId>;
-}
+impl pallet_spin_anchoring::Config for Runtime {}
 
 parameter_types! {
 	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
