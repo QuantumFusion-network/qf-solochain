@@ -140,10 +140,9 @@ pub mod pallet {
 			set_id: SetId,
 			authorities: AuthorityList,
 		) -> DispatchResult {
-			let signer = ensure_signed_or_root(origin)?;
-			if let Some(signer) = signer {
-				let relayer = Relayer::<T>::get();
-				ensure!(Some(signer) == relayer, BadOrigin);
+			match ensure_signed_or_root(origin)? {
+				Some(signer) => ensure!(Relayer::<T>::get() == Some(signer), BadOrigin),
+				None => {}, // root is allowed
 			}
 			ensure!(!authorities.is_empty(), Error::<T>::EmptyAuthoritySet);
 
