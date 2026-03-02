@@ -1,5 +1,3 @@
-
-
 # Local testing
 
 For local testing you should have:

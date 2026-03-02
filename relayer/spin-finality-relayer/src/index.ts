@@ -20,11 +20,11 @@ import type { RegistryTypes } from "@polkadot/types/types";
 import type { Compact, u64 } from "@polkadot/types-codec";
 import pino from "pino";
 
-const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:9944";
+const FASTCHAIN_WS = process.env.FASTCHAIN_WS ?? "ws://127.0.0.1:11144";
 const PARACHAIN_WS = process.env.PARACHAIN_WS ?? "ws://127.0.0.1:40767";
 const FASTCHAIN_SIGNER_URI = process.env.FASTCHAIN_SIGNER_URI ?? "//Bob";
 const PARACHAIN_SIGNER_URI = process.env.PARACHAIN_SIGNER_URI ?? "//Alice";
-const LOG_LEVEL = process.env.LOG_LEVEL ?? "debug";
+const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
 const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 60_000);
 const API_CONNECT_TIMEOUT_MS = Number(process.env.API_CONNECT_TIMEOUT_MS ?? 10_000);
 
