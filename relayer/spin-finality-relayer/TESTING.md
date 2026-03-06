@@ -79,8 +79,9 @@ Or if you don't use it you can configure parameters at begining of index.ts file
 To start use:
 ```bash
 cd relayer/spin-finality-relayer
-npm i
-npm start
+npm install -g pnpm
+pnpm i
+pnpm start
 ```
 
 ## Possible problems and Errors
