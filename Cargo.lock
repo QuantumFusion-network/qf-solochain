@@ -13159,6 +13159,7 @@ dependencies = [
  "pallet-claims",
  "pallet-grandpa",
  "pallet-multisig",
+ "pallet-proxy",
  "pallet-revive",
  "pallet-session",
  "pallet-spin",

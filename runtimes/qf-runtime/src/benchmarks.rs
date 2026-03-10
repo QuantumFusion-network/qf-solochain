@@ -28,10 +28,11 @@ frame_benchmarking::define_benchmarks!(
 	[frame_system, SystemBench::<Runtime>]
 	[pallet_assets, Assets]
 	[pallet_balances, Balances]
+	[pallet_claims, Claims]
 	[pallet_multisig, Multisig]
+	[pallet_proxy, Proxy]
 	[pallet_sudo, Sudo]
 	[pallet_timestamp, Timestamp]
 	[pallet_utility, Utility]
 	[pallet_vesting, Vesting]
-	[pallet_claims, Claims]
 );
