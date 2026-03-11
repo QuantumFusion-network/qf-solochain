@@ -35,6 +35,7 @@ frame-metadata-hash-extension = { workspace = true }
 
 # frame pallets
 pallet-assets = { workspace = true }
+pallet-assets-precompiles = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
@@ -111,6 +112,7 @@ std = [
 	"frame-system/std",
 	"frame-try-runtime?/std",
 	"pallet-assets/std",
+	"pallet-assets-precompiles/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-claims/std",
@@ -153,6 +155,7 @@ runtime-benchmarks = [
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
+	"pallet-assets-precompiles/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-claims/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
@@ -173,6 +176,7 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
 	"pallet-assets/try-runtime",
+	"pallet-assets-precompiles/try-runtime",
 	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-claims/try-runtime",
