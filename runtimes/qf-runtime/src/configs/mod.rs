@@ -527,7 +527,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Utility(..) |
 					RuntimeCall::Proxy(..) |
 					RuntimeCall::Multisig(..) |
-					RuntimeCall::Claims(..) |
+					RuntimeCall::Claims(pallet_claims::Call::claim {..}) |
 					RuntimeCall::Vesting(pallet_vesting::Call::vest{..}) |
 					RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..})
 			),
