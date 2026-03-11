@@ -44,7 +44,7 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
-use pallet_assets_precompiles::{ERC20, InlineIdConfig};
+use pallet_assets_precompiles::{InlineIdConfig, ERC20};
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
