@@ -27,21 +27,32 @@ use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 // Substrate and Polkadot dependencies
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
-	PalletId, derive_impl, parameter_types, traits::{
-		AsEnsureOriginWithArg, ConstBool, ConstU8, ConstU32, ConstU64, DefensiveSaturating, Get, InstanceFilter, Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons, fungible::{Balanced, Credit, Mutate}, tokens::{Fortitude, Precision, Preservation}
-	}, weights::{
-		IdentityFee, Weight, constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND}
-	}
+	derive_impl, parameter_types,
+	traits::{
+		fungible::{Balanced, Credit, Mutate},
+		tokens::{Fortitude, Precision, Preservation},
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
+		InstanceFilter, Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons,
+	},
+	weights::{
+		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
+		IdentityFee, Weight,
+	},
+	PalletId,
 };
 use frame_system::{
-	EnsureRoot, EnsureSigned, limits::{BlockLength, BlockWeights}, pallet_prelude::BlockNumberFor
+	limits::{BlockLength, BlockWeights},
+	pallet_prelude::BlockNumberFor,
+	EnsureRoot, EnsureSigned,
 };
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	Perbill, curve::PiecewiseLinear, traits::{AccountIdConversion, BlakeTwo256, ConvertInto, One, OpaqueKeys}
+	curve::PiecewiseLinear,
+	traits::{AccountIdConversion, BlakeTwo256, ConvertInto, One, OpaqueKeys},
+	Perbill,
 };
 use sp_version::RuntimeVersion;
 
@@ -527,9 +538,9 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Utility(..) |
 					RuntimeCall::Proxy(..) |
 					RuntimeCall::Multisig(..) |
-					RuntimeCall::Claims(pallet_claims::Call::claim {..}) |
-					RuntimeCall::Vesting(pallet_vesting::Call::vest{..}) |
-					RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..})
+					RuntimeCall::Claims(pallet_claims::Call::claim { .. }) |
+					RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+					RuntimeCall::Vesting(pallet_vesting::Call::vest_other { .. })
 			),
 			ProxyType::Governance => matches!(c, RuntimeCall::Utility(..)),
 			ProxyType::Staking => {
@@ -603,7 +614,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 	}
 }
 
-
 impl pallet_proxy::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
@@ -619,7 +629,6 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 	type BlockNumberProvider = frame_system::Pallet<Runtime>;
 }
-
 
 // TODO(khssnv): revisit.
 parameter_types! {
