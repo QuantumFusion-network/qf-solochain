@@ -528,41 +528,48 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			ProxyType::Any => true,
 			ProxyType::NonTransfer => !matches!(
 				c,
-				RuntimeCall::System(..) |
-					RuntimeCall::Spin(..) |
-					RuntimeCall::SpinAnchoring(..) |
-					RuntimeCall::Timestamp(..) |
-					RuntimeCall::Staking(..) |
-					RuntimeCall::Session(..) |
+				RuntimeCall::Claims(pallet_claims::Call::claim { .. }) |
 					RuntimeCall::Grandpa(..) |
-					RuntimeCall::Utility(..) |
-					RuntimeCall::Proxy(..) |
 					RuntimeCall::Multisig(..) |
-					RuntimeCall::Claims(pallet_claims::Call::claim { .. }) |
+					RuntimeCall::Proxy(..) |
+					RuntimeCall::Session(..) |
+					RuntimeCall::SpinAnchoring(..) |
+					RuntimeCall::Spin(..) |
+					RuntimeCall::Staking(..) |
+					RuntimeCall::System(..) |
+					RuntimeCall::Timestamp(..) |
+					RuntimeCall::Utility(..) |
 					RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
 					RuntimeCall::Vesting(pallet_vesting::Call::vest_other { .. })
 			),
-			ProxyType::Governance => matches!(c, RuntimeCall::Utility(..)),
+			ProxyType::Governance => {
+				matches!(
+					c,
+					RuntimeCall::Multisig { .. } |
+						RuntimeCall::Sudo(pallet_sudo::Call::sudo { .. }) |
+						RuntimeCall::Utility(..) 
+				)
+			},
 			ProxyType::Staking => {
 				matches!(
 					c,
-					RuntimeCall::Staking(..) | RuntimeCall::Session(..) | RuntimeCall::Utility(..)
+					RuntimeCall::Session(..) | RuntimeCall::Staking(..) | RuntimeCall::Utility(..)
 				)
 			},
 			ProxyType::CancelProxy => {
 				matches!(
 					c,
-					RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }) |
-						RuntimeCall::Utility { .. } |
-						RuntimeCall::Multisig { .. }
+					RuntimeCall::Multisig { .. } |
+						RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }) |
+						RuntimeCall::Utility { .. }
 				)
 			},
 			ProxyType::Assets => {
 				matches!(
 					c,
 					RuntimeCall::Assets { .. } |
-						RuntimeCall::Utility { .. } |
-						RuntimeCall::Multisig { .. }
+						RuntimeCall::Multisig { .. } |
+						RuntimeCall::Utility { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -577,8 +584,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets(AssetsCall::set_metadata { .. }) |
 					RuntimeCall::Assets(AssetsCall::clear_metadata { .. }) |
 					RuntimeCall::Assets(AssetsCall::set_min_balance { .. }) |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+					RuntimeCall::Multisig { .. } |
+					RuntimeCall::Utility { .. }
 			),
 			ProxyType::AssetManager => matches!(
 				c,
@@ -591,8 +598,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets(AssetsCall::thaw_asset { .. }) |
 					RuntimeCall::Assets(AssetsCall::touch_other { .. }) |
 					RuntimeCall::Assets(AssetsCall::refund_other { .. }) |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+					RuntimeCall::Multisig { .. } |
+					RuntimeCall::Utility { .. }
 			),
 		}
 	}
