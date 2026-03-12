@@ -547,7 +547,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					c,
 					RuntimeCall::Multisig { .. } |
 						RuntimeCall::Sudo(pallet_sudo::Call::sudo { .. }) |
-						RuntimeCall::Utility(..) 
+						RuntimeCall::Utility(..)
 				)
 			},
 			ProxyType::Staking => {
