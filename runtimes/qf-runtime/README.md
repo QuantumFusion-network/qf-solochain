@@ -1,7 +1,8 @@
 # qf-runtime
 
-The QF Network Runtime is a high-throughput Substrate-based runtime optimized for 100 ms block production, powered by a custom
-PoS-based **SPIN** [^1] consensus protocol that grants a single block-authoring right for a fixed sequence of slots and
+The QF Network Runtime is a high-throughput Substrate-based runtime optimized for 100 ms block production,
+powered by a custom PoS-based **SPIN** [^1] consensus protocol that grants a single block-authoring right for a
+fixed sequence of slots and
 standard GRANDPA finality gadget. It also contains `pallet-revive`[^2] with **PolkaVM**[^3] execution environment for smart
 contracts.
 
