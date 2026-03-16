@@ -13154,6 +13154,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "pallet-assets",
+ "pallet-assets-precompiles",
  "pallet-authorship",
  "pallet-balances",
  "pallet-claims",

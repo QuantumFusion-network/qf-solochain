@@ -44,6 +44,7 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned,
 };
+use pallet_assets_precompiles::{InlineIdConfig, ERC20};
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
@@ -500,7 +501,7 @@ impl pallet_revive::Config for Runtime {
 	type NativeToEthRatio = NativeToEthRatio;
 	type EthGasEncoder = ();
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
-	type Precompiles = ();
+	type Precompiles = (ERC20<Self, InlineIdConfig<0x120>>,);
 	type AllowEVMBytecode = ConstBool<true>;
 }
 
