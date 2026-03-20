@@ -13141,7 +13141,7 @@ dependencies = [
 
 [[package]]
 name = "qf-runtime"
-version = "0.8.2"
+version = "0.9.0"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -13159,6 +13159,7 @@ dependencies = [
  "pallet-claims",
  "pallet-grandpa",
  "pallet-multisig",
+ "pallet-proxy",
  "pallet-revive",
  "pallet-session",
  "pallet-spin",

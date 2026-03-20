@@ -39,6 +39,7 @@ pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-multisig = { workspace = true }
+pallet-proxy = { workspace = true }
 pallet-revive = { workspace = true }
 pallet-session = { workspace = true }
 pallet-staking = { workspace = true }
@@ -116,6 +117,7 @@ std = [
 	"pallet-claims/std",
 	"pallet-grandpa/std",
 	"pallet-multisig/std",
+	"pallet-proxy/std",
 	"pallet-revive/std",
 	"pallet-session/std",
 	"pallet-spin-anchoring/std",
@@ -157,6 +159,7 @@ runtime-benchmarks = [
 	"pallet-claims/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
+	"pallet-proxy/runtime-benchmarks",
 	"pallet-revive/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
@@ -178,6 +181,7 @@ try-runtime = [
 	"pallet-claims/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-multisig/try-runtime",
+	"pallet-proxy/try-runtime",
 	"pallet-revive/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-staking/try-runtime",

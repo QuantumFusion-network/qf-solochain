@@ -242,6 +242,8 @@ mod runtime {
 	pub type Utility = pallet_utility;
 	#[runtime::pallet_index(3)]
 	pub type Multisig = pallet_multisig;
+	#[runtime::pallet_index(4)]
+	pub type Proxy = pallet_proxy;
 
 	// Monetary
 	#[runtime::pallet_index(10)]

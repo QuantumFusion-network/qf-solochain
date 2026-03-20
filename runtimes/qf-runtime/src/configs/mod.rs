@@ -23,6 +23,7 @@
 //
 // For more information, please refer to <http://unlicense.org>
 
+use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 // Substrate and Polkadot dependencies
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
@@ -31,7 +32,7 @@ use frame_support::{
 		fungible::{Balanced, Credit, Mutate},
 		tokens::{Fortitude, Precision, Preservation},
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, DefensiveSaturating, Get,
-		Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons,
+		InstanceFilter, Nothing, OnUnbalanced, VariantCountOf, WithdrawReasons,
 	},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -47,9 +48,10 @@ use frame_system::{
 use pallet_claims::CompensateTrait;
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use qfp_consensus_spin::sr25519::AuthorityId as SpinId;
+use scale_info::TypeInfo;
 use sp_runtime::{
 	curve::PiecewiseLinear,
-	traits::{AccountIdConversion, ConvertInto, One, OpaqueKeys},
+	traits::{AccountIdConversion, BlakeTwo256, ConvertInto, One, OpaqueKeys},
 	Perbill,
 };
 use sp_version::RuntimeVersion;
@@ -135,6 +137,8 @@ impl pallet_assets::BenchmarkHelper<codec::Compact<u32>> for AssetsBenchmarkHelp
 		codec::Compact(GENESIS_NEXT_ASSET_ID.unwrap_or_default() + id)
 	}
 }
+
+type AssetsCall = pallet_assets::Call<Runtime>;
 
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -466,6 +470,171 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const ProxyDepositBase: Balance = deposit(1, 16);
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u32 = 32;
+	pub const MaxPending: u32 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 16);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 72);
+}
+
+/// The type used to represent the kinds of proxying allowed.
+#[derive(
+	Copy,
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Debug,
+	MaxEncodedLen,
+	TypeInfo,
+)]
+pub enum ProxyType {
+	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
+	Any,
+	/// Can execute any call that does not transfer funds or assets.
+	NonTransfer,
+	/// Proxy with the ability to reject time-delay proxy announcements.
+	CancelProxy,
+	/// Assets proxy. Can execute any call from `assets`, **including asset transfers**.
+	Assets,
+	/// Owner proxy. Can execute calls related to asset ownership.
+	AssetOwner,
+	/// Asset manager. Can execute calls related to asset management.
+	AssetManager,
+	/// Allow to do governance.
+	Governance,
+	/// Allows access to staking related calls.
+	///
+	/// Contains the `Staking`, `Session`, `Utility` pallets.
+	Staking,
+}
+impl Default for ProxyType {
+	fn default() -> Self {
+		Self::Any
+	}
+}
+
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			ProxyType::Any => true,
+			ProxyType::NonTransfer => !matches!(
+				c,
+				RuntimeCall::Claims(pallet_claims::Call::claim { .. }) |
+					RuntimeCall::Grandpa(..) |
+					RuntimeCall::Multisig(..) |
+					RuntimeCall::Proxy(..) |
+					RuntimeCall::Session(..) |
+					RuntimeCall::SpinAnchoring(..) |
+					RuntimeCall::Spin(..) |
+					RuntimeCall::Staking(..) |
+					RuntimeCall::System(..) |
+					RuntimeCall::Timestamp(..) |
+					RuntimeCall::Utility(..) |
+					RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+					RuntimeCall::Vesting(pallet_vesting::Call::vest_other { .. })
+			),
+			ProxyType::Governance => {
+				matches!(
+					c,
+					RuntimeCall::Multisig { .. } |
+						RuntimeCall::Sudo(pallet_sudo::Call::sudo { .. }) |
+						RuntimeCall::Utility(..)
+				)
+			},
+			ProxyType::Staking => {
+				matches!(
+					c,
+					RuntimeCall::Session(..) | RuntimeCall::Staking(..) | RuntimeCall::Utility(..)
+				)
+			},
+			ProxyType::CancelProxy => {
+				matches!(
+					c,
+					RuntimeCall::Multisig { .. } |
+						RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }) |
+						RuntimeCall::Utility { .. }
+				)
+			},
+			ProxyType::Assets => {
+				matches!(
+					c,
+					RuntimeCall::Assets { .. } |
+						RuntimeCall::Multisig { .. } |
+						RuntimeCall::Utility { .. }
+				)
+			},
+			ProxyType::AssetOwner => matches!(
+				c,
+				RuntimeCall::Assets(AssetsCall::create { .. }) |
+					RuntimeCall::Assets(AssetsCall::start_destroy { .. }) |
+					RuntimeCall::Assets(AssetsCall::destroy_accounts { .. }) |
+					RuntimeCall::Assets(AssetsCall::destroy_approvals { .. }) |
+					RuntimeCall::Assets(AssetsCall::finish_destroy { .. }) |
+					RuntimeCall::Assets(AssetsCall::transfer_ownership { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_team { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_metadata { .. }) |
+					RuntimeCall::Assets(AssetsCall::clear_metadata { .. }) |
+					RuntimeCall::Assets(AssetsCall::set_min_balance { .. }) |
+					RuntimeCall::Multisig { .. } |
+					RuntimeCall::Utility { .. }
+			),
+			ProxyType::AssetManager => matches!(
+				c,
+				RuntimeCall::Assets(AssetsCall::mint { .. }) |
+					RuntimeCall::Assets(AssetsCall::burn { .. }) |
+					RuntimeCall::Assets(AssetsCall::freeze { .. }) |
+					RuntimeCall::Assets(AssetsCall::block { .. }) |
+					RuntimeCall::Assets(AssetsCall::thaw { .. }) |
+					RuntimeCall::Assets(AssetsCall::freeze_asset { .. }) |
+					RuntimeCall::Assets(AssetsCall::thaw_asset { .. }) |
+					RuntimeCall::Assets(AssetsCall::touch_other { .. }) |
+					RuntimeCall::Assets(AssetsCall::refund_other { .. }) |
+					RuntimeCall::Multisig { .. } |
+					RuntimeCall::Utility { .. }
+			),
+		}
+	}
+
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			(ProxyType::Assets, ProxyType::AssetOwner) => true,
+			(ProxyType::Assets, ProxyType::AssetManager) => true,
+			(
+				ProxyType::NonTransfer,
+				ProxyType::Assets | ProxyType::AssetOwner | ProxyType::AssetManager,
+			) => false,
+			(ProxyType::NonTransfer, _) => true,
+			_ => false,
+		}
+	}
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+	type BlockNumberProvider = frame_system::Pallet<Runtime>;
 }
 
 // TODO(khssnv): revisit.
