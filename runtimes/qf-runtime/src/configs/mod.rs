@@ -644,7 +644,7 @@ parameter_types! {
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
 	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
-	pub const ChainId: u64 = 42;
+	pub const ChainId: u64 = 3426;
 	pub const NativeToEthRatio: u32 = 1;
 }
 
