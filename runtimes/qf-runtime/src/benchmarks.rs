@@ -27,6 +27,7 @@ frame_benchmarking::define_benchmarks!(
 	[frame_benchmarking, BaselineBench::<Runtime>]
 	[frame_system, SystemBench::<Runtime>]
 	[pallet_assets, Assets]
+	[pallet_bags_list, VoterList]
 	[pallet_balances, Balances]
 	[pallet_claims, Claims]
 	[pallet_multisig, Multisig]
