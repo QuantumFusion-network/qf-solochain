@@ -57,7 +57,7 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 
 use crate::{deposit, Vesting, SESSION_LENGTH};
-
+mod bag_thresholds;
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
 
@@ -330,6 +330,20 @@ impl pallet_timestamp::Config for Runtime {
 	type OnTimestampSet = Spin;
 	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const AutoRebagNumber: u32 = 4;
+	pub const BagThresholds: &'static [u64] = &bag_thresholds::THRESHOLDS;
+}
+
+impl pallet_bags_list::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ScoreProvider = Staking;
+	type BagThresholds = BagThresholds;
+	type Score = sp_npos_elections::VoteWeight;
+	type MaxAutoRebagPerBlock = AutoRebagNumber;
+	type WeightInfo = crate::weights::pallet_bags_list::WeightInfo<Runtime>;
 }
 
 parameter_types! {

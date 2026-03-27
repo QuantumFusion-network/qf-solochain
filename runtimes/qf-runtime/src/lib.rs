@@ -270,6 +270,8 @@ mod runtime {
 	// Staking
 	#[runtime::pallet_index(40)]
 	pub type Staking = pallet_staking;
+	#[runtime::pallet_index(41)]
+	pub type VoterList = pallet_bags_list;
 
 	// Governance
 	#[runtime::pallet_index(51)]

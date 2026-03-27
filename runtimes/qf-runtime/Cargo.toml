@@ -36,6 +36,7 @@ frame-metadata-hash-extension = { workspace = true }
 # frame pallets
 pallet-assets = { workspace = true }
 pallet-authorship = { workspace = true }
+pallet-bags-list = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-multisig = { workspace = true }
@@ -63,6 +64,7 @@ sp-core = { features = [
 	"serde",
 ], workspace = true }
 sp-inherents = { workspace = true }
+sp-npos-elections = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { features = [
 	"serde",
@@ -113,6 +115,7 @@ std = [
 	"frame-try-runtime?/std",
 	"pallet-assets/std",
 	"pallet-authorship/std",
+	"pallet-bags-list/std",
 	"pallet-balances/std",
 	"pallet-claims/std",
 	"pallet-grandpa/std",
@@ -138,6 +141,7 @@ std = [
 	"sp-core/std",
 	"sp-genesis-builder/std",
 	"sp-inherents/std",
+	"sp-npos-elections/std",
 	"sp-offchain/std",
 	"sp-runtime/std",
 	"sp-session/std",
@@ -155,6 +159,7 @@ runtime-benchmarks = [
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
+	"pallet-bags-list/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-claims/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
@@ -177,6 +182,7 @@ try-runtime = [
 	"frame-try-runtime/try-runtime",
 	"pallet-assets/try-runtime",
 	"pallet-authorship/try-runtime",
+	"pallet-bags-list/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-claims/try-runtime",
 	"pallet-grandpa/try-runtime",
