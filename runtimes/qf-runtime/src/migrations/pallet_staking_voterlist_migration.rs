@@ -1,12 +1,8 @@
-/// Migration to initialize the `pallet_bags_list` voter index from the existing `pallet_staking` validators and nominators.
-
-
+/// Migration to initialize the `pallet_bags_list` voter index from the existing
+/// `pallet_staking` validators and nominators.
 use alloc::boxed::Box;
 use frame_election_provider_support::SortedListProvider;
-use frame_support::{
-	traits::OnRuntimeUpgrade,
-	weights::Weight,
-};
+use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 
 #[cfg(feature = "try-runtime")]
 use alloc::vec::Vec;
@@ -54,7 +50,9 @@ impl OnRuntimeUpgrade for InitializeVoterList {
 		let inserted = VoterList::unsafe_regenerate(
 			pallet_staking::Validators::<Runtime>::iter()
 				.map(|(validator, _)| validator)
-				.chain(pallet_staking::Nominators::<Runtime>::iter().map(|(nominator, _)| nominator)),
+				.chain(
+					pallet_staking::Nominators::<Runtime>::iter().map(|(nominator, _)| nominator),
+				),
 			Box::new(|who| Some(Staking::weight_of(who))),
 		);
 
@@ -100,14 +98,8 @@ impl OnRuntimeUpgrade for InitializeVoterList {
 			expected,
 		);
 
-		ensure!(
-			current == expected,
-			"bags-list voter count mismatch after migration"
-		);
-		ensure!(
-			iter_count == expected,
-			"bags-list iterator length mismatch after migration"
-		);
+		ensure!(current == expected, "bags-list voter count mismatch after migration");
+		ensure!(iter_count == expected, "bags-list iterator length mismatch after migration");
 
 		Ok(())
 	}

@@ -65,8 +65,8 @@ use crate::GENESIS_NEXT_ASSET_ID;
 use super::{
 	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
-	VERSION, VoterList,
+	Session, SessionKeys, Spin, Staking, System, Timestamp, VoterList, EXISTENTIAL_DEPOSIT,
+	SLOT_DURATION, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -290,7 +290,7 @@ impl pallet_staking::Config for Runtime {
 	/// and split between validators and the system
 	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
 	type NextNewSession = Session;
-	type MaxExposurePageSize = ConstU32<32>;// TODO Can be changed to control cost of payouts. Was  64
+	type MaxExposurePageSize = ConstU32<32>; // TODO Can be changed to control cost of payouts. Was  64
 	type MaxValidatorSet = ConstU32<100>;
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
