@@ -14118,6 +14118,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48fd7bd8a6377e15ad9d42a8ec25371b94ddc67abe7c8b9127bec79bebaaae18"
 
 [[package]]
+name = "runtime-generate-bags"
+version = "3.0.0"
+dependencies = [
+ "clap",
+ "generate-bags",
+ "qf-runtime",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
