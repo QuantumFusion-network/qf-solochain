@@ -107,6 +107,11 @@ pub const fn deposit(items: u32, bytes: u32) -> Balance {
 }
 
 /// Existential deposit.
+/// Needed for pallet-staking benchmarks to pass the existential deposit check when creating a stash account.
+#[cfg(feature = "runtime-benchmarks")]
+pub const EXISTENTIAL_DEPOSIT: Balance = 900_000_000_000_000;
+
+#[cfg(not(feature = "runtime-benchmarks"))]
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
 /// Session length in blocks

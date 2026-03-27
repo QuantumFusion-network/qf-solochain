@@ -266,8 +266,8 @@ const MAX_QUOTA_NOMINATIONS: u32 = 16;
 
 pub struct StakingBenchmarkingConfig;
 impl pallet_staking::BenchmarkingConfig for StakingBenchmarkingConfig {
-	type MaxNominators = ConstU32<5000>;
-	type MaxValidators = ConstU32<1000>;
+	type MaxNominators = ConstU32<1000>;
+	type MaxValidators = ConstU32<100>;
 }
 
 impl pallet_staking::Config for Runtime {
@@ -305,7 +305,7 @@ impl pallet_staking::Config for Runtime {
 	/// Number of eras to keep in on‐chain history (for rewards, points, exposures, etc.)
 	type HistoryDepth = ConstU32<128>; // 30 minutes per session * 3 sessions per era * 128 eras = 8 days
 	type EventListeners = ();
-	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = crate::weights::pallet_staking::WeightInfo<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
 	type Filter = Nothing;
 }

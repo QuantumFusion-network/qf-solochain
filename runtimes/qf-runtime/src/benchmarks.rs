@@ -32,6 +32,7 @@ frame_benchmarking::define_benchmarks!(
 	[pallet_claims, Claims]
 	[pallet_multisig, Multisig]
 	[pallet_proxy, Proxy]
+	[pallet_staking, Staking]
 	[pallet_sudo, Sudo]
 	[pallet_timestamp, Timestamp]
 	[pallet_utility, Utility]
