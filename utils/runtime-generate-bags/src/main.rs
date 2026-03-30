@@ -1,6 +1,5 @@
-// This file is part of Substrate.
-
-// Copyright (C) Parity Technologies (UK) Ltd.
+// Copyright (C) QF Network, 2026.
+// Copyright (C) Parity Technologies (UK) Ltd., until 2026.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
