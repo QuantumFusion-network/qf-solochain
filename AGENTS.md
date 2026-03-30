@@ -2,7 +2,8 @@
 - `node/` is the Substrate entrypoint; `output/` collects staged binaries after make targets run.
 - `runtimes/` defines FastChain and AnchorChain logic; Wasm artifacts land under `target/release/wbuild/`.
 - `pallets/` hosts pallets such as `spin-anchoring` (SecureUpTo); shared primitives sit in `primitives/`.
-- `client/consensus-spin` plus `primitives/consensus-spin` implement SPIN; `docs/`, `docker/`, and `zombienet/` add ops tooling.
+- `client/consensus-spin` plus `primitives/consensus-spin` implement SPIN; `docs/`, `docker/`, and `zombienet/`
+  add ops tooling.
 
 ## Build, Test, and Development Commands
 - `make qf-node` / `make qf-node-release` compile debug or release nodes and copy binaries into `output/`.
