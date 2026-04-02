@@ -13155,6 +13155,7 @@ dependencies = [
  "hex-literal",
  "log",
  "pallet-assets",
+ "pallet-assets-precompiles",
  "pallet-authorship",
  "pallet-bags-list",
  "pallet-balances",
