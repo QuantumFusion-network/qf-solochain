@@ -7,6 +7,7 @@ pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
+mod migrations;
 mod weights;
 
 extern crate alloc;
@@ -107,6 +108,12 @@ pub const fn deposit(items: u32, bytes: u32) -> Balance {
 }
 
 /// Existential deposit.
+/// Needed for pallet-staking benchmarks to pass the existential deposit check when creating a stash
+/// account.
+#[cfg(feature = "runtime-benchmarks")]
+pub const EXISTENTIAL_DEPOSIT: Balance = 900_000_000_000_000;
+
+#[cfg(not(feature = "runtime-benchmarks"))]
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
 /// Session length in blocks
@@ -203,7 +210,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, TxExtension>;
 ///
 /// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
 #[allow(unused_parens)]
-type Migrations = ();
+type Migrations = (migrations::pallet_staking_voterlist_migration::InitializeVoterList,);
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -270,6 +277,8 @@ mod runtime {
 	// Staking
 	#[runtime::pallet_index(40)]
 	pub type Staking = pallet_staking;
+	#[runtime::pallet_index(41)]
+	pub type VoterList = pallet_bags_list;
 
 	// Governance
 	#[runtime::pallet_index(51)]
