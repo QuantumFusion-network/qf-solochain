@@ -13057,7 +13057,7 @@ dependencies = [
 
 [[package]]
 name = "qf-node"
-version = "0.1.29"
+version = "0.1.30"
 dependencies = [
  "clap",
  "frame-benchmarking-cli",
@@ -13141,7 +13141,7 @@ dependencies = [
 
 [[package]]
 name = "qf-runtime"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -13153,9 +13153,11 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "log",
  "pallet-assets",
  "pallet-assets-precompiles",
  "pallet-authorship",
+ "pallet-bags-list",
  "pallet-balances",
  "pallet-claims",
  "pallet-grandpa",
@@ -13184,6 +13186,7 @@ dependencies = [
  "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
+ "sp-npos-elections",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -14115,6 +14118,15 @@ name = "ruint-macro"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48fd7bd8a6377e15ad9d42a8ec25371b94ddc67abe7c8b9127bec79bebaaae18"
+
+[[package]]
+name = "runtime-generate-bags"
+version = "3.0.0"
+dependencies = [
+ "clap",
+ "generate-bags",
+ "qf-runtime",
+]
 
 [[package]]
 name = "rustc-demangle"

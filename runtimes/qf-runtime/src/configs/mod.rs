@@ -58,7 +58,7 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 
 use crate::{deposit, Vesting, SESSION_LENGTH};
-
+mod bag_thresholds;
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
 
@@ -66,8 +66,8 @@ use crate::GENESIS_NEXT_ASSET_ID;
 use super::{
 	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-	Session, SessionKeys, Spin, Staking, System, Timestamp, EXISTENTIAL_DEPOSIT, SLOT_DURATION,
-	VERSION,
+	Session, SessionKeys, Spin, Staking, System, Timestamp, VoterList, EXISTENTIAL_DEPOSIT,
+	SLOT_DURATION, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -267,8 +267,8 @@ const MAX_QUOTA_NOMINATIONS: u32 = 16;
 
 pub struct StakingBenchmarkingConfig;
 impl pallet_staking::BenchmarkingConfig for StakingBenchmarkingConfig {
-	type MaxNominators = ConstU32<5000>;
-	type MaxValidators = ConstU32<1000>;
+	type MaxNominators = ConstU32<1000>;
+	type MaxValidators = ConstU32<100>;
 }
 
 impl pallet_staking::Config for Runtime {
@@ -291,12 +291,12 @@ impl pallet_staking::Config for Runtime {
 	/// and split between validators and the system
 	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
 	type NextNewSession = Session;
-	type MaxExposurePageSize = ConstU32<64>;
+	type MaxExposurePageSize = ConstU32<32>; // TODO Can be changed to control cost of payouts. Was  64
 	type MaxValidatorSet = ConstU32<100>;
 	/// Provides the on‐chain election logic
 	type ElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
 	type GenesisElectionProvider = onchain::OnChainExecution<OnChainSeqPhragmen>;
-	type VoterList = pallet_staking::UseNominatorsAndValidatorsMap<Self>;
+	type VoterList = VoterList;
 	type NominationsQuota = pallet_staking::FixedNominationsQuota<MAX_QUOTA_NOMINATIONS>;
 	type TargetList = pallet_staking::UseValidatorsMap<Self>;
 	type MaxUnlockingChunks = ConstU32<32>;
@@ -306,7 +306,7 @@ impl pallet_staking::Config for Runtime {
 	/// Number of eras to keep in on‐chain history (for rewards, points, exposures, etc.)
 	type HistoryDepth = ConstU32<128>; // 30 minutes per session * 3 sessions per era * 128 eras = 8 days
 	type EventListeners = ();
-	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = crate::weights::pallet_staking::WeightInfo<Runtime>;
 	type BenchmarkingConfig = StakingBenchmarkingConfig;
 	type Filter = Nothing;
 }
@@ -331,6 +331,20 @@ impl pallet_timestamp::Config for Runtime {
 	type OnTimestampSet = Spin;
 	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const AutoRebagNumber: u32 = 4;
+	pub const BagThresholds: &'static [u64] = &bag_thresholds::THRESHOLDS;
+}
+
+impl pallet_bags_list::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ScoreProvider = Staking;
+	type BagThresholds = BagThresholds;
+	type Score = sp_npos_elections::VoteWeight;
+	type MaxAutoRebagPerBlock = AutoRebagNumber;
+	type WeightInfo = crate::weights::pallet_bags_list::WeightInfo<Runtime>;
 }
 
 parameter_types! {
