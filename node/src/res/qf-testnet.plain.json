@@ -119,6 +119,9 @@
         },
         "sudo": {
           "key": "5DPrpzkbQGkVgibdzTWQrQnefD54x8986CfpstcVMMMfAhTg"
+        },
+        "vesting": {
+          "vesting": []
         }
       }
     }

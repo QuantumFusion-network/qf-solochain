@@ -11,8 +11,8 @@
   "protocolId": "qf-para-pas",
   "properties": {
     "ss58Format": 42,
-    "tokenDecimals": 18,
-    "tokenSymbol": "QF"
+    "tokenDecimals": 12,
+    "tokenSymbol": "UNIT"
   },
   "relay_chain": "paseo",
   "codeSubstitutes": {},
