@@ -1,11 +1,12 @@
 # qf-testnet-runtime
 
 Copy of the `qf-runtime` at commit `0e4833aab30257730169d4cdbfeaec4227110f2e` created to simplify runtime preparation
-for the mainnet and work on testnet migration after the mainnet launch. Consider returning back to one runtime crate for
-the testnet and mainnet in the future.
+for the mainnet and work on testnet migration after the mainnet launch. Consider returning back to one runtime crate
+for the testnet and mainnet in the future.
 
-The QF Network Runtime is a high-throughput Substrate-based runtime optimized for 100 ms block production, powered by a custom
-PoS-based **SPIN** [^1] consensus protocol that grants a single block-authoring right for a fixed sequence of slots and
+The QF Network Runtime is a high-throughput Substrate-based runtime optimized for 100 ms block production,
+powered by a custom PoS-based **SPIN** [^1] consensus protocol that grants a single block-authoring right for a
+fixed sequence of slots and
 standard GRANDPA finality gadget. It also contains `pallet-revive`[^2] with **PolkaVM**[^3] execution environment for smart
 contracts.
 
