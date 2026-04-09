@@ -19,6 +19,9 @@
     "runtimeGenesis": {
       "code": "0x00",
       "patch": {
+        "assets": {
+          "nextAssetId": 1
+        },
         "balances": {
           "balances": [
             [
@@ -116,6 +119,9 @@
         },
         "sudo": {
           "key": "5DPrpzkbQGkVgibdzTWQrQnefD54x8986CfpstcVMMMfAhTg"
+        },
+        "vesting": {
+          "vesting": []
         }
       }
     }
