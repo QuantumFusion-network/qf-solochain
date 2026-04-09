@@ -27,7 +27,9 @@ use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 // Substrate and Polkadot dependencies
 use frame_election_provider_support::{bounds::ElectionBoundsBuilder, onchain, SequentialPhragmen};
 use frame_support::{
-	derive_impl, parameter_types,
+	derive_impl,
+	dispatch::DispatchClass,
+	parameter_types,
 	traits::{
 		fungible::{Balanced, Credit, Mutate},
 		tokens::{Fortitude, Precision, Preservation},
@@ -53,21 +55,20 @@ use scale_info::TypeInfo;
 use sp_runtime::{
 	curve::PiecewiseLinear,
 	traits::{AccountIdConversion, BlakeTwo256, ConvertInto, One, OpaqueKeys},
-	Perbill,
+	FixedU128, Perbill,
 };
 use sp_version::RuntimeVersion;
 
-use crate::{deposit, Vesting, SESSION_LENGTH};
 mod bag_thresholds;
 #[cfg(feature = "runtime-benchmarks")]
 use crate::GENESIS_NEXT_ASSET_ID;
 
 // Local module imports
 use super::{
-	AccountId, Balance, Balances, Block, BlockNumber, Hash, Nonce, PalletInfo, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask,
-	Session, SessionKeys, Spin, Staking, System, Timestamp, VoterList, EXISTENTIAL_DEPOSIT,
-	SLOT_DURATION, VERSION,
+	deposit, AccountId, Address, Balance, Balances, Block, BlockNumber, EthExtraImpl, Hash, Nonce,
+	PalletInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason,
+	RuntimeOrigin, RuntimeTask, Session, SessionKeys, Signature, Spin, Staking, System, Timestamp,
+	Vesting, VoterList, EXISTENTIAL_DEPOSIT, SESSION_LENGTH, SLOT_DURATION, VERSION,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -81,7 +82,13 @@ parameter_types! {
 		Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND / 20, u64::MAX),
 		NORMAL_DISPATCH_RATIO,
 	);
-	pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+	//pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+	pub RuntimeBlockLength: BlockLength = BlockLength::builder()
+		.max_length(5 * 1024 * 1024)
+		.modify_max_length_for_class(DispatchClass::Normal, |m| {
+			*m = NORMAL_DISPATCH_RATIO * *m
+		})
+		.build();
 	pub const SS58Prefix: u8 = 42;
 }
 
@@ -126,16 +133,20 @@ parameter_types! {
 	pub const AssetsStringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = deposit(1, 68);
 	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
-	pub const RemoveItemsLimit: u32 = 1000;
+	pub const RemoveItemsLimit: u32 = 100;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
 pub struct AssetsBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl pallet_assets::BenchmarkHelper<codec::Compact<u32>> for AssetsBenchmarkHelper {
+impl pallet_assets::BenchmarkHelper<codec::Compact<u32>, ()> for AssetsBenchmarkHelper {
 	fn create_asset_id_parameter(id: u32) -> codec::Compact<u32> {
 		codec::Compact(GENESIS_NEXT_ASSET_ID.unwrap_or_default() + id)
+	}
+
+	fn create_reserve_id_parameter(_id: u32) -> () {
+		()
 	}
 }
 
@@ -146,6 +157,7 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = u32;
 	type AssetIdParameter = codec::Compact<u32>;
+	type ReserveData = ();
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
@@ -165,9 +177,14 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = AssetsBenchmarkHelper;
 }
 
+impl pallet_assets_precompiles::PermitConfig for Runtime {
+	type ChainId = ChainId;
+	type WeightInfo = pallet_assets_precompiles::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
-	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?
+	type EventHandler = (); // TODO(khssnv): Staking, ImOnline?. (artemiksion): we can add like this - (Staking, ImOnline)
 }
 
 impl pallet_spin::Config for Runtime {
@@ -475,7 +492,9 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnChargeTransaction = FungibleAdapter<Balances, BurnFeesAndTipToAuthor<Runtime>>;
 	type OperationalFeeMultiplier = ConstU8<5>;
-	type WeightToFee = IdentityFee<Balance>;
+	// This is related to the FeeInfo type in the pallet_revive configuration, so we can no longer
+	// leave IdentityFee<Balance> here.
+	type WeightToFee = pallet_revive::evm::fees::BlockRatioFee<1, 1, Self, Balance>;
 	type LengthToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ConstFeeMultiplier<FeeMultiplier>;
 	type WeightInfo = pallet_transaction_payment::weights::SubstrateWeight<Runtime>;
@@ -655,37 +674,44 @@ impl pallet_proxy::Config for Runtime {
 // TODO(khssnv): revisit.
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerChildTrieItem: Balance = deposit(1, 0) / 100;
 	pub const DepositPerByte: Balance = deposit(0, 1);
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const RuntimeMemory: u32 = 128 * 1024 * 1024; // 128 MiB
 	pub const PVFMemory: u32 = 512 * 1024 * 1024; // 512 MiB
 	pub const ChainId: u64 = 3426;
 	pub const NativeToEthRatio: u32 = 1;
+	pub const MaxEthExtrinsicWeight: FixedU128 = FixedU128::from_rational(9, 10);
 }
 
 impl pallet_revive::Config for Runtime {
 	type Time = Timestamp;
+	type Balance = Balance;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
+	type RuntimeOrigin = RuntimeOrigin;
 	type DepositPerItem = DepositPerItem;
+	type DepositPerChildTrieItem = DepositPerChildTrieItem;
 	type DepositPerByte = DepositPerByte;
-	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = RuntimeMemory;
 	type PVFMemory = PVFMemory;
-	type UnsafeUnstableInterface = ConstBool<true>; // TODO(khssnv): try with `false` at `stable2506`.
 	type UploadOrigin = EnsureSigned<Self::AccountId>;
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
 	type ChainId = ChainId;
 	type NativeToEthRatio = NativeToEthRatio;
-	type EthGasEncoder = ();
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
-	type Precompiles = (ERC20<Self, InlineIdConfig<0x120>>,);
+	type Precompiles = (ERC20<Self, InlineIdConfig<0x1>>,);
 	type AllowEVMBytecode = ConstBool<true>;
+	type FeeInfo = pallet_revive::evm::fees::Info<Address, Signature, EthExtraImpl>;
+	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
+	type DebugEnabled = ConstBool<false>;
+	type GasScale = ConstU32<1000>; // In standart templates 1000, PAH uses 80_000.
+	type OnBurn = (); // TODO(artemiksion): maybe we should implement pallet_dap for this?
 }
 
 impl TryFrom<RuntimeCall> for pallet_revive::Call<Runtime> {

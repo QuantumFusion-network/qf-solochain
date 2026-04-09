@@ -291,4 +291,7 @@ mod runtime {
 	// Assets
 	#[runtime::pallet_index(80)]
 	pub type Assets = pallet_assets;
+
+	#[runtime::pallet_index(81)]
+	pub type AssetsPrecompilesPermit = pallet_assets_precompiles::permit::pallet::Pallet<Runtime>;
 }

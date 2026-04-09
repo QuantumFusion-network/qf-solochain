@@ -43,7 +43,7 @@ std = [
 	"qf-parachain-runtime/std",
 ]
 runtime-benchmarks = [
-	"polkadot-sdk/runtime-benchmarks",
+	"polkadot-sdk/assets-common",
 	"qf-parachain-runtime/runtime-benchmarks",
 ]
 try-runtime = [

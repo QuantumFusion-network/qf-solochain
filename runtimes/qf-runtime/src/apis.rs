@@ -30,7 +30,7 @@ use frame_support::{
 	weights::Weight,
 };
 use pallet_grandpa::AuthorityId as GrandpaId;
-use pallet_revive::impl_runtime_apis_plus_revive;
+use pallet_revive::impl_runtime_apis_plus_revive_traits;
 use qfp_consensus_spin::{sr25519::AuthorityId as SpinId, SpinAuxData};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -43,13 +43,14 @@ use sp_version::RuntimeVersion;
 
 // Local module imports
 use super::{
-	AccountId, Balance, Block, BlockNumber, EthExtraImpl, Executive, Grandpa, InherentDataExt,
-	Nonce, Runtime, RuntimeCall, RuntimeGenesisConfig, SessionKeys, Spin, Staking, System,
-	TransactionPayment, VERSION,
+	AccountId, Balance, Block, BlockNumber, Executive, Grandpa, InherentDataExt, Nonce, Runtime,
+	RuntimeCall, RuntimeGenesisConfig, SessionKeys, Spin, Staking, System, TransactionPayment,
+	VERSION,
 };
 
-impl_runtime_apis_plus_revive!(
+impl_runtime_apis_plus_revive_traits!(
 	Runtime,
+	Revive,
 	Executive,
 	EthExtraImpl,
 
@@ -58,7 +59,7 @@ impl_runtime_apis_plus_revive!(
 			VERSION
 		}
 
-		fn execute_block(block: Block) {
+		fn execute_block(block: <Block as BlockT>::LazyBlock) {
 			Executive::execute_block(block);
 		}
 
@@ -95,7 +96,7 @@ impl_runtime_apis_plus_revive!(
 		}
 
 		fn check_inherents(
-			block: Block,
+			block: <Block as BlockT>::LazyBlock,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
@@ -143,8 +144,8 @@ impl_runtime_apis_plus_revive!(
 	}
 
 	impl sp_session::SessionKeys<Block> for Runtime {
-		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-			SessionKeys::generate(seed)
+		fn generate_session_keys(owner: Vec<u8>, seed: Option<Vec<u8>>) -> sp_session::OpaqueGeneratedSessionKeys {
+			SessionKeys::generate(&owner, seed).into()
 		}
 
 		fn decode_session_keys(
@@ -289,7 +290,7 @@ impl_runtime_apis_plus_revive!(
 		}
 
 		fn execute_block(
-			block: Block,
+			block: <Block as BlockT>::LazyBlock,
 			state_root_check: bool,
 			signature_check: bool,
 			select: frame_try_runtime::TryStateSelect
