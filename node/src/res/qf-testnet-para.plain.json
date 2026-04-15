@@ -28,8 +28,7 @@
               "5HEdGQcg8HJCnFnq6GuCxS8vxEs1FheAWQSJEW89ZP7dHTq3",
               1000000000000000000
             ]
-          ],
-          "devAccounts": null
+          ]
         },
         "collatorSelection": {
           "candidacyBond": 1000000000000,
@@ -43,7 +42,6 @@
         "parachainInfo": {
           "parachainId": 4775
         },
-        "parachainSystem": {},
         "polkadotXcm": {
           "safeXcmVersion": 5
         },
