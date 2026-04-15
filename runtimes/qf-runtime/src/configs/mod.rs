@@ -184,7 +184,7 @@ impl pallet_assets_precompiles::PermitConfig for Runtime {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Spin>;
-	type EventHandler = Staking; // TODO(khssnv): Staking, ImOnline?. (artemiksion): we can add like this - (Staking, ImOnline)
+	type EventHandler = Staking;
 }
 
 impl pallet_spin::Config for Runtime {
