@@ -83,20 +83,16 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 		//  Measured:  `109 + c * (208 ±0)`
 		//  Estimated: `3675 + c * (2609 ±0)`
 		// Minimum execution time: 8_749_000 picoseconds.
-		// Weight::from_parts(9_008_000, 0)
-		// 	.saturating_add(Weight::from_parts(0, 3675))
-		// 	// Standard Error: 7_356
-		// 	.saturating_add(Weight::from_parts(7_819_372, 0).saturating_mul(c.into()))
-		// 	.saturating_add(T::DbWeight::get().reads(2))
-		// 	.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(c.into())))
-		// 	.saturating_add(T::DbWeight::get().writes(1))
-		// 	.saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(c.into())))
-		// 	.saturating_add(Weight::from_parts(0, 2609).saturating_mul(c.into()))
-
-		// TODO(khssnv)
-		Weight::from_parts(10_000, 0)
-			.saturating_add(T::DbWeight::get().reads(1))
+		// TODO (artemiksion): I reduce RemoveItemsLimit in config, so it start to destroy correctly
+		Weight::from_parts(9_008_000, 0)
+			.saturating_add(Weight::from_parts(0, 3675))
+			// Standard Error: 7_356
+			.saturating_add(Weight::from_parts(7_819_372, 0).saturating_mul(_c.into()))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(_c.into())))
 			.saturating_add(T::DbWeight::get().writes(1))
+			.saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(_c.into())))
+			.saturating_add(Weight::from_parts(0, 2609).saturating_mul(_c.into()))
 	}
 	/// Storage: `Assets::Asset` (r:1 w:1)
 	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
@@ -108,20 +104,16 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 		//  Measured:  `437 + a * (86 ±0)`
 		//  Estimated: `3675 + a * (2623 ±0)`
 		// Minimum execution time: 9_710_000 picoseconds.
-		// Weight::from_parts(9_926_000, 0)
-		// 	.saturating_add(Weight::from_parts(0, 3675))
-		// 	// Standard Error: 4_268
-		// 	.saturating_add(Weight::from_parts(8_700_815, 0).saturating_mul(a.into()))
-		// 	.saturating_add(T::DbWeight::get().reads(2))
-		// 	.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(a.into())))
-		// 	.saturating_add(T::DbWeight::get().writes(1))
-		// 	.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(a.into())))
-		// 	.saturating_add(Weight::from_parts(0, 2623).saturating_mul(a.into()))
-
-		// TODO(khssnv)
-		Weight::from_parts(10_000, 0)
-			.saturating_add(T::DbWeight::get().reads(1))
+		// TODO (artemiksion): I reduce RemoveItemsLimit in config, so it start to destroy correctly
+		Weight::from_parts(9_926_000, 0)
+			.saturating_add(Weight::from_parts(0, 3675))
+			// Standard Error: 4_268
+			.saturating_add(Weight::from_parts(8_700_815, 0).saturating_mul(_a.into()))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(_a.into())))
 			.saturating_add(T::DbWeight::get().writes(1))
+			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(_a.into())))
+			.saturating_add(Weight::from_parts(0, 2623).saturating_mul(_a.into()))
 	}
 	/// Storage: `Assets::Asset` (r:1 w:1)
 	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
@@ -288,6 +280,23 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 		// Minimum execution time: 7_368_000 picoseconds.
 		Weight::from_parts(7_555_000, 0)
 			.saturating_add(Weight::from_parts(0, 3675))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `Assets::Asset` (r:1 w:0)
+	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
+	/// Storage: `Assets::Reserves` (r:0 w:1)
+	/// Proof: `Assets::Reserves` (`max_values`: None, `max_size`: Some(21), added: 2496, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 5]`.
+	fn set_reserves(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `303`
+		//  Estimated: `3675`
+		// Minimum execution time: 8_849_000 picoseconds.
+		Weight::from_parts(9_663_159, 0)
+			.saturating_add(Weight::from_parts(0, 3675))
+			// Standard Error: 617
+			.saturating_add(Weight::from_parts(55_438, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -556,5 +565,30 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 		// Minimum execution time: 11_348_000 picoseconds.
 		Weight::from_parts(11_882_000, 3613)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
+	}
+	/// Storage: `Assets::Asset` (r:1 w:0)
+	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
+	/// Storage: `Assets::Reserves` (r:0 w:1)
+	/// Proof: `Assets::Reserves` (`max_values`: None, `max_size`: Some(21), added: 2496, mode: `MaxEncodedLen`)
+	fn migration_v2_foreign_asset_set_reserve_weight() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `142`
+		//  Estimated: `3675`
+		// Minimum execution time: 5_259_000 picoseconds.
+		Weight::from_parts(5_839_000, 0)
+			.saturating_add(Weight::from_parts(0, 3675))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `Assets::Metadata` (r:1 w:0)
+	/// Proof: `Assets::Metadata` (`max_values`: None, `max_size`: Some(140), added: 2615, mode: `MaxEncodedLen`)
+	fn get_metadata() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `267`
+		//  Estimated: `3605`
+		// Minimum execution time: 4_147_000 picoseconds.
+		Weight::from_parts(4_568_000, 0)
+			.saturating_add(Weight::from_parts(0, 3605))
+			.saturating_add(T::DbWeight::get().reads(1))
 	}
 }
