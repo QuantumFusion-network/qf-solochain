@@ -15,10 +15,11 @@ use sp_runtime::TryRuntimeError;
 
 use crate::{Runtime, Staking, VoterList};
 
+#[allow(dead_code)]
 const LOG_TARGET: &str = "runtime::migrations::bags_list";
-
+#[allow(dead_code)]
 pub struct InitializeVoterList;
-
+#[allow(dead_code)]
 impl InitializeVoterList {
 	fn expected_voter_count() -> u32 {
 		pallet_staking::Validators::<Runtime>::count()
