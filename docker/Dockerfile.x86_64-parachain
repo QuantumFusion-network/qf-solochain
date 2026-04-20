@@ -20,7 +20,7 @@ WORKDIR /opt/qf-solochain
 COPY . .
 
 # Build the node
-RUN cargo build --release --locked --bin qf-node
+RUN cargo build --release --locked --bin qf-parachain-node
 
 FROM debian:bookworm-slim AS runtime
 
@@ -33,10 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/qf-solochain
 
-COPY --from=builder /opt/qf-solochain/target/release/qf-node /usr/local/bin/qf-node
+COPY --from=builder /opt/qf-solochain/target/release/qf-parachain-node /usr/local/bin/qf-parachain-node
 
 LABEL org.opencontainers.image.authors="QF Network <admin@qfnetwork.xyz>"
 LABEL org.opencontainers.image.source="https://github.com/QuantumFusion-network/qf-solochain"
 LABEL org.opencontainers.image.revision="${QF_REF}"
-
-# No ENTRYPOINT or CMD - will be provided by docker-compose
