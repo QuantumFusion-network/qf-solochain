@@ -180,7 +180,7 @@ jobs:
 
       - name: Write Summary
         run: |
-          echo "## :white_check_mark: Solochain Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "## :white_check_mark: Fastchain Build Successful" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`theqfnetwork/qf-node:${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Digest:** \`${{ steps.docker_build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
 
