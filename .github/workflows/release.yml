@@ -156,8 +156,8 @@ jobs:
             sha256 hash: ${{ steps.checksums.outputs.sha256_qfparachain }}
             Blake2-256 hash: ${{ steps.checksums.outputs.blake2_qfparachain }}
 
-  publish-docker-solochain:
-    name: Build and Publish Solochain Image
+  publish-docker-fastchain:
+    name: Build and Publish Fastchain Image
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v6
